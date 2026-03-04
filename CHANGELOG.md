@@ -8,3 +8,4 @@
 - [2026-03-04T09:00:00] feat: add attendance tracker widget
 - [2026-03-04T11:30:00] feat: offline mode for cached timetable
 - [2026-03-04T14:00:00] fix: crash on empty exam schedule response
+- [2026-03-04T16:30:00] fix: null pointer in dashboard fragment
