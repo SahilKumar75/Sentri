@@ -5,3 +5,4 @@
 - [2026-03-03T09:00:00] feat: offline mode for cached timetable
 - [2026-03-03T12:20:00] chore: update Android target SDK to 35
 - [2026-03-03T15:40:00] chore: remove deprecated SharedPreferences calls
+- [2026-03-04T09:00:00] feat: add attendance tracker widget
