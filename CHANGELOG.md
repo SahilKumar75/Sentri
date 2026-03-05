@@ -11,3 +11,4 @@
 - [2026-03-04T16:30:00] fix: null pointer in dashboard fragment
 - [2026-03-05T09:00:00] feat: add attendance tracker widget
 - [2026-03-05T11:30:00] chore: remove deprecated SharedPreferences calls
+- [2026-03-05T14:00:00] fix: date formatting in timetable parser
