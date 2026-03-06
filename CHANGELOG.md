@@ -13,3 +13,4 @@
 - [2026-03-05T11:30:00] chore: remove deprecated SharedPreferences calls
 - [2026-03-05T14:00:00] fix: date formatting in timetable parser
 - [2026-03-05T16:30:00] fix: date formatting in timetable parser
+- [2026-03-06T09:00:00] fix: null pointer in dashboard fragment
