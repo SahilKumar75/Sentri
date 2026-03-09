@@ -17,3 +17,4 @@
 - [2026-03-06T14:00:00] fix: campus map tile loading on slow networks
 - [2026-03-07T10:00:00] refactor: migrate auth flow to JWT
 - [2026-03-09T09:00:00] feat: deep link support for notice board
+- [2026-03-09T14:00:00] fix: null pointer in dashboard fragment
