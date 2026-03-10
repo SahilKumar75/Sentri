@@ -20,3 +20,4 @@
 - [2026-03-09T14:00:00] fix: null pointer in dashboard fragment
 - [2026-03-10T09:00:00] feat: offline mode for cached timetable
 - [2026-03-10T11:30:00] feat: add attendance tracker widget
+- [2026-03-10T14:00:00] fix: OCR parsing fails on rotated timetable images
