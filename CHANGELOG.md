@@ -23,3 +23,4 @@
 - [2026-03-10T14:00:00] fix: OCR parsing fails on rotated timetable images
 - [2026-03-10T16:30:00] feat: offline mode for cached timetable
 - [2026-03-11T09:00:00] refactor: split CourseRepository from ViewModel
+- [2026-03-11T11:00:00] fix: campus map tile loading on slow networks
