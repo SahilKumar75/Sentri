@@ -27,3 +27,4 @@
 - [2026-03-11T13:00:00] refactor: migrate auth flow to JWT
 - [2026-03-11T15:00:00] refactor: room database migration v3 to v4
 - [2026-03-11T17:00:00] refactor: split CourseRepository from ViewModel
+- [2026-03-12T09:00:00] feat: deep link support for notice board
