@@ -30,3 +30,4 @@
 - [2026-03-12T09:00:00] feat: deep link support for notice board
 - [2026-03-12T11:30:00] fix: date formatting in timetable parser
 - [2026-03-12T14:00:00] fix: OCR parsing fails on rotated timetable images
+- [2026-03-12T16:30:00] chore: remove deprecated SharedPreferences calls
