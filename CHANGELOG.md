@@ -29,3 +29,4 @@
 - [2026-03-11T17:00:00] refactor: split CourseRepository from ViewModel
 - [2026-03-12T09:00:00] feat: deep link support for notice board
 - [2026-03-12T11:30:00] fix: date formatting in timetable parser
+- [2026-03-12T14:00:00] fix: OCR parsing fails on rotated timetable images
