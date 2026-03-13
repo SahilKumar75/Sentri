@@ -32,3 +32,4 @@
 - [2026-03-12T14:00:00] fix: OCR parsing fails on rotated timetable images
 - [2026-03-12T16:30:00] chore: remove deprecated SharedPreferences calls
 - [2026-03-13T09:00:00] feat: deep link support for notice board
+- [2026-03-13T12:20:00] feat: deep link support for notice board
