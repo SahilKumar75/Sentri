@@ -34,3 +34,4 @@
 - [2026-03-13T09:00:00] feat: deep link support for notice board
 - [2026-03-13T12:20:00] feat: deep link support for notice board
 - [2026-03-13T15:40:00] feat: deep link support for notice board
+- [2026-03-14T10:00:00] fix: campus map tile loading on slow networks
