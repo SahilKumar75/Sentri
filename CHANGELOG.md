@@ -38,3 +38,4 @@
 - [2026-03-16T09:00:00] feat: deep link support for notice board
 - [2026-03-16T14:00:00] refactor: room database migration v3 to v4
 - [2026-03-17T09:00:00] fix: date formatting in timetable parser
+- [2026-03-17T12:20:00] fix: null pointer in dashboard fragment
