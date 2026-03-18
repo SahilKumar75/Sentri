@@ -40,3 +40,4 @@
 - [2026-03-17T09:00:00] fix: date formatting in timetable parser
 - [2026-03-17T12:20:00] fix: null pointer in dashboard fragment
 - [2026-03-17T15:40:00] feat: add attendance tracker widget
+- [2026-03-18T09:00:00] fix: OCR parsing fails on rotated timetable images
