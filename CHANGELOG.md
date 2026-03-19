@@ -45,3 +45,4 @@
 - [2026-03-18T14:00:00] refactor: room database migration v3 to v4
 - [2026-03-18T16:30:00] chore: remove deprecated SharedPreferences calls
 - [2026-03-19T09:00:00] feat: offline mode for cached timetable
+- [2026-03-19T12:20:00] fix: null pointer in dashboard fragment
