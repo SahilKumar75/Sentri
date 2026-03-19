@@ -44,3 +44,4 @@
 - [2026-03-18T11:30:00] refactor: migrate auth flow to JWT
 - [2026-03-18T14:00:00] refactor: room database migration v3 to v4
 - [2026-03-18T16:30:00] chore: remove deprecated SharedPreferences calls
+- [2026-03-19T09:00:00] feat: offline mode for cached timetable
