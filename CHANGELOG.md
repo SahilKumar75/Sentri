@@ -47,3 +47,4 @@
 - [2026-03-19T09:00:00] feat: offline mode for cached timetable
 - [2026-03-19T12:20:00] fix: null pointer in dashboard fragment
 - [2026-03-19T15:40:00] fix: crash on empty exam schedule response
+- [2026-03-20T09:00:00] fix: campus map tile loading on slow networks
