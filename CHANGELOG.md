@@ -49,3 +49,4 @@
 - [2026-03-19T15:40:00] fix: crash on empty exam schedule response
 - [2026-03-20T09:00:00] fix: campus map tile loading on slow networks
 - [2026-03-20T14:00:00] fix: date formatting in timetable parser
+- [2026-03-21T10:00:00] refactor: split CourseRepository from ViewModel
