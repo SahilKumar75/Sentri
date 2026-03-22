@@ -50,3 +50,4 @@
 - [2026-03-20T09:00:00] fix: campus map tile loading on slow networks
 - [2026-03-20T14:00:00] fix: date formatting in timetable parser
 - [2026-03-21T10:00:00] refactor: split CourseRepository from ViewModel
+- [2026-03-22T10:00:00] chore: update Android target SDK to 35
