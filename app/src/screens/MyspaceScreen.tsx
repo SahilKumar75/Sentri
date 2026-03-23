@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -9,8 +10,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { theme as sharedTheme } from '../design/tokens';
-
+import { AvatarButton } from '../components/sentri-ui';
+import { theme } from '../design/tokens';
 import {
   captureOptions,
   savedItems,
@@ -20,223 +21,184 @@ import {
   type SavedItem,
 } from './myspace/data';
 
-type MyspaceScreenState = 'ready' | 'loading' | 'error' | 'empty' | 'success';
-
-const theme = {
-  background: sharedTheme.colors.background,
-  surface: sharedTheme.colors.surface,
-  surfaceMuted: sharedTheme.colors.surfaceAlt,
-  foreground: sharedTheme.colors.text,
-  secondary: sharedTheme.colors.textSoft,
-  accent: sharedTheme.colors.accent,
-  accentMuted: sharedTheme.colors.accentSoft,
-  accentDeep: sharedTheme.colors.accentStrong,
-  sky: sharedTheme.colors.blue,
-  skyMuted: sharedTheme.colors.blueSoft,
-  mint: sharedTheme.colors.mint,
-  mintMuted: sharedTheme.colors.mintSoft,
-  rose: sharedTheme.colors.rose,
-  roseMuted: sharedTheme.colors.roseSoft,
-  sandMuted: '#F3E6D2',
-  line: sharedTheme.colors.line,
-  shadow: 'rgba(38, 18, 7, 0.08)',
+type MyspaceScreenProps = {
+  onOpenDrawer: () => void;
+  avatarLabel: string;
 };
 
-const accentMap = {
-  sand: {
-    backgroundColor: theme.sandMuted,
-    strip: '#D9C19A',
-  },
-  sky: {
-    backgroundColor: theme.skyMuted,
-    strip: theme.sky,
-  },
-  mint: {
-    backgroundColor: theme.mintMuted,
-    strip: theme.mint,
-  },
-  rose: {
-    backgroundColor: theme.roseMuted,
-    strip: theme.rose,
-  },
-  ink: {
-    backgroundColor: '#EEE8DE',
-    strip: '#40362B',
-  },
+const noteTones = {
+  sand: { backgroundColor: '#F2E7D4', pin: '#D2B684' },
+  sky: { backgroundColor: '#DFE7FF', pin: '#4E72F5' },
+  mint: { backgroundColor: '#DCEDE6', pin: '#4B8B79' },
+  rose: { backgroundColor: '#F6E1E5', pin: '#BA6A73' },
+  ink: { backgroundColor: '#EAE4DD', pin: '#423A33' },
 } as const;
 
-export default function MyspaceScreen() {
+export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScreenProps) {
   const [query, setQuery] = useState('');
   const [subject, setSubject] = useState('All');
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
-  const [screenState] = useState<MyspaceScreenState>('ready');
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const filteredItems = searchSavedItems(savedItems, query, subject);
+  const filteredItems = useMemo(
+    () => searchSavedItems(savedItems, query, subject),
+    [query, subject]
+  );
   const pinnedItems = filteredItems.filter((item) => item.pinned);
-  const recentItems = filteredItems.filter((item) => !item.pinned);
-  const suggestedItems = filteredItems.filter((item) => item.featured);
-  const gridColumns = splitIntoColumns(recentItems);
-
-  if (screenState !== 'ready') {
-    return <MyspaceStatePanel state={screenState} />;
-  }
+  const libraryItems = filteredItems.filter((item) => !item.pinned);
+  const columns = splitIntoColumns(libraryItems);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.kicker}>Myspace</Text>
-            <Text style={styles.title}>Search what you saved</Text>
-            <Text style={styles.subtitle}>
-              A calm capture space for screenshots, links, notes, files, and board photos.
-            </Text>
-          </View>
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeValue}>{filteredItems.length}</Text>
-            <Text style={styles.headerBadgeLabel}>saved</Text>
+        <View style={styles.topRow}>
+          <AvatarButton onPress={onOpenDrawer} label={avatarLabel} />
+          <View style={styles.searchShell}>
+            <Ionicons name="search" size={18} color={theme.colors.textMuted} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search blackboard, DBMS, math, date..."
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.searchInput}
+              returnKeyType="search"
+            />
           </View>
         </View>
 
-        <View style={styles.searchCard}>
-          <TextInput
-            placeholder="Search blackboard, DBMS, interview, math, date..."
-            placeholderTextColor={theme.secondary}
-            value={query}
-            onChangeText={setQuery}
-            style={styles.searchInput}
-            returnKeyType="search"
-          />
-          <Text style={styles.searchHint}>
-            Search by OCR text, subject, source, date, or the thing you remember first.
+        <View style={styles.headerCopy}>
+          <Text style={styles.kicker}>Myspace</Text>
+          <Text style={styles.title}>Everything you saved, easier to find.</Text>
+          <Text style={styles.subtitle}>
+            Search OCR text, subject, source, date, or the thing you remember first.
           </Text>
         </View>
 
-        <View style={styles.chipsWrap}>
-          {subjectChips.map((chip) => (
-            <SubjectChip
-              key={chip}
-              label={chip}
-              active={chip === subject}
-              onPress={() => setSubject(chip)}
-            />
-          ))}
-        </View>
+        {statusMessage ? (
+          <View style={styles.statusBanner}>
+            <Text style={styles.statusBannerText}>{statusMessage}</Text>
+          </View>
+        ) : null}
 
-        <View style={styles.summaryRow}>
-          <SummaryPill label="Pinned" value={pinnedItems.length.toString()} />
-          <SummaryPill label="Recent" value={recentItems.length.toString()} />
-          <SummaryPill label="Surfacing" value={suggestedItems.length.toString()} />
-        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+        >
+          {subjectChips.map((chip) => {
+            const active = chip === subject;
+            return (
+              <Pressable
+                key={chip}
+                onPress={() => setSubject(chip)}
+                style={[styles.chip, active && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{chip}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
-        {pinnedItems.length > 0 && (
-          <Section title="Pinned" action="Keep close">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pinnedRow}>
+        {pinnedItems.length ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Pinned</Text>
+              <Text style={styles.sectionMeta}>Quick recall</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.pinnedRow}
+            >
               {pinnedItems.map((item) => (
-                <PillCard key={item.id} item={item} onPress={() => setSelectedItem(item)} />
+                <PinnedCard key={item.id} item={item} onPress={() => setSelectedItem(item)} />
               ))}
             </ScrollView>
-          </Section>
-        )}
-
-        <Section title={query ? 'Search results' : 'Recent items'} action={query ? 'Refined by search' : 'Latest capture'}>
-          <View style={styles.grid}>
-            <View style={styles.column}>{gridColumns[0].map((item) => <TileCard key={item.id} item={item} query={query} onPress={() => setSelectedItem(item)} />)}</View>
-            <View style={styles.column}>{gridColumns[1].map((item) => <TileCard key={item.id} item={item} query={query} onPress={() => setSelectedItem(item)} />)}</View>
           </View>
-        </Section>
+        ) : null}
 
-        <Section title="Suggested resurfacing" action="Useful today">
-          {suggestedItems.slice(0, 3).map((item) => (
-            <ResurfaceRow key={item.id} item={item} onPress={() => setSelectedItem(item)} />
-          ))}
-        </Section>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{query ? 'Results' : 'Board'}</Text>
+            <Text style={styles.sectionMeta}>{filteredItems.length} notes</Text>
+          </View>
 
-        {filteredItems.length === 0 && (
-          <EmptyState
-            title="Nothing matched yet"
-            description="Try a different subject chip, a board phrase, a date, or an OCR keyword from the saved image."
-          />
-        )}
+          {filteredItems.length ? (
+            <View style={styles.masonry}>
+              <View style={styles.column}>
+                {columns[0].map((item) => (
+                  <NoteCard key={item.id} item={item} query={query} onPress={() => setSelectedItem(item)} />
+                ))}
+              </View>
+              <View style={styles.column}>
+                {columns[1].map((item) => (
+                  <NoteCard key={item.id} item={item} query={query} onPress={() => setSelectedItem(item)} />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Nothing matched yet</Text>
+              <Text style={styles.emptyBody}>
+                Try a board phrase, a subject chip, a date, or an OCR keyword from the saved image.
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
-      <Pressable onPress={() => setAddSheetOpen(true)} style={styles.fab} accessibilityRole="button">
-        <Text style={styles.fabPlus}>+</Text>
+      <Pressable
+        onPress={() => setAddSheetOpen(true)}
+        style={styles.fab}
+        accessibilityRole="button"
+        accessibilityLabel="Add to Myspace"
+      >
+        <Ionicons name="add" size={26} color="#FFF9F5" />
       </Pressable>
 
-      <AddSheet open={addSheetOpen} onClose={() => setAddSheetOpen(false)} />
-      <DetailSheet item={selectedItem} query={query} onClose={() => setSelectedItem(null)} />
-    </SafeAreaView>
-  );
-}
-
-function Section({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionAction}>{action}</Text>
-      </View>
-      {children}
+      <AddSheet
+        open={addSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        onSelectOption={(option) => {
+          setAddSheetOpen(false);
+          setStatusMessage(`${option.label} capture staged for Myspace`);
+        }}
+      />
+      <DetailSheet
+        item={selectedItem}
+        query={query}
+        onClose={() => setSelectedItem(null)}
+        onAction={(action, item) => {
+          setStatusMessage(`${action} ready for ${item.title}`);
+          if (action === 'Copy' || action === 'Share') {
+            setSelectedItem(null);
+          }
+        }}
+      />
     </View>
   );
 }
 
-function SubjectChip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function SummaryPill({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.summaryPill}>
-      <Text style={styles.summaryValue}>{value}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function PillCard({ item, onPress }: { item: SavedItem; onPress: () => void }) {
-  const accent = accentMap[item.accent];
+function PinnedCard({ item, onPress }: { item: SavedItem; onPress: () => void }) {
+  const tone = noteTones[item.accent];
 
   return (
-    <Pressable onPress={onPress} style={[styles.pillCard, { backgroundColor: accent.backgroundColor }]}>
-      <View style={[styles.pillStrip, { backgroundColor: accent.strip }]} />
-      <Text style={styles.pillSubject}>{item.subject}</Text>
-      <Text style={styles.pillTitle} numberOfLines={2}>
+    <Pressable onPress={onPress} style={[styles.pinnedCard, { backgroundColor: tone.backgroundColor }]}>
+      <View style={[styles.notePin, { backgroundColor: tone.pin }]} />
+      <Text style={styles.noteSubject}>{item.subject}</Text>
+      <Text style={styles.pinnedTitle} numberOfLines={2}>
         {item.title}
       </Text>
-      <Text style={styles.pillBody} numberOfLines={3}>
+      <Text style={styles.pinnedBody} numberOfLines={3}>
         {item.body}
       </Text>
-      <Text style={styles.pillMeta}>
-        {item.source} · {item.dateLabel}
-      </Text>
+      <Text style={styles.noteMeta}>{item.source}</Text>
     </Pressable>
   );
 }
 
-function TileCard({
+function NoteCard({
   item,
   query,
   onPress,
@@ -245,119 +207,65 @@ function TileCard({
   query: string;
   onPress: () => void;
 }) {
-  const accent = accentMap[item.accent];
-  const matchLabel = getMatchLabel(item, query);
+  const tone = noteTones[item.accent];
 
   return (
-    <Pressable onPress={onPress} style={[styles.tileCard, { backgroundColor: accent.backgroundColor }]}>
-      <View style={[styles.tileStrip, { backgroundColor: accent.strip }]} />
-      <View style={styles.tileTopRow}>
-        <Text style={styles.tileKind}>{item.kind.toUpperCase()}</Text>
-        {item.pinned ? <Text style={styles.tilePinned}>PINNED</Text> : null}
+    <Pressable onPress={onPress} style={[styles.noteCard, { backgroundColor: tone.backgroundColor }]}>
+      <View style={[styles.notePin, { backgroundColor: tone.pin }]} />
+      <Text style={styles.noteTitle}>{item.title}</Text>
+      <Text style={styles.noteBody}>{item.body}</Text>
+      <View style={styles.noteFooter}>
+        <Text style={styles.noteMeta}>{item.subject}</Text>
+        <Text style={styles.noteMeta}>{item.dateLabel}</Text>
       </View>
-      <Text style={styles.tileTitle}>{item.title}</Text>
-      <Text style={styles.tileBody} numberOfLines={4}>
-        {item.body}
-      </Text>
-      <View style={styles.tileFooter}>
-        <Text style={styles.tileMeta}>{item.subject}</Text>
-        <Text style={styles.tileMeta}>{item.dateLabel}</Text>
-      </View>
-      <Text style={styles.tileMatch}>{matchLabel}</Text>
+      <Text style={styles.matchText}>{getMatchLabel(item, query)}</Text>
     </Pressable>
   );
 }
 
-function ResurfaceRow({ item, onPress }: { item: SavedItem; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={styles.resurfaceRow}>
-      <View style={styles.resurfaceDot} />
-      <View style={styles.resurfaceText}>
-        <Text style={styles.resurfaceTitle}>{item.title}</Text>
-        <Text style={styles.resurfaceMeta}>
-          {item.subject} · {item.source} · {item.dateLabel}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function EmptyState({ title, description }: { title: string; description: string }) {
-  return (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyBody}>{description}</Text>
-    </View>
-  );
-}
-
-function MyspaceStatePanel({ state }: { state: Exclude<MyspaceScreenState, 'ready'> }) {
-  const copy = {
-    loading: {
-      title: 'Searching your memory',
-      body: 'Sentri is indexing your saved screenshots, files, links, and OCR text.',
-    },
-    error: {
-      title: 'Could not load Myspace',
-      body: 'Try again after reconnecting or retry the last import.',
-    },
-    empty: {
-      title: 'Nothing saved yet',
-      body: 'Use the plus button to add a screenshot, note, file, or link into Myspace.',
-    },
-    success: {
-      title: 'Saved to Myspace',
-      body: 'Your latest item is indexed and ready for dynamic search.',
-    },
-  } as const;
-
-  const content = copy[state];
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.statePanel}>
-        <Text style={styles.kicker}>Myspace</Text>
-        <Text style={styles.title}>{content.title}</Text>
-        <Text style={styles.subtitle}>{content.body}</Text>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-function AddSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AddSheet({
+  open,
+  onClose,
+  onSelectOption,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSelectOption: (option: CaptureOption) => void;
+}) {
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.sheetBackdrop} onPress={onClose} />
-      <View style={styles.sheet}>
-        <Text style={styles.sheetKicker}>Capture</Text>
-        <Text style={styles.sheetTitle}>What do you want to save?</Text>
-        <Text style={styles.sheetBody}>
-          Add from share sheet, camera, files, or a quick note. Sentri can sort it out later.
-        </Text>
-        <View style={styles.optionList}>
-          {captureOptions.map((option) => (
-            <CaptureOptionRow key={option.id} option={option} />
-          ))}
-        </View>
-        <Pressable onPress={onClose} style={styles.closeButton}>
-          <Text style={styles.closeButtonText}>Close</Text>
-        </Pressable>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={styles.modalScrim} onPress={onClose} />
+        <SafeAreaView style={styles.sheetSafeArea}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetKicker}>Add to Myspace</Text>
+            <Text style={styles.sheetTitle}>What do you want to save?</Text>
+            <View style={styles.sheetOptions}>
+              {captureOptions.map((option) => (
+                <CaptureRow key={option.id} option={option} onPress={() => onSelectOption(option)} />
+              ))}
+            </View>
+            <Pressable onPress={onClose} style={styles.sheetClose}>
+              <Text style={styles.sheetCloseText}>Close</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
       </View>
     </Modal>
   );
 }
 
-function CaptureOptionRow({ option }: { option: CaptureOption }) {
+function CaptureRow({ option, onPress }: { option: CaptureOption; onPress: () => void }) {
   return (
-    <Pressable style={styles.captureRow}>
+    <Pressable style={styles.captureRow} onPress={onPress}>
       <View style={styles.captureIcon}>
-        <Text style={styles.captureIconText}>{option.symbol.slice(0, 1).toUpperCase()}</Text>
+        <Ionicons name={symbolToIcon(option.symbol)} size={18} color={theme.colors.accentStrong} />
       </View>
       <View style={styles.captureText}>
         <Text style={styles.captureTitle}>{option.label}</Text>
         <Text style={styles.captureHint}>{option.hint}</Text>
       </View>
-      <Text style={styles.captureArrow}>Add</Text>
+      <Text style={styles.captureAction}>Add</Text>
     </Pressable>
   );
 }
@@ -366,58 +274,58 @@ function DetailSheet({
   item,
   query,
   onClose,
+  onAction,
 }: {
   item: SavedItem | null;
   query: string;
   onClose: () => void;
+  onAction: (action: 'Copy' | 'Share', item: SavedItem) => void;
 }) {
   if (!item) {
     return null;
   }
 
-  const accent = accentMap[item.accent];
-  const matchLabel = getMatchLabel(item, query);
-
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.sheetBackdrop} onPress={onClose} />
-      <View style={styles.detailSheet}>
-        <View style={[styles.detailAccent, { backgroundColor: accent.strip }]} />
-        <Text style={styles.detailKicker}>{item.subject}</Text>
-        <Text style={styles.detailTitle}>{item.title}</Text>
-        <Text style={styles.detailBody}>{item.body}</Text>
-        <View style={styles.detailMetaRow}>
-          <MetaPill label={item.kind} />
-          <MetaPill label={item.source} />
-          <MetaPill label={item.dateLabel} />
-        </View>
-        <Text style={styles.detailMatch}>{matchLabel}</Text>
-        <View style={styles.detailActions}>
-          <ActionButton label="Copy" />
-          <ActionButton label="Share" filled />
-          <ActionButton label={item.pinned ? 'Pinned' : 'Pin'} />
-        </View>
-        <Pressable onPress={onClose} style={styles.closeButton}>
-          <Text style={styles.closeButtonText}>Done</Text>
-        </Pressable>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={styles.modalScrim} onPress={onClose} />
+        <SafeAreaView style={styles.sheetSafeArea}>
+          <View style={styles.detailSheet}>
+            <Text style={styles.sheetKicker}>{item.subject}</Text>
+            <Text style={styles.detailTitle}>{item.title}</Text>
+            <Text style={styles.detailBody}>{item.body}</Text>
+            <View style={styles.detailMetaRow}>
+              <MetaChip label={item.kind} />
+              <MetaChip label={item.source} />
+              <MetaChip label={item.dateLabel} />
+            </View>
+            <Text style={styles.detailMatch}>{getMatchLabel(item, query)}</Text>
+            <View style={styles.detailActions}>
+              <Pressable style={styles.detailAction} onPress={() => onAction('Copy', item)}>
+                <Text style={styles.detailActionText}>Copy</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.detailAction, styles.detailActionFilled]}
+                onPress={() => onAction('Share', item)}
+              >
+                <Text style={[styles.detailActionText, styles.detailActionTextFilled]}>Share</Text>
+              </Pressable>
+            </View>
+            <Pressable onPress={onClose} style={styles.sheetClose}>
+              <Text style={styles.sheetCloseText}>Done</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
       </View>
     </Modal>
   );
 }
 
-function MetaPill({ label }: { label: string }) {
+function MetaChip({ label }: { label: string }) {
   return (
-    <View style={styles.metaPill}>
-      <Text style={styles.metaPillText}>{label}</Text>
+    <View style={styles.metaChip}>
+      <Text style={styles.metaChipText}>{label}</Text>
     </View>
-  );
-}
-
-function ActionButton({ label, filled = false }: { label: string; filled?: boolean }) {
-  return (
-    <Pressable style={[styles.actionButton, filled && styles.actionButtonFilled]}>
-      <Text style={[styles.actionButtonText, filled && styles.actionButtonTextFilled]}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -439,188 +347,138 @@ function splitIntoColumns(items: SavedItem[]) {
 function getMatchLabel(item: SavedItem, query: string) {
   const normalized = query.trim().toLowerCase();
   if (!normalized) {
-    return item.featured ? 'Suggested from recent context' : 'Recently captured';
+    return item.featured ? 'Suggested from recent context' : 'Search by date, OCR, or subject';
   }
 
   const tokens = normalized.split(/\s+/).filter(Boolean);
   const ocrText = (item.ocrText ?? '').toLowerCase();
 
-  if (tokens.some((token) => item.title.toLowerCase().includes(token))) {
-    return 'Matched title';
-  }
-  if (tokens.some((token) => item.subject.toLowerCase().includes(token))) {
-    return 'Matched subject';
-  }
-  if (tokens.some((token) => item.source.toLowerCase().includes(token))) {
-    return 'Matched source';
-  }
-  if (tokens.some((token) => ocrText.includes(token))) {
-    return 'Matched OCR text';
-  }
-  if (tokens.some((token) => item.tags.some((tag) => tag.toLowerCase().includes(token)))) {
-    return 'Matched tag';
-  }
+  if (tokens.some((token) => item.title.toLowerCase().includes(token))) return 'Matched title';
+  if (tokens.some((token) => item.subject.toLowerCase().includes(token))) return 'Matched subject';
+  if (tokens.some((token) => item.source.toLowerCase().includes(token))) return 'Matched source';
+  if (tokens.some((token) => item.dateLabel.toLowerCase().includes(token))) return 'Matched date';
+  if (tokens.some((token) => ocrText.includes(token))) return 'Matched OCR text';
+  if (tokens.some((token) => item.tags.some((tag) => tag.toLowerCase().includes(token)))) return 'Matched tag';
 
   return 'Matched by context';
 }
 
+function symbolToIcon(symbol: string): keyof typeof Ionicons.glyphMap {
+  if (symbol === 'link') return 'link-outline';
+  if (symbol === 'doc') return 'document-outline';
+  if (symbol === 'note.text') return 'create-outline';
+  if (symbol === 'rectangle.on.rectangle') return 'copy-outline';
+  return 'image-outline';
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
-    backgroundColor: theme.background,
-  },
-  statePanel: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    gap: 10,
+    backgroundColor: theme.colors.background,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 160,
+    paddingHorizontal: theme.chrome.horizontalPadding,
+    paddingTop: theme.chrome.topPadding,
+    paddingBottom: theme.chrome.screenBottomInset,
   },
-  header: {
+  topRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchShell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    ...theme.shadow.soft,
+  },
+  searchInput: {
+    flex: 1,
+    color: theme.colors.text,
+    fontSize: 15,
+  },
+  headerCopy: {
+    marginTop: 18,
+    gap: 4,
   },
   kicker: {
-    color: theme.accentDeep,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+    color: theme.colors.accentStrong,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.9,
     textTransform: 'uppercase',
   },
   title: {
-    marginTop: 6,
-    color: theme.foreground,
-    fontSize: 30,
+    color: theme.colors.text,
+    fontSize: 28,
     fontWeight: '800',
-    lineHeight: 36,
+    lineHeight: 34,
   },
   subtitle: {
-    marginTop: 6,
-    maxWidth: 260,
-    color: theme.secondary,
+    color: theme.colors.textSoft,
     fontSize: 14,
     lineHeight: 20,
   },
-  headerBadge: {
-    minWidth: 72,
-    borderRadius: 22,
-    backgroundColor: theme.surface,
-    borderWidth: 1,
-    borderColor: theme.line,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-  },
-  headerBadgeValue: {
-    color: theme.foreground,
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  headerBadgeLabel: {
-    marginTop: 4,
-    color: theme.secondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  searchCard: {
-    borderRadius: 26,
-    backgroundColor: theme.surface,
-    borderWidth: 1,
-    borderColor: theme.line,
-    padding: 14,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 8,
-  },
-  searchInput: {
-    backgroundColor: theme.background,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: theme.line,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: theme.foreground,
-    fontSize: 15,
-  },
-  searchHint: {
-    marginTop: 10,
-    color: theme.secondary,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  chipsWrap: {
+  statusBanner: {
     marginTop: 14,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  statusBannerText: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  chipRow: {
+    marginTop: 16,
     gap: 8,
+    paddingRight: 4,
   },
   chip: {
     borderRadius: 999,
-    backgroundColor: theme.surface,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.line,
+    borderColor: theme.colors.line,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   chipActive: {
-    backgroundColor: theme.foreground,
-    borderColor: theme.foreground,
+    backgroundColor: theme.colors.surfaceStrong,
+    borderColor: theme.colors.surfaceStrong,
   },
   chipText: {
-    color: theme.secondary,
+    color: theme.colors.textSoft,
     fontSize: 13,
     fontWeight: '700',
   },
   chipTextActive: {
-    color: '#FFF6EF',
-  },
-  summaryRow: {
-    marginTop: 14,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  summaryPill: {
-    flex: 1,
-    borderRadius: 22,
-    backgroundColor: theme.surfaceMuted,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  summaryValue: {
-    color: theme.foreground,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  summaryLabel: {
-    marginTop: 4,
-    color: theme.secondary,
-    fontSize: 12,
-    fontWeight: '600',
+    color: theme.colors.surface,
   },
   section: {
-    marginTop: 18,
+    marginTop: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   sectionTitle: {
-    color: theme.foreground,
-    fontSize: 20,
+    color: theme.colors.text,
+    fontSize: 21,
     fontWeight: '800',
   },
-  sectionAction: {
-    color: theme.accentDeep,
+  sectionMeta: {
+    color: theme.colors.textSoft,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -628,47 +486,14 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingRight: 4,
   },
-  pillCard: {
-    width: 238,
-    borderRadius: 24,
+  pinnedCard: {
+    width: 220,
+    borderRadius: 22,
     padding: 14,
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.04)',
   },
-  pillStrip: {
-    height: 6,
-    width: 56,
-    borderRadius: 999,
-    marginBottom: 12,
-  },
-  pillSubject: {
-    color: theme.secondary,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  pillTitle: {
-    marginTop: 8,
-    color: theme.foreground,
-    fontSize: 17,
-    fontWeight: '800',
-    lineHeight: 22,
-  },
-  pillBody: {
-    marginTop: 8,
-    color: theme.secondary,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  pillMeta: {
-    marginTop: 12,
-    color: theme.accentDeep,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  grid: {
+  masonry: {
     flexDirection: 'row',
     gap: 12,
   },
@@ -676,265 +501,197 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 12,
   },
-  tileCard: {
-    borderRadius: 24,
+  noteCard: {
+    borderRadius: 20,
     padding: 14,
-    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
-  tileStrip: {
-    width: 46,
+  notePin: {
+    width: 52,
     height: 6,
     borderRadius: 999,
     marginBottom: 12,
   },
-  tileTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tileKind: {
-    color: theme.secondary,
+  noteSubject: {
+    color: theme.colors.textSoft,
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.9,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  tilePinned: {
-    color: theme.accentDeep,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  tileTitle: {
-    marginTop: 8,
-    color: theme.foreground,
-    fontSize: 17,
+  pinnedTitle: {
+    marginTop: 6,
+    color: theme.colors.text,
+    fontSize: 18,
     fontWeight: '800',
     lineHeight: 22,
   },
-  tileBody: {
+  pinnedBody: {
     marginTop: 8,
-    color: theme.secondary,
-    fontSize: 13,
+    color: theme.colors.textSoft,
+    fontSize: 14,
     lineHeight: 19,
   },
-  tileFooter: {
+  noteTitle: {
+    color: theme.colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 23,
+  },
+  noteBody: {
+    marginTop: 8,
+    color: theme.colors.textSoft,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  noteFooter: {
     marginTop: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  tileMeta: {
-    color: theme.accentDeep,
+  noteMeta: {
+    color: theme.colors.textSoft,
     fontSize: 12,
     fontWeight: '700',
   },
-  tileMatch: {
+  matchText: {
     marginTop: 10,
-    color: theme.secondary,
+    color: theme.colors.accentStrong,
     fontSize: 12,
-    fontStyle: 'italic',
+    fontWeight: '700',
   },
-  resurfaceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.surface,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.line,
-    padding: 14,
-    marginBottom: 10,
-  },
-  resurfaceDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 999,
-    backgroundColor: theme.accent,
-    marginRight: 12,
-  },
-  resurfaceText: {
-    flex: 1,
-  },
-  resurfaceTitle: {
-    color: theme.foreground,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  resurfaceMeta: {
-    marginTop: 4,
-    color: theme.secondary,
-    fontSize: 12,
-  },
-  emptyState: {
-    marginTop: 18,
+  emptyCard: {
+    backgroundColor: theme.colors.surface,
     borderRadius: 24,
-    backgroundColor: theme.surfaceMuted,
     borderWidth: 1,
-    borderColor: theme.line,
+    borderColor: theme.colors.line,
     padding: 18,
   },
   emptyTitle: {
-    color: theme.foreground,
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: '800',
   },
   emptyBody: {
     marginTop: 6,
-    color: theme.secondary,
-    fontSize: 13,
-    lineHeight: 19,
+    color: theme.colors.textSoft,
+    fontSize: 14,
+    lineHeight: 20,
   },
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 28,
-    width: 62,
-    height: 62,
-    borderRadius: 20,
-    backgroundColor: theme.accent,
+    bottom: 104,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 10,
+    ...theme.shadow.strong,
   },
-  fabPlus: {
-    color: '#FFF6EF',
-    fontSize: 32,
-    fontWeight: '700',
-    lineHeight: 32,
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 13, 10, 0.18)',
+    justifyContent: 'flex-end',
   },
-  sheetBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(12, 8, 6, 0.32)',
-  },
-  sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: theme.surface,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 24,
-  },
-  sheetKicker: {
-    color: theme.accentDeep,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-  },
-  sheetTitle: {
-    marginTop: 6,
-    color: theme.foreground,
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  sheetBody: {
-    marginTop: 6,
-    color: theme.secondary,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  optionList: {
-    marginTop: 16,
-    gap: 10,
-  },
-  captureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 20,
-    backgroundColor: theme.background,
-    borderWidth: 1,
-    borderColor: theme.line,
-    padding: 14,
-  },
-  captureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: theme.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  captureIconText: {
-    color: theme.foreground,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  captureText: {
+  modalScrim: {
     flex: 1,
   },
-  captureTitle: {
-    color: theme.foreground,
-    fontSize: 15,
-    fontWeight: '800',
+  sheetSafeArea: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
-  captureHint: {
-    marginTop: 3,
-    color: theme.secondary,
-    fontSize: 12,
+  sheet: {
+    borderRadius: 28,
+    backgroundColor: theme.colors.surface,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    ...theme.shadow.strong,
   },
-  captureArrow: {
-    color: theme.accentDeep,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  closeButton: {
-    marginTop: 16,
-    borderRadius: 18,
-    backgroundColor: theme.foreground,
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  closeButtonText: {
-    color: '#FFF6EF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  detailSheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: theme.surface,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 24,
-  },
-  detailAccent: {
-    width: 58,
-    height: 6,
-    borderRadius: 999,
-    marginBottom: 14,
-  },
-  detailKicker: {
-    color: theme.secondary,
+  sheetKicker: {
+    color: theme.colors.accentStrong,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
+  sheetTitle: {
+    marginTop: 6,
+    color: theme.colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  sheetOptions: {
+    marginTop: 14,
+    gap: 10,
+  },
+  captureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  captureIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: theme.colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  captureText: {
+    flex: 1,
+  },
+  captureTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  captureHint: {
+    marginTop: 2,
+    color: theme.colors.textSoft,
+    fontSize: 13,
+  },
+  captureAction: {
+    color: theme.colors.accentStrong,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  sheetClose: {
+    marginTop: 14,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  sheetCloseText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  detailSheet: {
+    borderRadius: 28,
+    backgroundColor: theme.colors.surface,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    ...theme.shadow.strong,
+  },
   detailTitle: {
     marginTop: 6,
-    color: theme.foreground,
-    fontSize: 24,
+    color: theme.colors.text,
+    fontSize: 22,
     fontWeight: '800',
-    lineHeight: 30,
   },
   detailBody: {
-    marginTop: 8,
-    color: theme.secondary,
-    fontSize: 14,
-    lineHeight: 20,
+    marginTop: 10,
+    color: theme.colors.textSoft,
+    fontSize: 15,
+    lineHeight: 22,
   },
   detailMetaRow: {
     marginTop: 14,
@@ -942,20 +699,20 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  metaPill: {
+  metaChip: {
     borderRadius: 999,
-    backgroundColor: theme.surfaceMuted,
+    backgroundColor: theme.colors.surfaceAlt,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  metaPillText: {
-    color: theme.foreground,
+  metaChipText: {
+    color: theme.colors.text,
     fontSize: 12,
     fontWeight: '700',
   },
   detailMatch: {
     marginTop: 12,
-    color: theme.accentDeep,
+    color: theme.colors.accentStrong,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -964,25 +721,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  actionButton: {
+  detailAction: {
     flex: 1,
     borderRadius: 18,
-    backgroundColor: theme.background,
-    borderWidth: 1,
-    borderColor: theme.line,
+    backgroundColor: theme.colors.surfaceAlt,
     alignItems: 'center',
-    paddingVertical: 13,
+    justifyContent: 'center',
+    paddingVertical: 12,
   },
-  actionButtonFilled: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
+  detailActionFilled: {
+    backgroundColor: theme.colors.accent,
   },
-  actionButtonText: {
-    color: theme.foreground,
-    fontSize: 13,
-    fontWeight: '800',
+  detailActionText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
-  actionButtonTextFilled: {
-    color: '#FFF6EF',
+  detailActionTextFilled: {
+    color: '#FFF9F5',
   },
 });

@@ -1,15 +1,13 @@
-import React from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type ViewStyle,
-} from 'react-native';
-import { theme as sharedTheme } from '../design/tokens';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AvatarButton } from '../components/sentri-ui';
+import { theme } from '../design/tokens';
 
-type HangoutScreenState = 'ready' | 'loading' | 'error' | 'empty' | 'success';
+type HangoutScreenProps = {
+  onOpenDrawer: () => void;
+  avatarLabel: string;
+};
 
 type Friend = {
   name: string;
@@ -17,481 +15,404 @@ type Friend = {
   note: string;
 };
 
-type RoomPreview = {
+type Room = {
   name: string;
   time: string;
-  audience: string;
-  tone: 'orange' | 'blue' | 'green';
+  invited: string;
 };
 
-const theme = {
-  background: sharedTheme.colors.background,
-  surface: sharedTheme.colors.surface,
-  surfaceMuted: sharedTheme.colors.surfaceAlt,
-  foreground: sharedTheme.colors.text,
-  secondary: sharedTheme.colors.textSoft,
-  accent: sharedTheme.colors.accent,
-  accentDeep: sharedTheme.colors.accentStrong,
-  line: sharedTheme.colors.line,
-  green: sharedTheme.colors.green,
-  greenSoft: sharedTheme.colors.greenSoft,
-  blue: sharedTheme.colors.blue,
-  blueSoft: sharedTheme.colors.blueSoft,
-  shadow: 'rgba(34, 18, 9, 0.08)',
-};
+const rooms: Room[] = [
+  { name: 'DBMS Revision Room', time: 'Today • 8:30 PM', invited: '5 invited' },
+  { name: 'Friday Movie Room', time: 'Friday • 9:00 PM', invited: '12 invited' },
+  { name: 'Gym Accountability', time: 'Daily • 7:00 AM', invited: '3 invited' },
+];
 
 const friends: Friend[] = [
-  { name: 'Ananya', status: 'online', note: 'Available now' },
-  { name: 'Rohan', status: 'offline', note: 'Back at 7 PM' },
+  { name: 'Ananya', status: 'online', note: 'Free now' },
   { name: 'Isha', status: 'online', note: 'Can join a room' },
-  { name: 'Pranav', status: 'offline', note: 'In class' },
   { name: 'Mehul', status: 'online', note: 'Study room ready' },
+  { name: 'Rohan', status: 'offline', note: 'Back at 7 PM' },
+  { name: 'Pranav', status: 'offline', note: 'In class' },
 ];
 
-const rooms: RoomPreview[] = [
-  { name: 'DBMS Revision Room', time: 'Today, 8:30 PM', audience: '5 invited', tone: 'orange' },
-  { name: 'Friday Movie Room', time: 'Friday, 9:00 PM', audience: '12 invited', tone: 'blue' },
-  { name: 'Gym Accountability', time: 'Daily check-in', audience: '3 invited', tone: 'green' },
-];
-
-export default function HangoutScreen() {
-  const screenState: HangoutScreenState = 'ready';
-
-  if (screenState !== 'ready') {
-    return <HangoutStatePanel state={screenState} />;
-  }
+export default function HangoutScreen({ onOpenDrawer, avatarLabel }: HangoutScreenProps) {
+  const [linkValue, setLinkValue] = useState('sentri.meet/DBMS-REV-84K');
+  const [statusMessage, setStatusMessage] = useState('Room link ready to share.');
 
   return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>Hangout</Text>
-          <Text style={styles.title}>Meet up, share a link, and bring friends in fast.</Text>
-          <Text style={styles.subtitle}>
-            Room-first coordination for students. Start a room, invite friends, and keep the link easy to share.
-          </Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.topRow}>
+        <AvatarButton onPress={onOpenDrawer} label={avatarLabel} />
+        <View style={styles.topCopy}>
+          <Text style={styles.kicker}>Hangout</Text>
+          <Text style={styles.title}>Rooms for calls, study, and watch parties.</Text>
         </View>
-
-        <View style={styles.actionRow}>
-          <ActionButton label="Join room" tone="ghost" />
-          <ActionButton label="Create room" tone="filled" />
-        </View>
-
-        <Card style={styles.linkCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardKicker}>Generated link</Text>
-            <Text style={styles.statusPill}>Ready to share</Text>
-          </View>
-          <Text style={styles.linkTitle}>sentri.meet/DBMS-REV-84K</Text>
-          <Text style={styles.linkBody}>
-            Copy or share this room link with your friends. It is built for quick join flows, not long setup.
-          </Text>
-          <View style={styles.linkActions}>
-            <InlineAction label="Copy link" />
-            <InlineAction label="Share" />
-          </View>
-        </Card>
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Rooms</Text>
-          <Text style={styles.sectionMeta}>Room-first layout</Text>
-        </View>
-        <View style={styles.roomList}>
-          {rooms.map((room) => (
-            <RoomCard key={room.name} room={room} />
-          ))}
-        </View>
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Friends</Text>
-          <Text style={styles.sectionMeta}>Invite and check availability</Text>
-        </View>
-        <View style={styles.friendList}>
-          {friends.map((friend) => (
-            <FriendRow key={friend.name} friend={friend} />
-          ))}
-        </View>
-      </ScrollView>
-    </View>
-  );
-}
-
-function ActionButton({ label, tone }: { label: string; tone: 'filled' | 'ghost' }) {
-  return (
-    <Pressable
-      style={[
-        styles.actionButton,
-        tone === 'filled' ? styles.actionButtonFilled : styles.actionButtonGhost,
-      ]}
-    >
-      <Text style={[styles.actionButtonText, tone === 'filled' && styles.actionButtonTextFilled]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function InlineAction({ label }: { label: string }) {
-  return (
-    <Pressable style={styles.inlineAction}>
-      <Text style={styles.inlineActionText}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function RoomCard({ room }: { room: RoomPreview }) {
-  const tint = roomToneMap[room.tone];
-
-  return (
-    <Card style={styles.roomCard}>
-      <View style={styles.roomTopRow}>
-        <View style={[styles.roomBadge, { backgroundColor: tint.badge }]}>
-          <Text style={[styles.roomBadgeText, { color: tint.text }]}>S</Text>
-        </View>
-        <View style={styles.roomCopy}>
-          <Text style={styles.roomName}>{room.name}</Text>
-          <Text style={styles.roomTime}>{room.time}</Text>
-        </View>
-        <Text style={styles.roomAudience}>{room.audience}</Text>
       </View>
-      <View style={styles.roomFooter}>
-        <Text style={styles.roomFooterText}>Share link ready</Text>
-        <Text style={[styles.roomFooterDot, { color: tint.text }]}>•</Text>
-        <Text style={styles.roomFooterText}>Invite friends</Text>
-      </View>
-    </Card>
-  );
-}
 
-function FriendRow({ friend }: { friend: Friend }) {
-  return (
-    <Card style={styles.friendCard}>
-      <View style={styles.friendRow}>
-        <View style={styles.friendLeft}>
-          <View
-            style={[
-              styles.statusDot,
-              friend.status === 'online' ? styles.statusDotOnline : styles.statusDotOffline,
-            ]}
-          />
-          <View>
-            <Text style={styles.friendName}>{friend.name}</Text>
-            <Text style={styles.friendNote}>{friend.note}</Text>
-          </View>
-        </View>
-        <Pressable style={styles.inviteButton}>
-          <Text style={styles.inviteButtonText}>Invite</Text>
+      <View style={styles.actionRow}>
+        <Pressable
+          style={[styles.actionButton, styles.actionButtonGhost]}
+          onPress={() => setStatusMessage('Join flow staged. Paste the room link next.')}
+        >
+          <Text style={styles.actionGhostText}>Join room</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.actionButton, styles.actionButtonFilled]}
+          onPress={() => {
+            setLinkValue(`sentri.meet/ROOM-${Math.floor(100 + Math.random() * 900)}K`);
+            setStatusMessage('New room created. Share the fresh link below.');
+          }}
+        >
+          <Text style={styles.actionFilledText}>Create room</Text>
         </Pressable>
       </View>
-    </Card>
+
+      <View style={styles.statusBanner}>
+        <Text style={styles.statusBannerText}>{statusMessage}</Text>
+      </View>
+
+      <View style={styles.linkCard}>
+        <View style={styles.linkHeader}>
+          <Text style={styles.linkLabel}>Generated link</Text>
+          <View style={styles.linkStatus}>
+            <Text style={styles.linkStatusText}>Ready to share</Text>
+          </View>
+        </View>
+        <Text style={styles.linkValue}>{linkValue}</Text>
+        <View style={styles.linkActions}>
+          <InlineButton
+            label="Copy link"
+            icon="copy-outline"
+            onPress={() => setStatusMessage(`Copied ${linkValue}`)}
+          />
+          <InlineButton
+            label="Share"
+            icon="share-social-outline"
+            onPress={() => setStatusMessage(`Share sheet prepared for ${linkValue}`)}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Rooms</Text>
+          <Text style={styles.sectionMeta}>Quick access</Text>
+        </View>
+        {rooms.map((room) => (
+          <View key={room.name} style={styles.roomCard}>
+            <View style={styles.roomBadge}>
+              <Text style={styles.roomBadgeText}>S</Text>
+            </View>
+            <View style={styles.roomCopy}>
+              <Text style={styles.roomTitle}>{room.name}</Text>
+              <Text style={styles.roomMeta}>{room.time}</Text>
+            </View>
+            <View style={styles.roomRight}>
+              <Text style={styles.roomInvited}>{room.invited}</Text>
+              <Text style={styles.roomLinkLabel}>Link ready</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Friends</Text>
+          <Text style={styles.sectionMeta}>Invite list</Text>
+        </View>
+        {friends.map((friend) => (
+          <View key={friend.name} style={styles.friendRow}>
+            <View style={styles.friendLeft}>
+              <View
+                style={[
+                  styles.statusDot,
+                  friend.status === 'online' ? styles.statusDotOnline : styles.statusDotOffline,
+                ]}
+              />
+              <View>
+                <Text style={styles.friendName}>{friend.name}</Text>
+                <Text style={styles.friendNote}>{friend.note}</Text>
+              </View>
+            </View>
+            <Pressable
+              style={styles.inviteButton}
+              onPress={() => setStatusMessage(`Invite queued for ${friend.name}`)}
+            >
+              <Text style={styles.inviteButtonText}>Invite</Text>
+            </Pressable>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
-function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
-  return <View style={[styles.card, style]}>{children}</View>;
-}
-
-function HangoutStatePanel({ state }: { state: Exclude<HangoutScreenState, 'ready'> }) {
-  const copy = {
-    loading: {
-      title: 'Preparing your rooms',
-      body: 'Sentri is checking your latest links, invites, and friend availability.',
-    },
-    error: {
-      title: 'Could not load Hangout',
-      body: 'Try again after reconnecting before creating or joining a room.',
-    },
-    empty: {
-      title: 'No rooms yet',
-      body: 'Create a room or paste a link to start inviting your friends.',
-    },
-    success: {
-      title: 'Room created',
-      body: 'Your room link is ready to share and your friends can be invited now.',
-    },
-  } as const;
-
-  const content = copy[state];
-
+function InlineButton({
+  label,
+  icon,
+  onPress,
+}: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+}) {
   return (
-    <View style={styles.statePanel}>
-      <Text style={styles.eyebrow}>Hangout</Text>
-      <Text style={styles.title}>{content.title}</Text>
-      <Text style={styles.subtitle}>{content.body}</Text>
-    </View>
+    <Pressable style={styles.inlineButton} onPress={onPress}>
+      <Ionicons name={icon} size={16} color={theme.colors.text} />
+      <Text style={styles.inlineButtonText}>{label}</Text>
+    </Pressable>
   );
 }
-
-const roomToneMap = {
-  orange: {
-    badge: theme.surfaceMuted,
-    text: theme.accentDeep,
-  },
-  blue: {
-    badge: theme.blueSoft,
-    text: theme.blue,
-  },
-  green: {
-    badge: theme.greenSoft,
-    text: theme.green,
-  },
-} as const;
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: theme.background,
-  },
-  statePanel: {
-    flex: 1,
-    backgroundColor: theme.background,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    gap: 8,
+    backgroundColor: theme.colors.background,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-    gap: 16,
+    paddingHorizontal: theme.chrome.horizontalPadding,
+    paddingTop: theme.chrome.topPadding,
+    paddingBottom: theme.chrome.screenBottomInset,
   },
-  header: {
-    gap: 8,
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  eyebrow: {
-    color: theme.accentDeep,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1,
+  topCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  kicker: {
+    color: theme.colors.accentStrong,
+    fontSize: 12,
+    fontWeight: '800',
     textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   title: {
-    color: theme.foreground,
-    fontSize: 30,
+    color: theme.colors.text,
+    fontSize: 28,
     fontWeight: '800',
-    lineHeight: 36,
-  },
-  subtitle: {
-    color: theme.secondary,
-    fontSize: 15,
-    lineHeight: 22,
-    maxWidth: 320,
+    lineHeight: 34,
   },
   actionRow: {
+    marginTop: 18,
     flexDirection: 'row',
     gap: 12,
   },
+  statusBanner: {
+    marginTop: 14,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  statusBannerText: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   actionButton: {
     flex: 1,
-    borderRadius: 22,
     minHeight: 52,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
-  actionButtonFilled: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 6,
-  },
   actionButtonGhost: {
-    backgroundColor: theme.surface,
-    borderColor: theme.line,
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.line,
   },
-  actionButtonText: {
+  actionButtonFilled: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  actionGhostText: {
+    color: theme.colors.text,
     fontSize: 15,
     fontWeight: '800',
-    color: theme.foreground,
   },
-  actionButtonTextFilled: {
-    color: '#FFF8F3',
-  },
-  card: {
-    backgroundColor: theme.surface,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: theme.line,
-    padding: 18,
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 1,
-    shadowRadius: 24,
-    elevation: 7,
+  actionFilledText: {
+    color: '#FFF9F5',
+    fontSize: 15,
+    fontWeight: '800',
   },
   linkCard: {
-    gap: 10,
+    marginTop: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    padding: 18,
+    ...theme.shadow.soft,
   },
-  cardHeader: {
+  linkHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    alignItems: 'center',
   },
-  cardKicker: {
-    color: theme.secondary,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  statusPill: {
-    backgroundColor: theme.greenSoft,
-    color: theme.green,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
+  linkLabel: {
+    color: theme.colors.textSoft,
     fontSize: 12,
     fontWeight: '800',
-    overflow: 'hidden',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
   },
-  linkTitle: {
-    color: theme.foreground,
+  linkStatus: {
+    borderRadius: 999,
+    backgroundColor: theme.colors.greenSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  linkStatusText: {
+    color: theme.colors.green,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  linkValue: {
+    marginTop: 12,
+    color: theme.colors.text,
     fontSize: 22,
     fontWeight: '800',
-  },
-  linkBody: {
-    color: theme.secondary,
-    fontSize: 14,
-    lineHeight: 21,
+    lineHeight: 28,
   },
   linkActions: {
+    marginTop: 16,
     flexDirection: 'row',
     gap: 10,
-    flexWrap: 'wrap',
   },
-  inlineAction: {
-    backgroundColor: theme.surfaceMuted,
-    borderRadius: 999,
+  inlineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
-  inlineActionText: {
-    color: theme.foreground,
-    fontSize: 13,
+  inlineButtonText: {
+    color: theme.colors.text,
+    fontSize: 14,
     fontWeight: '700',
+  },
+  section: {
+    marginTop: 22,
   },
   sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'baseline',
     justifyContent: 'space-between',
-    marginTop: 6,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sectionTitle: {
-    color: theme.foreground,
-    fontSize: 19,
+    color: theme.colors.text,
+    fontSize: 22,
     fontWeight: '800',
   },
   sectionMeta: {
-    color: theme.secondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  roomList: {
-    gap: 12,
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    fontWeight: '700',
   },
   roomCard: {
-    gap: 12,
-  },
-  roomTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    padding: 16,
+    marginBottom: 10,
   },
   roomBadge: {
     width: 46,
     height: 46,
     borderRadius: 16,
+    backgroundColor: theme.colors.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   roomBadgeText: {
-    fontSize: 18,
-    fontWeight: '900',
+    color: theme.colors.accentStrong,
+    fontSize: 20,
+    fontWeight: '800',
   },
   roomCopy: {
     flex: 1,
     gap: 4,
   },
-  roomName: {
-    color: theme.foreground,
+  roomTitle: {
+    color: theme.colors.text,
     fontSize: 17,
     fontWeight: '800',
   },
-  roomTime: {
-    color: theme.secondary,
+  roomMeta: {
+    color: theme.colors.textSoft,
     fontSize: 13,
-    fontWeight: '600',
   },
-  roomAudience: {
-    color: theme.accentDeep,
+  roomRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  roomInvited: {
+    color: theme.colors.accentStrong,
     fontSize: 13,
     fontWeight: '800',
   },
-  roomFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  roomFooterText: {
-    color: theme.secondary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  roomFooterDot: {
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  friendList: {
-    gap: 10,
-  },
-  friendCard: {
-    paddingVertical: 16,
+  roomLinkLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
   },
   friendRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 10,
   },
   friendLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    flex: 1,
   },
   statusDot: {
-    width: 11,
-    height: 11,
-    borderRadius: 999,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   statusDotOnline: {
-    backgroundColor: theme.green,
+    backgroundColor: theme.colors.green,
   },
   statusDotOffline: {
-    backgroundColor: '#C7B8A7',
+    backgroundColor: theme.colors.textMuted,
   },
   friendName: {
-    color: theme.foreground,
+    color: theme.colors.text,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   friendNote: {
-    color: theme.secondary,
+    marginTop: 4,
+    color: theme.colors.textSoft,
     fontSize: 13,
-    marginTop: 3,
   },
   inviteButton: {
-    backgroundColor: theme.accent,
-    borderRadius: 999,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceAlt,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   inviteButtonText: {
-    color: '#FFF8F3',
+    color: theme.colors.text,
     fontSize: 13,
     fontWeight: '800',
   },

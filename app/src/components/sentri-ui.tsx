@@ -1,208 +1,31 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ReactNode } from 'react';
-import {
-  Modal,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleProp,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  ViewStyle,
-} from 'react-native';
-import { theme, TabKey } from '../design/tokens';
-
-type PillTone = 'neutral' | 'accent' | 'blue' | 'green' | 'soft' | 'strong';
+import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { theme, type TabKey } from '../design/tokens';
 
 type CapsuleTabBarProps = {
   activeTab: TabKey;
   onTabChange: (tab: TabKey) => void;
   onSentriPress: () => void;
+  tone?: 'light' | 'dark';
 };
-
-export function Surface({
-  children,
-  style,
-  tone = 'default',
-}: {
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
-  tone?: 'default' | 'strong' | 'alt';
-}) {
-  const backgroundColor =
-    tone === 'strong'
-      ? theme.colors.surfaceStrong
-      : tone === 'alt'
-        ? theme.colors.surfaceAlt
-        : theme.colors.surface;
-
-  return <View style={[styles.surface, { backgroundColor }, style]}>{children}</View>;
-}
-
-export function SectionHeader({
-  title,
-  actionLabel,
-  onActionPress,
-}: {
-  title: string;
-  actionLabel?: string;
-  onActionPress?: () => void;
-}) {
-  return (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionHeaderTitle}>{title}</Text>
-      {actionLabel ? (
-        <Pressable onPress={onActionPress} hitSlop={10}>
-          <Text style={styles.sectionHeaderAction}>{actionLabel}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-export function Pill({
-  label,
-  tone = 'neutral',
-  selected = false,
-}: {
-  label: string;
-  tone?: PillTone;
-  selected?: boolean;
-}) {
-  const toneStyle =
-    tone === 'accent'
-      ? styles.pillAccent
-      : tone === 'blue'
-        ? styles.pillBlue
-        : tone === 'green'
-          ? styles.pillGreen
-          : tone === 'soft'
-            ? styles.pillSoft
-            : tone === 'strong'
-              ? styles.pillStrong
-              : styles.pillNeutral;
-
-  return (
-    <View style={[styles.pill, toneStyle, selected && styles.pillSelected]}>
-      <Text style={[styles.pillText, tone === 'strong' && styles.pillTextStrong]}>{label}</Text>
-    </View>
-  );
-}
 
 export function AvatarButton({
   label = 'SK',
   onPress,
+  tone = 'light',
 }: {
   label?: string;
   onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={styles.avatarButton}>
-      <Text style={styles.avatarText}>{label}</Text>
-    </Pressable>
-  );
-}
-
-export function SearchBar({
-  value,
-  onChangeText,
-  placeholder,
-}: {
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder: string;
-}) {
-  return (
-    <View style={styles.searchWrap}>
-      <Ionicons name="search" size={18} color={theme.colors.textMuted} />
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.textMuted}
-        style={styles.searchInput}
-      />
-    </View>
-  );
-}
-
-export function FloatingAddButton({
-  onPress,
-  label = '+',
-}: {
-  onPress: () => void;
-  label?: string;
-}) {
-  return (
-    <Pressable onPress={onPress} style={styles.fab}>
-      <Text style={styles.fabLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
-export function TimelineRow({
-  title,
-  subtitle,
-  meta,
-  rightLabel,
-  selected = false,
-  onPress,
-  onLongPress,
-}: {
-  title: string;
-  subtitle: string;
-  meta?: string;
-  rightLabel?: string;
-  selected?: boolean;
-  onPress?: () => void;
-  onLongPress?: () => void;
+  tone?: 'light' | 'dark';
 }) {
   return (
     <Pressable
       onPress={onPress}
-      onLongPress={onLongPress}
-      style={[styles.timelineRow, selected && styles.timelineRowSelected]}
+      style={[styles.avatarButton, tone === 'dark' ? styles.avatarButtonDark : styles.avatarButtonLight]}
+      accessibilityRole="button"
+      accessibilityLabel="Open profile and settings"
     >
-      <View style={styles.timelineRail}>
-        <View style={[styles.timelineDot, selected && styles.timelineDotSelected]} />
-        <View style={styles.timelineLine} />
-      </View>
-      <View style={styles.timelineContent}>
-        <Text style={styles.timelineTitle}>{title}</Text>
-        <Text style={styles.timelineSubtitle}>{subtitle}</Text>
-        {meta ? <Text style={styles.timelineMeta}>{meta}</Text> : null}
-      </View>
-      {rightLabel ? <Text style={styles.timelineRightLabel}>{rightLabel}</Text> : null}
-    </Pressable>
-  );
-}
-
-export function CalendarDayCell({
-  day,
-  date,
-  items,
-  selected = false,
-  onPress,
-}: {
-  day: string;
-  date: string;
-  items: string[];
-  selected?: boolean;
-  onPress?: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={[styles.calendarCell, selected && styles.calendarCellSelected]}>
-      <Text style={styles.calendarDay}>{day}</Text>
-      <Text style={styles.calendarDate}>{date}</Text>
-      <View style={styles.calendarItems}>
-        {items.slice(0, 2).map((item) => (
-          <Text key={item} numberOfLines={1} style={styles.calendarItem}>
-            {item}
-          </Text>
-        ))}
-      </View>
+      <Text style={[styles.avatarText, tone === 'dark' && styles.avatarTextDark]}>{label}</Text>
     </Pressable>
   );
 }
@@ -211,31 +34,51 @@ export function DrawerSheet({
   visible,
   onClose,
   userName,
+  userSubtitle,
+  onSelectItem,
 }: {
   visible: boolean;
   onClose: () => void;
   userName: string;
+  userSubtitle: string;
+  onSelectItem: (item: 'account' | 'settings' | 'logout') => void;
 }) {
+  const menuItems = [
+    { key: 'account' as const, label: 'Account', icon: 'person-outline' as const },
+    { key: 'settings' as const, label: 'Settings', icon: 'settings-outline' as const },
+    { key: 'logout' as const, label: 'Logout', icon: 'log-out-outline' as const },
+  ];
+
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <View style={styles.drawerBackdrop}>
         <Pressable style={styles.drawerScrim} onPress={onClose} />
         <SafeAreaView style={styles.drawerPanel}>
-          <View style={styles.drawerProfileRow}>
+          <View style={styles.drawerHeader}>
             <View style={styles.drawerAvatar}>
               <Text style={styles.drawerAvatarText}>{userName.slice(0, 2).toUpperCase()}</Text>
             </View>
-            <View style={styles.drawerProfileMeta}>
+            <View style={styles.drawerMeta}>
               <Text style={styles.drawerName}>{userName}</Text>
-              <Text style={styles.drawerEmail}>ait.student@sentri.app</Text>
+              <Text style={styles.drawerEmail}>{userSubtitle}</Text>
             </View>
           </View>
 
-          <View style={styles.drawerList}>
-            {['Account', 'Settings', 'Notifications', 'Storage & Imports', 'Logout'].map((item) => (
-              <Pressable key={item} style={styles.drawerItem}>
-                <Text style={styles.drawerItemText}>{item}</Text>
-                <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.45)" />
+          <View style={styles.drawerSection}>
+            {menuItems.map((item) => (
+              <Pressable
+                key={item.label}
+                style={styles.drawerItem}
+                onPress={() => {
+                  onClose();
+                  onSelectItem(item.key);
+                }}
+              >
+                <View style={styles.drawerItemLeft}>
+                  <Ionicons name={item.icon} size={18} color={theme.colors.textSoft} />
+                  <Text style={styles.drawerItemText}>{item.label}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
               </Pressable>
             ))}
           </View>
@@ -249,38 +92,57 @@ export function CapsuleTabBar({
   activeTab,
   onTabChange,
   onSentriPress,
+  tone = 'light',
 }: CapsuleTabBarProps) {
+  const dark = tone === 'dark';
+
   return (
-    <View style={styles.tabWrap}>
-      <View style={styles.tabBar}>
+    <View style={styles.tabWrap} pointerEvents="box-none">
+      <View style={[styles.tabBar, dark ? styles.tabBarDark : styles.tabBarLight]}>
         <TabItem
           label="Home"
           icon="home-outline"
           active={activeTab === 'home'}
+          dark={dark}
           onPress={() => onTabChange('home')}
         />
         <TabItem
           label="Myspace"
           icon="albums-outline"
           active={activeTab === 'myspace'}
+          dark={dark}
           onPress={() => onTabChange('myspace')}
         />
-        <Pressable onPress={onSentriPress} style={styles.sentriButton} accessibilityRole="button">
+        <Pressable
+          onPress={onSentriPress}
+          style={styles.sentriButton}
+          accessibilityRole="button"
+          accessibilityLabel="Open Sentri assistant"
+        >
           <View style={styles.sentriInner}>
-            <Ionicons name="sparkles" size={22} color={theme.colors.surface} />
+            <Ionicons name="sparkles" size={18} color="#FFF9F5" />
           </View>
-          <Text style={styles.sentriLabel}>Sentri</Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+            style={[styles.sentriLabel, dark && styles.sentriLabelDark]}
+          >
+            Sentri
+          </Text>
         </Pressable>
         <TabItem
           label="Calorie"
           icon="fitness-outline"
           active={activeTab === 'calorie'}
+          dark={dark}
           onPress={() => onTabChange('calorie')}
         />
         <TabItem
           label="Hangout"
           icon="people-outline"
           active={activeTab === 'hangout'}
+          dark={dark}
           onPress={() => onTabChange('hangout')}
         />
       </View>
@@ -292,342 +154,178 @@ function TabItem({
   label,
   icon,
   active,
+  dark,
   onPress,
 }: {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   active: boolean;
+  dark: boolean;
   onPress: () => void;
 }) {
+  const idleColor = dark ? theme.colors.darkTextSoft : theme.colors.textMuted;
+  const activeColor = active ? theme.colors.accent : idleColor;
+
   return (
-    <Pressable onPress={onPress} style={styles.tabItem}>
-      <Ionicons
-        name={icon}
-        size={20}
-        color={active ? theme.colors.accent : theme.colors.textMuted}
-      />
-      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
+    <Pressable onPress={onPress} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={label}>
+      <Ionicons name={icon} size={19} color={activeColor} />
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+        style={[styles.tabLabel, { color: active ? (dark ? '#FFFFFF' : theme.colors.text) : idleColor }]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
-export function DetailCard({
-  title,
-  body,
-  meta,
-}: {
-  title: string;
-  body: string;
-  meta?: string;
-}) {
-  return (
-    <Surface tone="alt" style={styles.detailCard}>
-      <Text style={styles.detailEyebrow}>Pressed detail</Text>
-      <Text style={styles.detailTitle}>{title}</Text>
-      <Text style={styles.detailBody}>{body}</Text>
-      {meta ? <Text style={styles.detailMeta}>{meta}</Text> : null}
-    </Surface>
-  );
-}
-
 const styles = StyleSheet.create({
-  surface: {
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.line,
-    padding: theme.spacing.md,
-    ...theme.shadow.soft,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-  },
-  sectionHeaderTitle: {
-    color: theme.colors.text,
-    fontSize: theme.typography.title,
-    fontWeight: '800',
-  },
-  sectionHeaderAction: {
-    color: theme.colors.accentStrong,
-    fontSize: theme.typography.body,
-    fontWeight: '700',
-  },
-  pill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: theme.radius.pill,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  pillText: {
-    color: theme.colors.text,
-    fontSize: theme.typography.footnote,
-    fontWeight: '700',
-  },
-  pillTextStrong: {
-    color: theme.colors.surface,
-  },
-  pillNeutral: { backgroundColor: theme.colors.surfaceAlt },
-  pillAccent: { backgroundColor: theme.colors.accentSoft, borderColor: 'rgba(234,106,58,0.08)' },
-  pillBlue: { backgroundColor: theme.colors.blueSoft },
-  pillGreen: { backgroundColor: theme.colors.greenSoft },
-  pillSoft: { backgroundColor: theme.colors.surface },
-  pillStrong: { backgroundColor: theme.colors.surfaceStrong },
-  pillSelected: {
-    borderColor: theme.colors.accent,
-  },
   avatarButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.surfaceStrong,
     borderWidth: 1,
+  },
+  avatarButtonLight: {
+    backgroundColor: theme.colors.surfaceStrong,
     borderColor: 'rgba(255,255,255,0.08)',
+  },
+  avatarButtonDark: {
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderColor: theme.colors.darkLine,
   },
   avatarText: {
     color: theme.colors.surface,
     fontSize: 14,
     fontWeight: '800',
   },
-  searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.pill,
-    borderWidth: 1,
-    borderColor: theme.colors.line,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  searchInput: {
-    flex: 1,
-    color: theme.colors.text,
-    fontSize: theme.typography.body,
-  },
-  fab: {
-    width: 58,
-    height: 58,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.accent,
-    ...theme.shadow.strong,
-  },
-  fabLabel: {
-    color: theme.colors.surface,
-    fontSize: 32,
-    fontWeight: '400',
-    marginTop: -2,
-  },
-  timelineRow: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  timelineRowSelected: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.accentSoft,
-  },
-  timelineRail: {
-    alignItems: 'center',
-    width: 18,
-  },
-  timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: theme.colors.line,
-    marginTop: 4,
-  },
-  timelineDotSelected: {
-    backgroundColor: theme.colors.accent,
-  },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: theme.colors.line,
-    marginTop: 6,
-  },
-  timelineContent: {
-    flex: 1,
-    gap: 2,
-  },
-  timelineTitle: {
-    color: theme.colors.text,
-    fontSize: theme.typography.headline,
-    fontWeight: '800',
-  },
-  timelineSubtitle: {
-    color: theme.colors.textSoft,
-    fontSize: theme.typography.body,
-    fontWeight: '600',
-  },
-  timelineMeta: {
-    color: theme.colors.textMuted,
-    fontSize: theme.typography.footnote,
-  },
-  timelineRightLabel: {
-    color: theme.colors.accentStrong,
-    fontSize: theme.typography.footnote,
-    fontWeight: '800',
-  },
-  calendarCell: {
-    flex: 1,
-    minHeight: 80,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.line,
-    padding: 8,
-    backgroundColor: theme.colors.surface,
-    gap: 4,
-  },
-  calendarCellSelected: {
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  calendarDay: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  calendarDate: {
-    color: theme.colors.text,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  calendarItems: {
-    gap: 2,
-  },
-  calendarItem: {
-    color: theme.colors.textSoft,
-    fontSize: 10,
-    fontWeight: '600',
+  avatarTextDark: {
+    color: theme.colors.darkText,
   },
   drawerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(20,14,10,0.24)',
     flexDirection: 'row',
+    backgroundColor: 'rgba(17, 13, 10, 0.18)',
   },
   drawerScrim: {
     flex: 1,
   },
   drawerPanel: {
-    width: 292,
+    width: 306,
     backgroundColor: theme.colors.drawer,
-    padding: theme.spacing.lg,
-    borderTopRightRadius: 30,
-    borderBottomRightRadius: 30,
+    borderTopRightRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
+    borderRightWidth: 1,
+    borderColor: theme.colors.drawerLine,
   },
-  drawerProfileRow: {
+  drawerHeader: {
     flexDirection: 'row',
-    gap: 14,
     alignItems: 'center',
+    gap: 14,
     paddingBottom: theme.spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.drawerLine,
   },
   drawerAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: theme.colors.accent,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   drawerAvatarText: {
-    color: theme.colors.surface,
+    color: theme.colors.accentStrong,
     fontSize: 18,
     fontWeight: '800',
   },
-  drawerProfileMeta: {
+  drawerMeta: {
     gap: 3,
   },
   drawerName: {
-    color: theme.colors.surface,
-    fontSize: 20,
+    color: theme.colors.text,
+    fontSize: 19,
     fontWeight: '800',
   },
   drawerEmail: {
-    color: 'rgba(255,255,255,0.55)',
+    color: theme.colors.textSoft,
     fontSize: 13,
   },
-  drawerList: {
+  drawerSection: {
     marginTop: theme.spacing.lg,
-    gap: 10,
+    gap: 6,
   },
   drawerItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: theme.radius.md,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: theme.colors.drawerLine,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+  },
+  drawerItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   drawerItemText: {
-    color: theme.colors.surface,
+    color: theme.colors.text,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   tabWrap: {
     position: 'absolute',
     left: 14,
     right: 14,
-    bottom: 14,
-    alignItems: 'center',
+    bottom: theme.chrome.floatingBarOffset,
   },
   tabBar: {
-    width: '100%',
-    minHeight: 76,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,252,248,0.92)',
+    height: theme.chrome.floatingBarHeight,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: theme.colors.line,
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingBottom: 4,
+  },
+  tabBarLight: {
+    backgroundColor: 'rgba(255, 252, 247, 0.95)',
+    borderColor: theme.colors.line,
     ...theme.shadow.strong,
+  },
+  tabBarDark: {
+    backgroundColor: 'rgba(28, 28, 30, 0.94)',
+    borderColor: theme.colors.darkLine,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    gap: 2,
     paddingVertical: 4,
   },
   tabLabel: {
     fontSize: 11,
-    color: theme.colors.textMuted,
     fontWeight: '700',
   },
-  tabLabelActive: {
-    color: theme.colors.text,
-  },
   sentriButton: {
-    width: 68,
+    width: 62,
     alignItems: 'center',
-    gap: 3,
-    transform: [{ translateY: -18 }],
+    gap: 2,
+    transform: [{ translateY: -10 }],
   },
   sentriInner: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+    width: 46,
+    height: 46,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.accent,
@@ -638,29 +336,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontWeight: '700',
   },
-  detailCard: {
-    gap: 8,
-  },
-  detailEyebrow: {
-    color: theme.colors.accentStrong,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  detailTitle: {
-    color: theme.colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  detailBody: {
-    color: theme.colors.textSoft,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  detailMeta: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
+  sentriLabelDark: {
+    color: theme.colors.darkTextSoft,
   },
 });
-

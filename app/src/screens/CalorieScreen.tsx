@@ -1,460 +1,220 @@
-import React, { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
-import { theme as sharedTheme } from '../design/tokens';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AvatarButton } from '../components/sentri-ui';
+import { theme } from '../design/tokens';
 
-type GoalMode = 'lose' | 'maintain' | 'bulk';
-type CheatPattern = 'Friday' | 'Saturday' | 'Sunday' | 'Two days/week';
-type CalorieScreenState = 'ready' | 'loading' | 'error' | 'empty' | 'success';
-
-type MacroKey = 'protein' | 'carbs' | 'fats';
-type BurnType = 'gym' | 'run' | 'walk' | 'cycling';
-
-type Meal = {
-  label: string;
-  calories: number;
-  protein: number;
-  note: string;
-  time: string;
+type CalorieScreenProps = {
+  onOpenDrawer: () => void;
+  avatarLabel: string;
 };
 
-type BurnEntry = {
-  label: string;
-  minutes: number;
-  calories: number;
-  type: BurnType;
-};
-
-type TrendPoint = {
-  day: string;
-  intake: number;
-  target: number;
-};
-
-const theme = {
-  bg: sharedTheme.colors.background,
-  card: sharedTheme.colors.surface,
-  mutedCard: sharedTheme.colors.surfaceAlt,
-  text: sharedTheme.colors.text,
-  subtext: sharedTheme.colors.textSoft,
-  line: sharedTheme.colors.line,
-  accent: sharedTheme.colors.accent,
-  accentSoft: sharedTheme.colors.accentSoft,
-  green: sharedTheme.colors.green,
-  greenSoft: sharedTheme.colors.greenSoft,
-  blue: sharedTheme.colors.blue,
-  blueSoft: sharedTheme.colors.blueSoft,
-  amber: sharedTheme.colors.amber,
-  amberSoft: sharedTheme.colors.amberSoft,
-  shadow: 'rgba(39, 24, 16, 0.08)',
-};
-
-const profileSnapshot = {
+const profile = {
   age: 21,
-  height: `176 cm`,
-  weight: `72 kg`,
-  waist: `32 in`,
-  thigh: `21 in`,
-  neck: `15 in`,
+  height: '176 cm',
+  weight: '72 kg',
   bodyType: 'Lean',
-  goalMode: 'bulk' as GoalMode,
-  idealBodyType: 'Athletic',
-  goalWeight: `78 kg`,
-  journeyDuration: '3 months',
+  goal: 'Bulk',
+  goalWeight: '78 kg',
+  journey: '3 months',
   dailyTarget: 2680,
-  currentIntake: 1890,
-  caloriesBurned: 420,
-  cheatPattern: 'Friday' as CheatPattern,
+  consumed: 1890,
+  burned: 420,
+  cheatDay: 'Friday',
 };
 
 const macros = [
-  { key: 'protein' as const, label: 'Protein', value: 124, goal: 160, tint: 'green' },
-  { key: 'carbs' as const, label: 'Carbs', value: 212, goal: 320, tint: 'blue' },
-  { key: 'fats' as const, label: 'Fats', value: 61, goal: 84, tint: 'amber' },
-] satisfies Array<{
-  key: MacroKey;
-  label: string;
-  value: number;
-  goal: number;
-  tint: 'green' | 'blue' | 'amber';
-}>;
-
-const meals: Meal[] = [
-  {
-    label: 'Breakfast',
-    calories: 480,
-    protein: 23,
-    note: 'Poha, eggs, milk, and peanut butter toast',
-    time: '08:40',
-  },
-  {
-    label: 'Lunch',
-    calories: 665,
-    protein: 34,
-    note: 'Rice, dal, paneer bhurji, curd',
-    time: '13:15',
-  },
-  {
-    label: 'Snack',
-    calories: 245,
-    protein: 17,
-    note: 'Banana, whey shake, and roasted chana',
-    time: '17:30',
-  },
-  {
-    label: 'Dinner',
-    calories: 500,
-    protein: 31,
-    note: 'Chapati, chicken curry, and salad',
-    time: '20:45',
-  },
+  { label: 'Protein', value: '124g', tint: theme.colors.fitnessGreen },
+  { label: 'Carbs', value: '212g', tint: theme.colors.fitnessBlue },
+  { label: 'Fats', value: '61g', tint: theme.colors.fitnessPink },
 ];
 
-const burns: BurnEntry[] = [
-  { label: 'Chest workout', minutes: 58, calories: 220, type: 'gym' },
-  { label: 'Evening walk', minutes: 34, calories: 96, type: 'walk' },
-  { label: 'Cycling', minutes: 22, calories: 104, type: 'cycling' },
+const meals = [
+  { label: 'Breakfast', kcal: 480, note: 'Poha, eggs, milk', time: '08:40' },
+  { label: 'Lunch', kcal: 665, note: 'Rice, dal, paneer bhurji', time: '13:15' },
+  { label: 'Snack', kcal: 245, note: 'Banana and whey shake', time: '17:30' },
+  { label: 'Dinner', kcal: 500, note: 'Chapati and chicken curry', time: '20:45' },
 ];
 
-const trend: TrendPoint[] = [
-  { day: 'Mon', intake: 2520, target: 2680 },
-  { day: 'Tue', intake: 2710, target: 2680 },
-  { day: 'Wed', intake: 2440, target: 2680 },
-  { day: 'Thu', intake: 2590, target: 2680 },
-  { day: 'Fri', intake: 2790, target: 2680 },
-  { day: 'Sat', intake: 2660, target: 2680 },
-  { day: 'Sun', intake: 2480, target: 2680 },
+const workoutEntries = [
+  { label: 'Functional strength', kcal: 220, meta: '58 min gym' },
+  { label: 'Evening walk', kcal: 96, meta: '34 min walk' },
+  { label: 'Cycling', kcal: 104, meta: '22 min ride' },
 ];
 
-export default function CalorieScreen() {
-  const [mode, setMode] = useState<GoalMode>(profileSnapshot.goalMode);
-  const [screenState] = useState<CalorieScreenState>('ready');
-  const remaining = profileSnapshot.dailyTarget - profileSnapshot.currentIntake + profileSnapshot.caloriesBurned;
-  const intakeProgress = Math.min(profileSnapshot.currentIntake / profileSnapshot.dailyTarget, 1);
+export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScreenProps) {
+  const [mealsToday, setMealsToday] = useState(meals);
+  const [workoutsToday, setWorkoutsToday] = useState(workoutEntries);
+  const [statusMessage, setStatusMessage] = useState('Goal auto-set from your onboarding details.');
 
-  if (screenState !== 'ready') {
-    return <CalorieStatePanel state={screenState} />;
-  }
+  const consumed = mealsToday.reduce((total, meal) => total + meal.kcal, 0);
+  const burned = workoutsToday.reduce((total, workout) => total + workout.kcal, 0);
+  const remaining = profile.dailyTarget - consumed + burned;
 
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.backdropA} />
-      <View style={styles.backdropB} />
-
-      <View style={styles.hero}>
-        <View>
-          <Text style={styles.eyebrow}>Apple Health inspired</Text>
-          <Text style={styles.title}>Calorie</Text>
-          <Text style={styles.subtitle}>
-            Calm tracking for student meals, gym work, and a goal that actually fits your journey.
-          </Text>
-        </View>
-
-        <View style={styles.summaryRing}>
-          <Text style={styles.ringCaption}>Remaining</Text>
-          <Text style={styles.ringValue}>{remaining}</Text>
-          <Text style={styles.ringUnit}>kcal today</Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.topRow}>
+        <AvatarButton onPress={onOpenDrawer} tone="dark" label={avatarLabel} />
+        <View style={styles.topCopy}>
+          <Text style={styles.date}>Today, 23 Mar 2026</Text>
+          <Text style={styles.title}>Summary</Text>
         </View>
       </View>
 
-      <Card style={styles.profileCard}>
-        <SectionHeader title="Your starting point" caption="Onboarding snapshot" />
-        <View style={styles.profileGrid}>
-          <ProfileField label="Age" value={`${profileSnapshot.age}`} />
-          <ProfileField label="Height" value={profileSnapshot.height} />
-          <ProfileField label="Weight" value={profileSnapshot.weight} />
-          <ProfileField label="Body type" value={profileSnapshot.bodyType} />
-          <ProfileField label="Goal weight" value={profileSnapshot.goalWeight} />
-          <ProfileField label="Journey" value={profileSnapshot.journeyDuration} />
+      <View style={styles.heroCard}>
+        <View style={styles.ringWrap}>
+          <View style={styles.ringOuter}>
+            <View style={styles.ringInner}>
+              <Text style={styles.ringValue}>{remaining}</Text>
+              <Text style={styles.ringUnit}>kcal left</Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.goalRow}>
-          <GoalChip active={mode === 'lose'} label="Lose" onPress={() => setMode('lose')} />
-          <GoalChip active={mode === 'maintain'} label="Maintain" onPress={() => setMode('maintain')} />
-          <GoalChip active={mode === 'bulk'} label="Bulk" onPress={() => setMode('bulk')} />
-        </View>
-        <View style={styles.goalDetail}>
-          <Text style={styles.goalDetailTitle}>Goal mode: {mode}</Text>
-          <Text style={styles.goalDetailBody}>
-            Daily target set to {profileSnapshot.dailyTarget} kcal for a {profileSnapshot.journeyDuration} runway toward {profileSnapshot.goalWeight}.
+
+        <View style={styles.heroCopy}>
+          <Text style={styles.heroLabel}>Daily target</Text>
+          <Text style={styles.heroTotal}>{profile.dailyTarget} kcal</Text>
+          <Text style={styles.heroBody}>
+            Calories burned from manual workouts are already added back into today’s remaining total.
           </Text>
         </View>
-      </Card>
+      </View>
 
-      <Card>
-        <SectionHeader title="Today" caption="Summary" />
-        <View style={styles.summaryGrid}>
-          <StatTile label="Consumed" value={profileSnapshot.currentIntake} unit="kcal" tint="amber" />
-          <StatTile label="Burned" value={profileSnapshot.caloriesBurned} unit="kcal" tint="green" />
-          <StatTile label="Target" value={profileSnapshot.dailyTarget} unit="kcal" tint="blue" />
+      <View style={styles.statusCard}>
+        <Text style={styles.statusText}>{statusMessage}</Text>
+      </View>
+
+      <View style={styles.metricRow}>
+        <MetricCard label="Consumed" value={`${consumed}`} suffix="kcal" tint={theme.colors.fitnessPink} />
+        <MetricCard label="Burned" value={`${burned}`} suffix="kcal" tint={theme.colors.fitnessGreen} />
+      </View>
+
+      <View style={styles.metricRow}>
+        <MetricCard label="Goal" value={profile.goalWeight} suffix={profile.goal} tint={theme.colors.fitnessBlue} />
+        <MetricCard label="Cheat day" value={profile.cheatDay} suffix="set" tint={theme.colors.textSoft} />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Goal setup</Text>
+        <View style={styles.setupGrid}>
+          <SetupCell label="Age" value={`${profile.age}`} />
+          <SetupCell label="Height" value={profile.height} />
+          <SetupCell label="Weight" value={profile.weight} />
+          <SetupCell label="Body type" value={profile.bodyType} />
+          <SetupCell label="Goal" value={profile.goal} />
+          <SetupCell label="Journey" value={profile.journey} />
         </View>
-        <ProgressBar value={intakeProgress} />
-        <Text style={styles.progressCopy}>
-          You are <Text style={styles.progressHighlight}>{remaining} kcal</Text> away from target after manual exercise is applied.
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Macros</Text>
+        <View style={styles.macroRow}>
+          {macros.map((macro) => (
+            <View key={macro.label} style={styles.macroCard}>
+              <View style={[styles.macroDot, { backgroundColor: macro.tint }]} />
+              <Text style={styles.macroLabel}>{macro.label}</Text>
+              <Text style={[styles.macroValue, { color: macro.tint }]}>{macro.value}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Meals</Text>
+          <Pressable
+            style={styles.inlineButton}
+            onPress={() => {
+              setMealsToday((current) => [
+                ...current,
+                { label: 'Quick add', kcal: 210, note: 'Hostel snack estimate', time: '21:30' },
+              ]);
+              setStatusMessage('Quick meal added to today.');
+            }}
+          >
+            <Text style={styles.inlineButtonText}>Add meal</Text>
+          </Pressable>
+        </View>
+        {mealsToday.map((meal) => (
+          <View key={meal.label} style={styles.listRow}>
+            <View>
+              <Text style={styles.listTitle}>{meal.label}</Text>
+              <Text style={styles.listMeta}>
+                {meal.time} • {meal.note}
+              </Text>
+            </View>
+            <Text style={styles.listValue}>{meal.kcal}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Workout burn</Text>
+          <Pressable
+            style={styles.inlineButton}
+            onPress={() => {
+              setWorkoutsToday((current) => [
+                ...current,
+                { label: 'Manual walk', kcal: 95, meta: '25 min quick add' },
+              ]);
+              setStatusMessage('Manual calorie burn added.');
+            }}
+          >
+            <Text style={styles.inlineButtonText}>Log burn</Text>
+          </Pressable>
+        </View>
+        {workoutsToday.map((entry) => (
+          <View key={entry.label} style={styles.listRow}>
+            <View>
+              <Text style={styles.listTitle}>{entry.label}</Text>
+              <Text style={styles.listMeta}>{entry.meta}</Text>
+            </View>
+            <Text style={[styles.listValue, styles.listValueGreen]}>{entry.kcal}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Cheat day rhythm</Text>
+        <Text style={styles.cheatBody}>
+          One flexible day is scheduled for <Text style={styles.cheatBodyStrong}>{profile.cheatDay}</Text>, so the plan stays realistic for hostel meals, hangouts, and weekends.
         </Text>
-      </Card>
-
-      <Card>
-        <SectionHeader title="Macros" caption="Daily breakdown" />
-        <View style={styles.macroStack}>
-          {macros.map((macro) => {
-            const ratio = Math.min(macro.value / macro.goal, 1);
-            return (
-              <MacroRow
-                key={macro.key}
-                label={macro.label}
-                value={macro.value}
-                goal={macro.goal}
-                tint={macro.tint}
-                ratio={ratio}
-              />
-            );
-          })}
-        </View>
-      </Card>
-
-      <Card>
-        <SectionHeader title="Meals" caption="Ledger style" />
-        <View style={styles.quickActions}>
-          <ActionPill label="Add meal" />
-          <ActionPill label="Repeat last" />
-          <ActionPill label="Add staple" />
-        </View>
-        <View style={styles.mealList}>
-          {meals.map((meal) => (
-            <MealRow key={meal.label} meal={meal} />
-          ))}
-        </View>
-      </Card>
-
-      <Card>
-        <SectionHeader title="Calories burned" caption="Manual and tracked" />
-        <View style={styles.quickActions}>
-          <ActionPill label="Log workout" />
-          <ActionPill label="Log walk" />
-          <ActionPill label="Add custom burn" />
-        </View>
-        <View style={styles.burnList}>
-          {burns.map((burn) => (
-            <BurnRow key={burn.label} burn={burn} />
-          ))}
-        </View>
-      </Card>
-
-      <Card>
-        <SectionHeader title="Weekly trend" caption="Simple and readable" />
-        <View style={styles.trendWrap}>
-          {trend.map((point) => (
-            <TrendBar key={point.day} point={point} />
-          ))}
-        </View>
-        <View style={styles.trendLegend}>
-          <LegendDot tint="amber" label="Intake" />
-          <LegendDot tint="blue" label="Target" />
-        </View>
-      </Card>
-
-      <Card>
-        <SectionHeader title="Cheat days" caption="Plan the flex" />
-        <Text style={styles.cardBody}>
-          Cheat day pattern: <Text style={styles.inlineStrong}>{profileSnapshot.cheatPattern}</Text>
-        </Text>
-        <View style={styles.cheatRow}>
-          <CheatChip active label="Friday" />
+        <View style={styles.cheatChips}>
+          <CheatChip label="Friday" active />
           <CheatChip label="Saturday" />
           <CheatChip label="Sunday" />
-          <CheatChip label="2 days/week" />
+          <CheatChip label="2 days / week" />
         </View>
-        <Text style={styles.cardBody}>
-          This keeps the app practical for real student life instead of treating every day like a perfect spreadsheet.
-        </Text>
-      </Card>
+      </View>
     </ScrollView>
   );
 }
 
-function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[styles.card, style]}>{children}</View>;
-}
-
-function SectionHeader({ title, caption }: { title: string; caption: string }) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View>
-        <Text style={styles.sectionCaption}>{caption}</Text>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-    </View>
-  );
-}
-
-function ProfileField({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.profileField}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <Text style={styles.fieldValue}>{value}</Text>
-    </View>
-  );
-}
-
-function GoalChip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={[styles.goalChip, active && styles.goalChipActive]}>
-      <Text style={[styles.goalChipText, active && styles.goalChipTextActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function StatTile({
+function MetricCard({
   label,
   value,
-  unit,
+  suffix,
   tint,
 }: {
   label: string;
-  value: number;
-  unit: string;
-  tint: 'amber' | 'green' | 'blue';
+  value: string;
+  suffix: string;
+  tint: string;
 }) {
-  const background =
-    tint === 'green' ? theme.greenSoft : tint === 'blue' ? theme.blueSoft : theme.amberSoft;
-  const textColor = tint === 'green' ? theme.green : tint === 'blue' ? theme.blue : theme.amber;
-
   return (
-    <View style={[styles.statTile, { backgroundColor: background }]}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={[styles.statValue, { color: textColor }]}>{value}</Text>
-      <Text style={styles.statUnit}>{unit}</Text>
+    <View style={styles.metricCard}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={[styles.metricValue, { color: tint }]}>{value}</Text>
+      <Text style={styles.metricSuffix}>{suffix}</Text>
     </View>
   );
 }
 
-function ProgressBar({ value }: { value: number }) {
+function SetupCell({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.progressTrack}>
-      <View style={[styles.progressFill, { width: `${Math.max(value * 100, 10)}%` }]} />
-    </View>
-  );
-}
-
-function ActionPill({ label }: { label: string }) {
-  return (
-    <Pressable style={styles.actionPill}>
-      <Text style={styles.actionPillText}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function MacroRow({
-  label,
-  value,
-  goal,
-  tint,
-  ratio,
-}: {
-  label: string;
-  value: number;
-  goal: number;
-  tint: 'green' | 'blue' | 'amber';
-  ratio: number;
-}) {
-  const background = tint === 'green' ? theme.greenSoft : tint === 'blue' ? theme.blueSoft : theme.amberSoft;
-  const fill = tint === 'green' ? theme.green : tint === 'blue' ? theme.blue : theme.amber;
-
-  return (
-    <View style={styles.macroRow}>
-      <View style={styles.macroHeader}>
-        <Text style={styles.macroLabel}>{label}</Text>
-        <Text style={styles.macroValueText}>
-          {value}g <Text style={styles.macroGoalText}>/ {goal}g</Text>
-        </Text>
-      </View>
-      <View style={[styles.macroTrack, { backgroundColor: background }]}>
-        <View style={[styles.macroFill, { width: `${Math.max(ratio * 100, 8)}%`, backgroundColor: fill }]} />
-      </View>
-    </View>
-  );
-}
-
-function MealRow({ meal }: { meal: Meal }) {
-  return (
-    <View style={styles.listRow}>
-      <View style={styles.rowBadge}>
-        <Text style={styles.rowBadgeText}>{meal.label.slice(0, 1)}</Text>
-      </View>
-      <View style={styles.rowBody}>
-        <View style={styles.rowHead}>
-          <Text style={styles.rowTitle}>{meal.label}</Text>
-          <Text style={styles.rowMeta}>{meal.time}</Text>
-        </View>
-        <Text style={styles.rowCopy}>{meal.note}</Text>
-      </View>
-      <View style={styles.rowRight}>
-        <Text style={styles.rowKcal}>{meal.calories}</Text>
-        <Text style={styles.rowProtein}>{meal.protein}g protein</Text>
-      </View>
-    </View>
-  );
-}
-
-function BurnRow({ burn }: { burn: BurnEntry }) {
-  const tone = burn.type === 'gym' ? theme.accentSoft : burn.type === 'run' ? theme.blueSoft : theme.greenSoft;
-  const accent = burn.type === 'gym' ? theme.accent : burn.type === 'run' ? theme.blue : theme.green;
-
-  return (
-    <View style={styles.listRow}>
-      <View style={[styles.rowBadge, { backgroundColor: tone }]}>
-        <Text style={[styles.rowBadgeText, { color: accent }]}>•</Text>
-      </View>
-      <View style={styles.rowBody}>
-        <View style={styles.rowHead}>
-          <Text style={styles.rowTitle}>{burn.label}</Text>
-          <Text style={styles.rowMeta}>{burn.minutes} min</Text>
-        </View>
-        <Text style={styles.rowCopy}>Manual burn applied for today's calorie balance.</Text>
-      </View>
-      <View style={styles.rowRight}>
-        <Text style={styles.rowKcal}>{burn.calories} kcal</Text>
-      </View>
-    </View>
-  );
-}
-
-function TrendBar({ point }: { point: TrendPoint }) {
-  const baseline = 3000;
-  const intakeHeight = Math.max((point.intake / baseline) * 110, 30);
-  const targetHeight = Math.max((point.target / baseline) * 110, 30);
-
-  return (
-    <View style={styles.trendBar}>
-      <View style={styles.trendBars}>
-        <View style={[styles.targetBar, { height: targetHeight }]} />
-        <View style={[styles.intakeBar, { height: intakeHeight }]} />
-      </View>
-      <Text style={styles.trendDay}>{point.day}</Text>
-    </View>
-  );
-}
-
-function LegendDot({ tint, label }: { tint: 'amber' | 'blue'; label: string }) {
-  return (
-    <View style={styles.legendItem}>
-      <View style={[styles.legendDot, { backgroundColor: tint === 'amber' ? theme.accent : theme.blue }]} />
-      <Text style={styles.legendLabel}>{label}</Text>
+    <View style={styles.setupCell}>
+      <Text style={styles.setupLabel}>{label}</Text>
+      <Text style={styles.setupValue}>{value}</Text>
     </View>
   );
 }
@@ -467,502 +227,277 @@ function CheatChip({ label, active = false }: { label: string; active?: boolean 
   );
 }
 
-function CalorieStatePanel({ state }: { state: Exclude<CalorieScreenState, 'ready'> }) {
-  const copy = {
-    loading: {
-      title: 'Calculating your plan',
-      body: 'Sentri is preparing your calorie target, meals, and trend summaries.',
-    },
-    error: {
-      title: 'Could not load calories',
-      body: 'Try again after reconnecting or updating your body profile.',
-    },
-    empty: {
-      title: 'Start your health profile',
-      body: 'Add your body basics and goal so Sentri can calculate your daily calorie plan.',
-    },
-    success: {
-      title: 'Plan updated',
-      body: 'Your new calorie target and cheat-day plan are ready for today.',
-    },
-  } as const;
-
-  const content = copy[state];
-
-  return (
-    <View style={styles.statePanel}>
-      <Text style={styles.eyebrow}>Apple Health inspired</Text>
-      <Text style={styles.title}>{content.title}</Text>
-      <Text style={styles.subtitle}>{content.body}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  statePanel: {
+  screen: {
     flex: 1,
-    paddingHorizontal: 18,
-    paddingTop: 32,
-    backgroundColor: theme.bg,
-    gap: 10,
+    backgroundColor: theme.colors.darkBackground,
   },
-  container: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 44,
-    backgroundColor: theme.bg,
-    position: 'relative',
+  content: {
+    paddingHorizontal: theme.chrome.horizontalPadding,
+    paddingTop: theme.chrome.topPadding,
+    paddingBottom: theme.chrome.screenBottomInset,
   },
-  backdropA: {
-    position: 'absolute',
-    top: -56,
-    right: -96,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(241, 100, 54, 0.08)',
-  },
-  backdropB: {
-    position: 'absolute',
-    top: 180,
-    left: -120,
-    width: 210,
-    height: 210,
-    borderRadius: 105,
-    backgroundColor: 'rgba(80, 120, 255, 0.08)',
-  },
-  hero: {
-    marginBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 16,
-  },
-  eyebrow: {
-    color: theme.accent,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-  },
-  title: {
-    marginTop: 8,
-    color: theme.text,
-    fontSize: 36,
-    fontWeight: '800',
-    letterSpacing: -0.8,
-  },
-  subtitle: {
-    marginTop: 8,
-    color: theme.subtext,
-    fontSize: 14,
-    lineHeight: 20,
-    maxWidth: 220,
-  },
-  summaryRing: {
-    width: 122,
-    height: 122,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: theme.line,
-    backgroundColor: theme.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: theme.shadow,
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
-  },
-  ringCaption: {
-    color: theme.subtext,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  ringValue: {
-    marginTop: 6,
-    color: theme.text,
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: -0.8,
-  },
-  ringUnit: {
-    marginTop: 2,
-    color: theme.subtext,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  card: {
-    marginTop: 14,
-    borderRadius: 28,
-    backgroundColor: theme.card,
-    borderWidth: 1,
-    borderColor: theme.line,
-    padding: 18,
-    shadowColor: theme.shadow,
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
-  },
-  profileCard: {
-    backgroundColor: theme.mutedCard,
-  },
-  sectionHeader: {
-    marginBottom: 14,
-  },
-  sectionCaption: {
-    color: theme.subtext,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  sectionTitle: {
-    marginTop: 4,
-    color: theme.text,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  profileGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  profileField: {
-    width: '31%',
-    minWidth: 88,
-    borderRadius: 18,
-    backgroundColor: theme.card,
-    borderWidth: 1,
-    borderColor: theme.line,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-  },
-  fieldLabel: {
-    color: theme.subtext,
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  fieldValue: {
-    marginTop: 8,
-    color: theme.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  goalRow: {
-    marginTop: 14,
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  goalChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: theme.card,
-    borderWidth: 1,
-    borderColor: theme.line,
-  },
-  goalChipActive: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
-  },
-  goalChipText: {
-    color: theme.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  goalChipTextActive: {
-    color: '#FFF6EF',
-  },
-  goalDetail: {
-    marginTop: 14,
-    borderRadius: 20,
-    backgroundColor: theme.card,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.line,
-  },
-  goalDetailTitle: {
-    color: theme.text,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  goalDetailBody: {
-    marginTop: 6,
-    color: theme.subtext,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  statTile: {
-    flex: 1,
-    borderRadius: 22,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  statLabel: {
-    color: theme.subtext,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  statValue: {
-    marginTop: 10,
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  statUnit: {
-    marginTop: 2,
-    color: theme.subtext,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  progressTrack: {
-    marginTop: 14,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: theme.mutedCard,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: theme.accent,
-  },
-  progressCopy: {
-    marginTop: 10,
-    color: theme.subtext,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  progressHighlight: {
-    color: theme.text,
-    fontWeight: '800',
-  },
-  macroStack: {
-    gap: 14,
-  },
-  macroRow: {
-    gap: 8,
-  },
-  macroHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-  },
-  macroLabel: {
-    color: theme.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  macroValueText: {
-    color: theme.text,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  macroGoalText: {
-    color: theme.subtext,
-    fontWeight: '700',
-  },
-  macroTrack: {
-    height: 12,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  macroFill: {
-    height: '100%',
-    borderRadius: 999,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginBottom: 12,
-  },
-  actionPill: {
-    borderRadius: 999,
-    backgroundColor: theme.mutedCard,
-    borderWidth: 1,
-    borderColor: theme.line,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  actionPillText: {
-    color: theme.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  mealList: {
-    gap: 10,
-  },
-  burnList: {
-    gap: 10,
-  },
-  listRow: {
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: theme.line,
-    backgroundColor: theme.card,
-    padding: 14,
   },
-  rowBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: theme.mutedCard,
+  topCopy: {
+    gap: 2,
+  },
+  date: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 14,
+  },
+  title: {
+    color: theme.colors.darkText,
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  heroCard: {
+    marginTop: 20,
+    backgroundColor: theme.colors.darkSurface,
+    borderRadius: 28,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+  },
+  ringWrap: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  ringOuter: {
+    width: 178,
+    height: 178,
+    borderRadius: 89,
+    borderWidth: 18,
+    borderColor: theme.colors.fitnessPink,
+    backgroundColor: theme.colors.fitnessPinkSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowBadgeText: {
-    color: theme.accent,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  rowBody: {
-    flex: 1,
-    gap: 5,
-  },
-  rowHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  ringInner: {
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    backgroundColor: theme.colors.darkBackground,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
-  rowTitle: {
-    color: theme.text,
-    fontSize: 15,
+  ringValue: {
+    color: theme.colors.darkText,
+    fontSize: 30,
     fontWeight: '800',
   },
-  rowMeta: {
-    color: theme.subtext,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  rowCopy: {
-    color: theme.subtext,
+  ringUnit: {
+    marginTop: 4,
+    color: theme.colors.darkTextSoft,
     fontSize: 13,
-    lineHeight: 18,
   },
-  rowRight: {
-    alignItems: 'flex-end',
+  heroCopy: {
+    gap: 6,
   },
-  rowKcal: {
-    color: theme.text,
-    fontSize: 14,
-    fontWeight: '800',
+  statusCard: {
+    marginTop: 14,
+    borderRadius: 18,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  rowProtein: {
-    marginTop: 4,
-    color: theme.subtext,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  trendWrap: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: 8,
-    height: 156,
-    marginTop: 4,
-  },
-  trendBar: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  trendBars: {
-    width: '100%',
-    height: 112,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  targetBar: {
-    width: 18,
-    borderRadius: 9,
-    backgroundColor: theme.blueSoft,
-    position: 'absolute',
-    bottom: 0,
-  },
-  intakeBar: {
-    width: 18,
-    borderRadius: 9,
-    backgroundColor: theme.accent,
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-  },
-  trendDay: {
-    color: theme.subtext,
-    fontSize: 12,
+  statusText: {
+    color: theme.colors.darkText,
+    fontSize: 13,
     fontWeight: '700',
   },
-  trendLegend: {
-    marginTop: 6,
-    flexDirection: 'row',
-    gap: 16,
+  heroLabel: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  legendItem: {
+  heroTotal: {
+    color: theme.colors.darkText,
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  heroBody: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  metricRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: theme.colors.darkSurface,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    padding: 16,
+  },
+  metricLabel: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  metricValue: {
+    marginTop: 10,
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  metricSuffix: {
+    marginTop: 4,
+    color: theme.colors.darkTextSoft,
+    fontSize: 13,
+  },
+  card: {
+    marginTop: 14,
+    backgroundColor: theme.colors.darkSurface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    padding: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    color: theme.colors.darkText,
+    fontSize: 21,
+    fontWeight: '800',
+  },
+  inlineButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
     borderRadius: 999,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  legendLabel: {
-    color: theme.subtext,
-    fontSize: 12,
-    fontWeight: '600',
+  inlineButtonText: {
+    color: theme.colors.darkText,
+    fontSize: 13,
+    fontWeight: '700',
   },
-  inlineStrong: {
-    color: theme.text,
-    fontWeight: '800',
-  },
-  cheatRow: {
+  setupGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
+    gap: 10,
+  },
+  setupCell: {
+    width: '48%',
+    minHeight: 82,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderRadius: 18,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  setupLabel: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  setupValue: {
+    color: theme.colors.darkText,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  macroRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  macroCard: {
+    flex: 1,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderRadius: 18,
+    padding: 14,
+  },
+  macroDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     marginBottom: 12,
+  },
+  macroLabel: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  macroValue: {
+    marginTop: 6,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  listRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.darkLine,
+  },
+  listTitle: {
+    color: theme.colors.darkText,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  listMeta: {
+    marginTop: 4,
+    color: theme.colors.darkTextSoft,
+    fontSize: 13,
+    maxWidth: 220,
+  },
+  listValue: {
+    color: theme.colors.fitnessPink,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  listValueGreen: {
+    color: theme.colors.fitnessGreen,
+  },
+  cheatBody: {
+    marginTop: 10,
+    color: theme.colors.darkTextSoft,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  cheatBodyStrong: {
+    color: theme.colors.darkText,
+    fontWeight: '700',
+  },
+  cheatChips: {
+    marginTop: 14,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   cheatChip: {
     borderRadius: 999,
-    paddingHorizontal: 12,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: theme.mutedCard,
-    borderWidth: 1,
-    borderColor: theme.line,
   },
   cheatChipActive: {
-    backgroundColor: theme.accentSoft,
-    borderColor: theme.accent,
+    backgroundColor: theme.colors.fitnessPink,
   },
   cheatChipText: {
-    color: theme.text,
+    color: theme.colors.darkTextSoft,
     fontSize: 13,
     fontWeight: '700',
   },
   cheatChipTextActive: {
-    color: theme.accent,
-  },
-  cardBody: {
-    color: theme.subtext,
-    fontSize: 14,
-    lineHeight: 20,
+    color: '#FFF8FA',
   },
 });
