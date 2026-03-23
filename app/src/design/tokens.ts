@@ -56,14 +56,14 @@ export const theme = {
   },
   shadow: {
     soft: {
-      shadowColor: 'rgba(40, 24, 10, 0.12)',
+      shadowColor: 'rgba(17, 17, 17, 0.10)',
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 1,
       shadowRadius: 18,
       elevation: 6,
     },
     strong: {
-      shadowColor: 'rgba(40, 24, 10, 0.18)',
+      shadowColor: 'rgba(17, 17, 17, 0.16)',
       shadowOffset: { width: 0, height: 12 },
       shadowOpacity: 1,
       shadowRadius: 22,

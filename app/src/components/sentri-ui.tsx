@@ -101,14 +101,14 @@ export function CapsuleTabBar({
       <View style={[styles.tabBar, dark ? styles.tabBarDark : styles.tabBarLight]}>
         <TabItem
           label="Home"
-          icon="home-outline"
+          icon="home"
           active={activeTab === 'home'}
           dark={dark}
           onPress={() => onTabChange('home')}
         />
         <TabItem
           label="Myspace"
-          icon="albums-outline"
+          icon="grid"
           active={activeTab === 'myspace'}
           dark={dark}
           onPress={() => onTabChange('myspace')}
@@ -133,14 +133,14 @@ export function CapsuleTabBar({
         </Pressable>
         <TabItem
           label="Calorie"
-          icon="fitness-outline"
+          icon="barbell"
           active={activeTab === 'calorie'}
           dark={dark}
           onPress={() => onTabChange('calorie')}
         />
         <TabItem
           label="Hangout"
-          icon="people-outline"
+          icon="people"
           active={activeTab === 'hangout'}
           dark={dark}
           onPress={() => onTabChange('hangout')}
@@ -168,7 +168,9 @@ function TabItem({
 
   return (
     <Pressable onPress={onPress} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={label}>
-      <Ionicons name={icon} size={19} color={activeColor} />
+      <View style={[styles.tabIconShell, active && styles.tabIconShellActive]}>
+        <Ionicons name={icon} size={26} color={activeColor} />
+      </View>
       <Text
         numberOfLines={1}
         adjustsFontSizeToFit
@@ -287,17 +289,17 @@ const styles = StyleSheet.create({
     bottom: theme.chrome.floatingBarOffset,
   },
   tabBar: {
-    height: theme.chrome.floatingBarHeight,
-    borderRadius: 24,
+    height: 78,
+    borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
-    paddingBottom: 4,
+    paddingVertical: 8,
   },
   tabBarLight: {
-    backgroundColor: 'rgba(255, 252, 247, 0.95)',
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
     borderColor: theme.colors.line,
     ...theme.shadow.strong,
   },
@@ -309,23 +311,33 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
-    paddingVertical: 4,
+    gap: 4,
+    paddingVertical: 2,
+  },
+  tabIconShell: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconShellActive: {
+    backgroundColor: theme.colors.accentSoft,
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
   sentriButton: {
-    width: 62,
+    width: 68,
     alignItems: 'center',
-    gap: 2,
-    transform: [{ translateY: -10 }],
+    gap: 4,
+    transform: [{ translateY: -14 }],
   },
   sentriInner: {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.accent,

@@ -1,5 +1,12 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 
@@ -8,229 +15,445 @@ type CalorieScreenProps = {
   avatarLabel: string;
 };
 
-const profile = {
-  age: 21,
-  height: '176 cm',
-  weight: '72 kg',
+type GoalMode = 'Lose' | 'Maintain' | 'Bulk';
+type BodyType = 'Lean' | 'Average' | 'Heavy';
+type CheatFrequency = '1 day / week' | '2 days / week';
+
+type CalorieSetup = {
+  age: string;
+  height: string;
+  weight: string;
+  waist: string;
+  thigh: string;
+  neck: string;
+  bodyType: BodyType;
+  goal: GoalMode;
+  idealBodyType: string;
+  goalWeight: string;
+  journeyMonths: string;
+  cheatFrequency: CheatFrequency;
+  cheatDay: string;
+};
+
+const defaultSetup: CalorieSetup = {
+  age: '21',
+  height: '176',
+  weight: '72',
+  waist: '',
+  thigh: '',
+  neck: '',
   bodyType: 'Lean',
   goal: 'Bulk',
-  goalWeight: '78 kg',
-  journey: '3 months',
-  dailyTarget: 2680,
-  consumed: 1890,
-  burned: 420,
+  idealBodyType: 'Athletic',
+  goalWeight: '78',
+  journeyMonths: '3',
+  cheatFrequency: '1 day / week',
   cheatDay: 'Friday',
 };
 
-const macros = [
-  { label: 'Protein', value: '124g', tint: theme.colors.fitnessGreen },
-  { label: 'Carbs', value: '212g', tint: theme.colors.fitnessBlue },
-  { label: 'Fats', value: '61g', tint: theme.colors.fitnessPink },
-];
-
-const meals = [
+const baseMeals = [
   { label: 'Breakfast', kcal: 480, note: 'Poha, eggs, milk', time: '08:40' },
   { label: 'Lunch', kcal: 665, note: 'Rice, dal, paneer bhurji', time: '13:15' },
   { label: 'Snack', kcal: 245, note: 'Banana and whey shake', time: '17:30' },
-  { label: 'Dinner', kcal: 500, note: 'Chapati and chicken curry', time: '20:45' },
 ];
 
-const workoutEntries = [
-  { label: 'Functional strength', kcal: 220, meta: '58 min gym' },
-  { label: 'Evening walk', kcal: 96, meta: '34 min walk' },
-  { label: 'Cycling', kcal: 104, meta: '22 min ride' },
+const baseBurns = [
+  { label: 'Gym session', kcal: 220, meta: '58 min lifting' },
+  { label: 'Walk', kcal: 96, meta: '34 min walk' },
 ];
 
 export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScreenProps) {
-  const [mealsToday, setMealsToday] = useState(meals);
-  const [workoutsToday, setWorkoutsToday] = useState(workoutEntries);
-  const [statusMessage, setStatusMessage] = useState('Goal auto-set from your onboarding details.');
+  const [setup, setSetup] = useState<CalorieSetup>(defaultSetup);
+  const [setupComplete, setSetupComplete] = useState(false);
+  const [meals, setMeals] = useState(baseMeals);
+  const [burns, setBurns] = useState(baseBurns);
+  const [statusMessage, setStatusMessage] = useState('Complete your setup to generate a calorie target.');
 
-  const consumed = mealsToday.reduce((total, meal) => total + meal.kcal, 0);
-  const burned = workoutsToday.reduce((total, workout) => total + workout.kcal, 0);
-  const remaining = profile.dailyTarget - consumed + burned;
+  const dailyTarget = useMemo(() => estimateDailyTarget(setup), [setup]);
+  const consumed = meals.reduce((sum, meal) => sum + meal.kcal, 0);
+  const burned = burns.reduce((sum, entry) => sum + entry.kcal, 0);
+  const remaining = dailyTarget - consumed + burned;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.topRow}>
-        <AvatarButton onPress={onOpenDrawer} tone="dark" label={avatarLabel} />
+        <AvatarButton onPress={onOpenDrawer} label={avatarLabel} />
         <View style={styles.topCopy}>
-          <Text style={styles.date}>Today, 23 Mar 2026</Text>
-          <Text style={styles.title}>Summary</Text>
+          <Text style={styles.eyebrow}>Calorie</Text>
+          <Text style={styles.title}>{setupComplete ? 'Your plan' : 'Build your plan'}</Text>
         </View>
       </View>
 
-      <View style={styles.heroCard}>
-        <View style={styles.ringWrap}>
-          <View style={styles.ringOuter}>
-            <View style={styles.ringInner}>
-              <Text style={styles.ringValue}>{remaining}</Text>
-              <Text style={styles.ringUnit}>kcal left</Text>
+      {!setupComplete ? (
+        <>
+          <View style={styles.heroCard}>
+            <Text style={styles.heroTitle}>Tell Sentri about your current body and goal.</Text>
+            <Text style={styles.heroBody}>
+              We’ll use your details, journey time, and cheat-day rhythm to set a realistic daily target for hostel life and gym days.
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Basics</Text>
+            <View style={styles.row}>
+              <InputField
+                label="Age"
+                value={setup.age}
+                onChangeText={(value) => updateSetup(setSetup, 'age', value)}
+                keyboardType="number-pad"
+                suffix="years"
+              />
+              <InputField
+                label="Height"
+                value={setup.height}
+                onChangeText={(value) => updateSetup(setSetup, 'height', value)}
+                keyboardType="number-pad"
+                suffix="cm"
+              />
+            </View>
+            <View style={styles.row}>
+              <InputField
+                label="Weight"
+                value={setup.weight}
+                onChangeText={(value) => updateSetup(setSetup, 'weight', value)}
+                keyboardType="number-pad"
+                suffix="kg"
+              />
+              <InputField
+                label="Goal weight"
+                value={setup.goalWeight}
+                onChangeText={(value) => updateSetup(setSetup, 'goalWeight', value)}
+                keyboardType="number-pad"
+                suffix="kg"
+              />
             </View>
           </View>
-        </View>
 
-        <View style={styles.heroCopy}>
-          <Text style={styles.heroLabel}>Daily target</Text>
-          <Text style={styles.heroTotal}>{profile.dailyTarget} kcal</Text>
-          <Text style={styles.heroBody}>
-            Calories burned from manual workouts are already added back into today’s remaining total.
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.statusCard}>
-        <Text style={styles.statusText}>{statusMessage}</Text>
-      </View>
-
-      <View style={styles.metricRow}>
-        <MetricCard label="Consumed" value={`${consumed}`} suffix="kcal" tint={theme.colors.fitnessPink} />
-        <MetricCard label="Burned" value={`${burned}`} suffix="kcal" tint={theme.colors.fitnessGreen} />
-      </View>
-
-      <View style={styles.metricRow}>
-        <MetricCard label="Goal" value={profile.goalWeight} suffix={profile.goal} tint={theme.colors.fitnessBlue} />
-        <MetricCard label="Cheat day" value={profile.cheatDay} suffix="set" tint={theme.colors.textSoft} />
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Goal setup</Text>
-        <View style={styles.setupGrid}>
-          <SetupCell label="Age" value={`${profile.age}`} />
-          <SetupCell label="Height" value={profile.height} />
-          <SetupCell label="Weight" value={profile.weight} />
-          <SetupCell label="Body type" value={profile.bodyType} />
-          <SetupCell label="Goal" value={profile.goal} />
-          <SetupCell label="Journey" value={profile.journey} />
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Macros</Text>
-        <View style={styles.macroRow}>
-          {macros.map((macro) => (
-            <View key={macro.label} style={styles.macroCard}>
-              <View style={[styles.macroDot, { backgroundColor: macro.tint }]} />
-              <Text style={styles.macroLabel}>{macro.label}</Text>
-              <Text style={[styles.macroValue, { color: macro.tint }]}>{macro.value}</Text>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Optional measurements</Text>
+            <View style={styles.row}>
+              <InputField
+                label="Waist"
+                value={setup.waist}
+                onChangeText={(value) => updateSetup(setSetup, 'waist', value)}
+                keyboardType="number-pad"
+                suffix="cm"
+              />
+              <InputField
+                label="Thigh"
+                value={setup.thigh}
+                onChangeText={(value) => updateSetup(setSetup, 'thigh', value)}
+                keyboardType="number-pad"
+                suffix="cm"
+              />
             </View>
-          ))}
-        </View>
-      </View>
+            <InputField
+              label="Neck"
+              value={setup.neck}
+              onChangeText={(value) => updateSetup(setSetup, 'neck', value)}
+              keyboardType="number-pad"
+              suffix="cm"
+            />
+          </View>
 
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Meals</Text>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Body and goal</Text>
+            <Text style={styles.fieldLabel}>Current body type</Text>
+            <View style={styles.choiceRow}>
+              {(['Lean', 'Average', 'Heavy'] as BodyType[]).map((option) => (
+                <ChoiceChip
+                  key={option}
+                  label={option}
+                  active={setup.bodyType === option}
+                  onPress={() => updateSetup(setSetup, 'bodyType', option)}
+                />
+              ))}
+            </View>
+
+            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Goal</Text>
+            <View style={styles.choiceRow}>
+              {(['Lose', 'Maintain', 'Bulk'] as GoalMode[]).map((option) => (
+                <ChoiceChip
+                  key={option}
+                  label={option}
+                  active={setup.goal === option}
+                  onPress={() => updateSetup(setSetup, 'goal', option)}
+                />
+              ))}
+            </View>
+
+            <InputField
+              label="Ideal body type"
+              value={setup.idealBodyType}
+              onChangeText={(value) => updateSetup(setSetup, 'idealBodyType', value)}
+              placeholder="Athletic, lean bulk, toned..."
+            />
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Timeline and cheat days</Text>
+            <InputField
+              label="Journey time"
+              value={setup.journeyMonths}
+              onChangeText={(value) => updateSetup(setSetup, 'journeyMonths', value)}
+              keyboardType="number-pad"
+              suffix="months"
+            />
+            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Cheat day frequency</Text>
+            <View style={styles.choiceRow}>
+              {(['1 day / week', '2 days / week'] as CheatFrequency[]).map((option) => (
+                <ChoiceChip
+                  key={option}
+                  label={option}
+                  active={setup.cheatFrequency === option}
+                  onPress={() => updateSetup(setSetup, 'cheatFrequency', option)}
+                />
+              ))}
+            </View>
+
+            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Preferred day</Text>
+            <View style={styles.choiceRow}>
+              {['Friday', 'Saturday', 'Sunday'].map((option) => (
+                <ChoiceChip
+                  key={option}
+                  label={option}
+                  active={setup.cheatDay === option}
+                  onPress={() => updateSetup(setSetup, 'cheatDay', option)}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.planPreview}>
+            <Text style={styles.planLabel}>Estimated daily intake</Text>
+            <Text style={styles.planValue}>{dailyTarget} kcal</Text>
+            <Text style={styles.planBody}>
+              Based on {setup.goal.toLowerCase()} mode, {setup.journeyMonths || '3'} months, and a {setup.cheatFrequency.toLowerCase()} rhythm.
+            </Text>
+          </View>
+
           <Pressable
-            style={styles.inlineButton}
+            style={styles.primaryButton}
             onPress={() => {
-              setMealsToday((current) => [
-                ...current,
-                { label: 'Quick add', kcal: 210, note: 'Hostel snack estimate', time: '21:30' },
-              ]);
-              setStatusMessage('Quick meal added to today.');
+              setSetupComplete(true);
+              setStatusMessage(`Daily target set to ${dailyTarget} kcal for your ${setup.goal.toLowerCase()} plan.`);
             }}
           >
-            <Text style={styles.inlineButtonText}>Add meal</Text>
+            <Text style={styles.primaryButtonText}>Build my plan</Text>
           </Pressable>
-        </View>
-        {mealsToday.map((meal) => (
-          <View key={meal.label} style={styles.listRow}>
+        </>
+      ) : (
+        <>
+          <View style={styles.summaryHero}>
             <View>
-              <Text style={styles.listTitle}>{meal.label}</Text>
-              <Text style={styles.listMeta}>
-                {meal.time} • {meal.note}
-              </Text>
+              <Text style={styles.heroLabel}>Remaining today</Text>
+              <Text style={styles.summaryValue}>{remaining}</Text>
+              <Text style={styles.summaryUnit}>kcal</Text>
             </View>
-            <Text style={styles.listValue}>{meal.kcal}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Workout burn</Text>
-          <Pressable
-            style={styles.inlineButton}
-            onPress={() => {
-              setWorkoutsToday((current) => [
-                ...current,
-                { label: 'Manual walk', kcal: 95, meta: '25 min quick add' },
-              ]);
-              setStatusMessage('Manual calorie burn added.');
-            }}
-          >
-            <Text style={styles.inlineButtonText}>Log burn</Text>
-          </Pressable>
-        </View>
-        {workoutsToday.map((entry) => (
-          <View key={entry.label} style={styles.listRow}>
-            <View>
-              <Text style={styles.listTitle}>{entry.label}</Text>
-              <Text style={styles.listMeta}>{entry.meta}</Text>
+            <View style={styles.ring}>
+              <View style={styles.ringInner}>
+                <Text style={styles.ringText}>{Math.max(Math.round((consumed / Math.max(dailyTarget, 1)) * 100), 0)}%</Text>
+              </View>
             </View>
-            <Text style={[styles.listValue, styles.listValueGreen]}>{entry.kcal}</Text>
           </View>
-        ))}
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Cheat day rhythm</Text>
-        <Text style={styles.cheatBody}>
-          One flexible day is scheduled for <Text style={styles.cheatBodyStrong}>{profile.cheatDay}</Text>, so the plan stays realistic for hostel meals, hangouts, and weekends.
-        </Text>
-        <View style={styles.cheatChips}>
-          <CheatChip label="Friday" active />
-          <CheatChip label="Saturday" />
-          <CheatChip label="Sunday" />
-          <CheatChip label="2 days / week" />
-        </View>
-      </View>
+          <View style={styles.statusCard}>
+            <Text style={styles.statusText}>{statusMessage}</Text>
+          </View>
+
+          <View style={styles.metricRow}>
+            <MetricCard label="Target" value={`${dailyTarget}`} suffix="kcal" />
+            <MetricCard label="Consumed" value={`${consumed}`} suffix="kcal" />
+            <MetricCard label="Burned" value={`${burned}`} suffix="kcal" />
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Your setup</Text>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => {
+                  setSetupComplete(false);
+                  setStatusMessage('Update your body details to rebuild the plan.');
+                }}
+              >
+                <Text style={styles.secondaryButtonText}>Edit</Text>
+              </Pressable>
+            </View>
+            <View style={styles.setupGrid}>
+              <SetupPill label="Age" value={`${setup.age} y`} />
+              <SetupPill label="Height" value={`${setup.height} cm`} />
+              <SetupPill label="Weight" value={`${setup.weight} kg`} />
+              <SetupPill label="Goal" value={setup.goal} />
+              <SetupPill label="Goal weight" value={`${setup.goalWeight} kg`} />
+              <SetupPill label="Cheat day" value={setup.cheatDay} />
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Meals</Text>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => {
+                  setMeals((current) => [
+                    ...current,
+                    { label: 'Quick add', kcal: 210, note: 'Hostel snack estimate', time: '21:30' },
+                  ]);
+                  setStatusMessage('Quick meal added.');
+                }}
+              >
+                <Text style={styles.secondaryButtonText}>Add meal</Text>
+              </Pressable>
+            </View>
+            {meals.map((meal) => (
+              <View key={`${meal.label}-${meal.time}`} style={styles.listRow}>
+                <View style={styles.listCopy}>
+                  <Text style={styles.listTitle}>{meal.label}</Text>
+                  <Text style={styles.listMeta}>
+                    {meal.time} • {meal.note}
+                  </Text>
+                </View>
+                <Text style={styles.listValue}>{meal.kcal}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Calories burned</Text>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => {
+                  setBurns((current) => [
+                    ...current,
+                    { label: 'Manual run', kcal: 110, meta: '20 min quick add' },
+                  ]);
+                  setStatusMessage('Manual burn added.');
+                }}
+              >
+                <Text style={styles.secondaryButtonText}>Log burn</Text>
+              </Pressable>
+            </View>
+            {burns.map((entry) => (
+              <View key={`${entry.label}-${entry.meta}`} style={styles.listRow}>
+                <View style={styles.listCopy}>
+                  <Text style={styles.listTitle}>{entry.label}</Text>
+                  <Text style={styles.listMeta}>{entry.meta}</Text>
+                </View>
+                <Text style={styles.listValue}>{entry.kcal}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Cheat day rhythm</Text>
+            <Text style={styles.cheatText}>
+              {setup.cheatFrequency} is active, with {setup.cheatDay} set as the primary relaxed day so the plan stays realistic.
+            </Text>
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }
 
-function MetricCard({
+function updateSetup(
+  setSetup: Dispatch<SetStateAction<CalorieSetup>>,
+  key: keyof CalorieSetup,
+  value: string
+) {
+  setSetup((current) => ({ ...current, [key]: value }));
+}
+
+function InputField({
   label,
   value,
+  onChangeText,
+  keyboardType,
+  placeholder,
   suffix,
-  tint,
 }: {
   label: string;
   value: string;
-  suffix: string;
-  tint: string;
+  onChangeText: (value: string) => void;
+  keyboardType?: 'default' | 'number-pad';
+  placeholder?: string;
+  suffix?: string;
 }) {
+  return (
+    <View style={styles.inputField}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.inputShell}>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
+          placeholder={placeholder}
+          placeholderTextColor={theme.colors.textMuted}
+          style={styles.input}
+        />
+        {suffix ? <Text style={styles.inputSuffix}>{suffix}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+function ChoiceChip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={[styles.choiceChip, active && styles.choiceChipActive]} onPress={onPress}>
+      <Text style={[styles.choiceChipText, active && styles.choiceChipTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function MetricCard({ label, value, suffix }: { label: string; value: string; suffix: string }) {
   return (
     <View style={styles.metricCard}>
       <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={[styles.metricValue, { color: tint }]}>{value}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
       <Text style={styles.metricSuffix}>{suffix}</Text>
     </View>
   );
 }
 
-function SetupCell({ label, value }: { label: string; value: string }) {
+function SetupPill({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.setupCell}>
-      <Text style={styles.setupLabel}>{label}</Text>
-      <Text style={styles.setupValue}>{value}</Text>
+    <View style={styles.setupPill}>
+      <Text style={styles.setupPillLabel}>{label}</Text>
+      <Text style={styles.setupPillValue}>{value}</Text>
     </View>
   );
 }
 
-function CheatChip({ label, active = false }: { label: string; active?: boolean }) {
-  return (
-    <View style={[styles.cheatChip, active && styles.cheatChipActive]}>
-      <Text style={[styles.cheatChipText, active && styles.cheatChipTextActive]}>{label}</Text>
-    </View>
-  );
+function estimateDailyTarget(setup: CalorieSetup) {
+  const weight = Number(setup.weight) || 70;
+  const height = Number(setup.height) || 170;
+  const age = Number(setup.age) || 21;
+  const months = Math.max(Number(setup.journeyMonths) || 3, 1);
+  const goalWeight = Number(setup.goalWeight) || weight;
+
+  const base = Math.round(10 * weight + 6.25 * height - 5 * age + 500);
+  const delta = goalWeight - weight;
+  const pace = Math.round((delta * 7700) / (months * 30));
+
+  if (setup.goal === 'Lose') return Math.max(base - Math.abs(pace), 1400);
+  if (setup.goal === 'Bulk') return base + Math.max(pace, 220);
+  return base;
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: theme.colors.darkBackground,
+    backgroundColor: theme.colors.background,
   },
   content: {
     paddingHorizontal: theme.chrome.horizontalPadding,
@@ -245,124 +468,47 @@ const styles = StyleSheet.create({
   topCopy: {
     gap: 2,
   },
-  date: {
-    color: theme.colors.darkTextSoft,
-    fontSize: 14,
+  eyebrow: {
+    color: theme.colors.accentStrong,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   title: {
-    color: theme.colors.darkText,
+    color: theme.colors.text,
     fontSize: 28,
     fontWeight: '800',
   },
   heroCard: {
-    marginTop: 20,
-    backgroundColor: theme.colors.darkSurface,
+    marginTop: 18,
     borderRadius: 28,
-    padding: 18,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.darkLine,
+    borderColor: theme.colors.line,
+    padding: 18,
+    ...theme.shadow.soft,
   },
-  ringWrap: {
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  ringOuter: {
-    width: 178,
-    height: 178,
-    borderRadius: 89,
-    borderWidth: 18,
-    borderColor: theme.colors.fitnessPink,
-    backgroundColor: theme.colors.fitnessPinkSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringInner: {
-    width: 116,
-    height: 116,
-    borderRadius: 58,
-    backgroundColor: theme.colors.darkBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringValue: {
-    color: theme.colors.darkText,
-    fontSize: 30,
+  heroTitle: {
+    color: theme.colors.text,
+    fontSize: 22,
     fontWeight: '800',
-  },
-  ringUnit: {
-    marginTop: 4,
-    color: theme.colors.darkTextSoft,
-    fontSize: 13,
-  },
-  heroCopy: {
-    gap: 6,
-  },
-  statusCard: {
-    marginTop: 14,
-    borderRadius: 18,
-    backgroundColor: theme.colors.darkSurfaceAlt,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  statusText: {
-    color: theme.colors.darkText,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  heroLabel: {
-    color: theme.colors.darkTextSoft,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  heroTotal: {
-    color: theme.colors.darkText,
-    fontSize: 24,
-    fontWeight: '800',
+    lineHeight: 28,
   },
   heroBody: {
-    color: theme.colors.darkTextSoft,
+    marginTop: 10,
+    color: theme.colors.textSoft,
     fontSize: 14,
     lineHeight: 20,
   },
-  metricRow: {
-    marginTop: 14,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: theme.colors.darkSurface,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: theme.colors.darkLine,
-    padding: 16,
-  },
-  metricLabel: {
-    color: theme.colors.darkTextSoft,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  metricValue: {
-    marginTop: 10,
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  metricSuffix: {
-    marginTop: 4,
-    color: theme.colors.darkTextSoft,
-    fontSize: 13,
-  },
   card: {
-    marginTop: 14,
-    backgroundColor: theme.colors.darkSurface,
+    marginTop: 16,
     borderRadius: 24,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.darkLine,
+    borderColor: theme.colors.line,
     padding: 16,
+    ...theme.shadow.soft,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -371,21 +517,215 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    color: theme.colors.darkText,
-    fontSize: 21,
+    color: theme.colors.text,
+    fontSize: 20,
     fontWeight: '800',
   },
-  inlineButton: {
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  inputField: {
+    flex: 1,
+    marginTop: 12,
+  },
+  fieldLabel: {
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  fieldSpacing: {
+    marginTop: 16,
+  },
+  inputShell: {
+    marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: theme.colors.darkSurfaceAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: 8,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 14,
   },
-  inlineButtonText: {
-    color: theme.colors.darkText,
+  input: {
+    flex: 1,
+    minHeight: 50,
+    color: theme.colors.text,
+    fontSize: 15,
+  },
+  inputSuffix: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  choiceRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  choiceChip: {
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  choiceChipActive: {
+    backgroundColor: theme.colors.accent,
+  },
+  choiceChipText: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  choiceChipTextActive: {
+    color: '#FFFFFF',
+  },
+  planPreview: {
+    marginTop: 16,
+    borderRadius: 24,
+    backgroundColor: theme.colors.accent,
+    padding: 18,
+  },
+  planLabel: {
+    color: '#D2E3FC',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  planValue: {
+    marginTop: 8,
+    color: '#FFFFFF',
+    fontSize: 36,
+    fontWeight: '800',
+  },
+  planBody: {
+    marginTop: 8,
+    color: '#D2E3FC',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  primaryButton: {
+    marginTop: 16,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surfaceStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  summaryHero: {
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    borderRadius: 28,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    padding: 18,
+    ...theme.shadow.soft,
+  },
+  heroLabel: {
+    color: theme.colors.textSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  summaryValue: {
+    marginTop: 8,
+    color: theme.colors.text,
+    fontSize: 40,
+    fontWeight: '800',
+  },
+  summaryUnit: {
+    color: theme.colors.textSoft,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  ring: {
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    borderWidth: 12,
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringInner: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringText: {
+    color: theme.colors.accentStrong,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  statusCard: {
+    marginTop: 14,
+    borderRadius: 18,
+    backgroundColor: theme.colors.accentSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  statusText: {
+    color: theme.colors.accentStrong,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  metricRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    padding: 16,
+  },
+  metricLabel: {
+    color: theme.colors.textSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  metricValue: {
+    marginTop: 8,
+    color: theme.colors.text,
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  metricSuffix: {
+    marginTop: 4,
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  secondaryButtonText: {
+    color: theme.colors.text,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -394,110 +734,56 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-  setupCell: {
-    width: '48%',
-    minHeight: 82,
-    backgroundColor: theme.colors.darkSurfaceAlt,
+  setupPill: {
+    width: '47%',
     borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
     padding: 12,
-    justifyContent: 'space-between',
+    gap: 4,
   },
-  setupLabel: {
-    color: theme.colors.darkTextSoft,
+  setupPillLabel: {
+    color: theme.colors.textSoft,
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
   },
-  setupValue: {
-    color: theme.colors.darkText,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  macroRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  macroCard: {
-    flex: 1,
-    backgroundColor: theme.colors.darkSurfaceAlt,
-    borderRadius: 18,
-    padding: 14,
-  },
-  macroDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginBottom: 12,
-  },
-  macroLabel: {
-    color: theme.colors.darkTextSoft,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  macroValue: {
-    marginTop: 6,
-    fontSize: 22,
+  setupPillValue: {
+    color: theme.colors.text,
+    fontSize: 17,
     fontWeight: '800',
   },
   listRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.darkLine,
+    borderTopColor: theme.colors.line,
+  },
+  listCopy: {
+    flex: 1,
+    paddingRight: 12,
   },
   listTitle: {
-    color: theme.colors.darkText,
+    color: theme.colors.text,
     fontSize: 16,
     fontWeight: '700',
   },
   listMeta: {
     marginTop: 4,
-    color: theme.colors.darkTextSoft,
+    color: theme.colors.textSoft,
     fontSize: 13,
-    maxWidth: 220,
+    lineHeight: 18,
   },
   listValue: {
-    color: theme.colors.fitnessPink,
-    fontSize: 20,
+    color: theme.colors.accentStrong,
+    fontSize: 22,
     fontWeight: '800',
   },
-  listValueGreen: {
-    color: theme.colors.fitnessGreen,
-  },
-  cheatBody: {
+  cheatText: {
     marginTop: 10,
-    color: theme.colors.darkTextSoft,
+    color: theme.colors.textSoft,
     fontSize: 14,
     lineHeight: 20,
-  },
-  cheatBodyStrong: {
-    color: theme.colors.darkText,
-    fontWeight: '700',
-  },
-  cheatChips: {
-    marginTop: 14,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  cheatChip: {
-    borderRadius: 999,
-    backgroundColor: theme.colors.darkSurfaceAlt,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  cheatChipActive: {
-    backgroundColor: theme.colors.fitnessPink,
-  },
-  cheatChipText: {
-    color: theme.colors.darkTextSoft,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  cheatChipTextActive: {
-    color: '#FFF8FA',
   },
 });

@@ -176,7 +176,7 @@ const scheduleByDay: Record<string, ClassEntry[]> = {
       start: '10:00',
       end: '10:15',
       type: 'Deadline',
-      note: 'Ask the user to upload next week timetable screenshot.',
+      note: 'Upload next week timetable screenshot here.',
     },
   ],
   sun: [],
@@ -197,19 +197,16 @@ const calendarTags: Record<string, CalendarTag[]> = {
 export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('today');
   const [focusedDate, setFocusedDate] = useState(todayAnchor);
-  const [selectedClassId, setSelectedClassId] = useState(scheduleByDay.mon[0]?.id ?? null);
+  const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'updated'>('idle');
 
   const weekDays = useMemo(() => buildWeekDates(focusedDate), [focusedDate]);
+  const monthRows = useMemo(() => buildMonthRows(focusedDate), [focusedDate]);
   const selectedDayKey = dayKeyForDate(focusedDate);
   const selectedEntries = scheduleByDay[selectedDayKey] || [];
-  const selectedClass = selectedEntries.find((entry) => entry.id === selectedClassId) ?? selectedEntries[0] ?? null;
-  const summaryState = resolveScheduleState(selectedEntries, focusedDate, todayAnchor);
-  const currentClass = summaryState.currentClass;
-  const nextClass = summaryState.nextClass;
+  const hoveredClass = selectedEntries.find((entry) => entry.id === hoveredClassId) ?? null;
   const refreshDue = todayAnchor >= saturdayRefreshDate;
-  const monthRows = useMemo(() => buildMonthRows(focusedDate), [focusedDate]);
-  const summaryHeadline = summaryState.headline;
+  const summaryState = resolveScheduleState(selectedEntries, focusedDate, todayAnchor);
 
   return (
     <ScrollView
@@ -223,19 +220,27 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
           <Text style={styles.topMonth}>{formatMonthYear(focusedDate)}</Text>
           <Text style={styles.topDate}>{formatLongDate(focusedDate)}</Text>
         </View>
-        <View style={[styles.refreshChip, refreshDue ? styles.refreshChipUrgent : styles.refreshChipCalm]}>
-          <Text style={[styles.refreshChipText, refreshDue && styles.refreshChipTextUrgent]}>
-            {refreshDue ? 'Refresh due' : 'Week ready'}
+        <Pressable
+          style={[styles.topUploadButton, uploadState === 'updated' && styles.topUploadButtonDone]}
+          onPress={() => {
+            setUploadState('uploading');
+            setTimeout(() => setUploadState('updated'), 260);
+          }}
+        >
+          <Text style={styles.topUploadButtonText}>
+            {uploadState === 'uploading' ? 'Uploading' : uploadState === 'updated' ? 'Updated' : 'Upload'}
           </Text>
-        </View>
+        </Pressable>
       </View>
 
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeader}>
-          <View>
+          <View style={styles.summaryCopy}>
             <Text style={styles.summaryLabel}>Current + Next</Text>
             <Text style={styles.summaryTitle}>
-              {currentClass || nextClass ? summaryHeadline : 'Nothing live right now'}
+              {summaryState.currentClass || summaryState.nextClass
+                ? summaryState.headline
+                : 'No class running right now'}
             </Text>
           </View>
           <Text style={styles.summaryDay}>{selectedDayKey.toUpperCase()}</Text>
@@ -243,56 +248,41 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
 
         <View style={styles.summaryColumns}>
           <View style={styles.summaryColumn}>
-            <Text style={styles.columnLabel}>Current class</Text>
-            <Text style={styles.columnTitle}>{currentClass?.title ?? 'Free slot'}</Text>
+            <Text style={styles.columnLabel}>Current</Text>
+            <Text style={styles.columnTitle}>{summaryState.currentClass?.title ?? 'Free slot'}</Text>
             <Text style={styles.columnMeta}>
-              {currentClass ? `${currentClass.room} • ${currentClass.teacher}` : 'No active lecture now'}
+              {summaryState.currentClass
+                ? `${summaryState.currentClass.room} • ${summaryState.currentClass.teacher}`
+                : 'No active lecture right now'}
             </Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryColumn}>
-            <Text style={styles.columnLabel}>Next class</Text>
-            <Text style={styles.columnTitle}>{nextClass?.title ?? 'No next class'}</Text>
+            <Text style={styles.columnLabel}>Next</Text>
+            <Text style={styles.columnTitle}>{summaryState.nextClass?.title ?? 'No next class'}</Text>
             <Text style={styles.columnMeta}>
-              {nextClass ? `${nextClass.start} - ${nextClass.end} • ${nextClass.room}` : 'Upload the next week when Saturday arrives'}
+              {summaryState.nextClass
+                ? `${summaryState.nextClass.start} - ${summaryState.nextClass.end} • ${summaryState.nextClass.room}`
+                : 'Upload next week timetable on Saturday'}
             </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.refreshBanner}>
-        <View style={styles.refreshBannerRow}>
-          <View style={styles.refreshBannerCopy}>
-            <Text style={styles.refreshBannerTitle}>
-              {uploadState === 'updated'
-                ? 'Timetable screenshot received'
-                : refreshDue
-                  ? 'Upload the next timetable this Saturday'
-                  : 'Next timetable prompt comes on Saturday'}
-            </Text>
-            <Text style={styles.refreshBannerBody}>
-              {uploadState === 'updated'
-                ? 'The new screenshot is queued so Sentri can refresh this week.'
-                : 'Upload the latest timetable screenshot here whenever AIT sends the new week.'}
-            </Text>
-          </View>
-          <Pressable
-            style={[styles.uploadButton, uploadState === 'updated' && styles.uploadButtonDone]}
-            onPress={() => {
-              setUploadState('uploading');
-              setTimeout(() => {
-                setUploadState('updated');
-              }, 250);
-            }}
-          >
-            <Text style={[styles.uploadButtonText, uploadState === 'updated' && styles.uploadButtonTextDone]}>
-              {uploadState === 'uploading'
-                ? 'Uploading'
-                : uploadState === 'updated'
-                  ? 'Updated'
-                  : 'Upload'}
-            </Text>
-          </Pressable>
+        <View style={styles.refreshBannerCopy}>
+          <Text style={styles.refreshBannerTitle}>
+            {uploadState === 'updated'
+              ? 'Timetable updated'
+              : refreshDue
+                ? 'Week ready for a fresh upload'
+                : 'Week ready'}
+          </Text>
+          <Text style={styles.refreshBannerBody}>
+            {uploadState === 'updated'
+              ? 'Your next screenshot is staged so Sentri can refresh the week.'
+              : 'Every Saturday, upload the new screenshot when the timetable mail arrives.'}
+          </Text>
         </View>
       </View>
 
@@ -325,7 +315,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
                   key={date.toISOString()}
                   onPress={() => {
                     setFocusedDate(date);
-                    setSelectedClassId((scheduleByDay[dayKeyForDate(date)] || [])[0]?.id ?? null);
+                    setHoveredClassId(null);
                   }}
                   style={[styles.dayCard, active && styles.dayCardActive]}
                 >
@@ -349,35 +339,34 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
           </View>
 
           {selectedEntries.length ? (
-            <View style={styles.timelineList}>
-              {selectedEntries.map((entry) => {
-                const selected = selectedClass?.id === entry.id;
-                return (
+            <View style={styles.scheduleCard}>
+              <View style={styles.scheduleHead}>
+                <Text style={styles.scheduleCardTitle}>{formatLongDate(focusedDate)}</Text>
+                <Text style={styles.scheduleCardHint}>Long press any class for the hover card.</Text>
+              </View>
+              <View style={styles.scheduleList}>
+                {selectedEntries.map((entry, index) => (
                   <Pressable
                     key={entry.id}
-                    onPress={() => setSelectedClassId(entry.id)}
-                    onLongPress={() => setSelectedClassId(entry.id)}
-                    style={[styles.timelineRow, selected && styles.timelineRowSelected]}
+                    onLongPress={() => setHoveredClassId(entry.id)}
+                    onPressOut={() =>
+                      setHoveredClassId((current) => (current === entry.id ? null : current))
+                    }
+                    delayLongPress={180}
+                    style={[styles.scheduleRow, index !== 0 && styles.scheduleRowBorder]}
                   >
-                    <View style={styles.timelineMarkerWrap}>
-                      <View style={[styles.timelineDot, selected && styles.timelineDotActive]} />
-                      <View style={styles.timelineLine} />
+                    <View style={styles.scheduleTimeBlock}>
+                      <Text style={styles.scheduleTime}>{entry.start}</Text>
+                      <Text style={styles.scheduleTimeEnd}>{entry.end}</Text>
                     </View>
-                    <View style={styles.timelineText}>
-                      <Text style={styles.timelineSubject}>{entry.title}</Text>
-                      <Text style={styles.timelineSubheading}>
-                        {entry.start} - {entry.end}
-                      </Text>
-                      <Text style={styles.timelineMeta}>
-                        {entry.room} • {entry.teacher}
-                      </Text>
+                    <View style={styles.scheduleCopy}>
+                      <Text style={styles.scheduleSubject}>{entry.title}</Text>
+                      <Text style={styles.scheduleMeta}>{entry.room} • {entry.teacher}</Text>
                     </View>
-                    <View style={styles.typeBadge}>
-                      <Text style={styles.typeBadgeText}>{entry.type}</Text>
-                    </View>
+                    <Text style={styles.scheduleType}>{entry.type}</Text>
                   </Pressable>
-                );
-              })}
+                ))}
+              </View>
             </View>
           ) : (
             <View style={styles.emptyCard}>
@@ -386,14 +375,16 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
             </View>
           )}
 
-          {selectedClass ? (
-            <View style={styles.detailCard}>
-              <Text style={styles.detailKicker}>Pressed detail</Text>
-              <Text style={styles.detailTitle}>{selectedClass.title}</Text>
-              <Text style={styles.detailBody}>
-                {selectedClass.start} - {selectedClass.end} • {selectedClass.room} • {selectedClass.teacher}
+          {hoveredClass ? (
+            <View style={styles.hoverCard}>
+              <Text style={styles.hoverKicker}>Class detail</Text>
+              <Text style={styles.hoverTitle}>{hoveredClass.title}</Text>
+              <Text style={styles.hoverBody}>
+                {hoveredClass.start} - {hoveredClass.end} • {hoveredClass.room} • {hoveredClass.teacher}
               </Text>
-              <Text style={styles.detailNote}>{selectedClass.note ?? 'Open until you press another class.'}</Text>
+              <Text style={styles.hoverNote}>
+                {hoveredClass.note ?? 'Release your press to hide this detail preview.'}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -405,7 +396,6 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
             <Text style={styles.sectionTitle}>This week</Text>
             <Text style={styles.sectionAction}>Tap a day</Text>
           </View>
-
           {weekDays.map((date) => {
             const entries = scheduleByDay[dayKeyForDate(date)] || [];
             return (
@@ -413,7 +403,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
                 key={`week-${date.toISOString()}`}
                 onPress={() => {
                   setFocusedDate(date);
-                  setSelectedClassId(entries[0]?.id ?? null);
+                  setHoveredClassId(null);
                   setViewMode('today');
                 }}
                 style={styles.weekRow}
@@ -423,9 +413,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
                   <Text style={styles.weekDateNumber}>{date.getDate()}</Text>
                 </View>
                 <View style={styles.weekSummaryBlock}>
-                  <Text style={styles.weekSummaryTitle}>
-                    {entries[0]?.title ?? 'No classes'}
-                  </Text>
+                  <Text style={styles.weekSummaryTitle}>{entries[0]?.title ?? 'No classes'}</Text>
                   <Text style={styles.weekSummaryBody}>
                     {entries.length ? `${entries.length} timetable items` : 'Free day'}
                   </Text>
@@ -464,7 +452,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
                         cell.date
                           ? () => {
                               setFocusedDate(cell.date);
-                              setSelectedClassId((scheduleByDay[dayKeyForDate(cell.date)] || [])[0]?.id ?? null);
+                              setHoveredClassId(null);
                               setViewMode('today');
                             }
                           : undefined
@@ -634,7 +622,9 @@ function isSameDate(left: Date, right: Date) {
 }
 
 function dateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate()
+  ).padStart(2, '0')}`;
 }
 
 function toMinutes(time: string) {
@@ -643,9 +633,9 @@ function toMinutes(time: string) {
 }
 
 const tagToneStyles = StyleSheet.create({
-  accent: { backgroundColor: theme.colors.accentSoft },
-  blue: { backgroundColor: theme.colors.blueSoft },
-  green: { backgroundColor: theme.colors.greenSoft },
+  accent: { backgroundColor: '#D2E3FC' },
+  blue: { backgroundColor: '#E8F0FE' },
+  green: { backgroundColor: '#F1F3F4' },
 });
 
 const styles = StyleSheet.create({
@@ -676,24 +666,22 @@ const styles = StyleSheet.create({
     color: theme.colors.textSoft,
     fontSize: 14,
   },
-  refreshChip: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  refreshChipCalm: {
-    backgroundColor: theme.colors.surfaceAlt,
-  },
-  refreshChipUrgent: {
+  topUploadButton: {
+    minWidth: 86,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.accentSoft,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  refreshChipText: {
-    color: theme.colors.text,
-    fontSize: 12,
-    fontWeight: '700',
+  topUploadButtonDone: {
+    backgroundColor: theme.colors.accent,
   },
-  refreshChipTextUrgent: {
+  topUploadButtonText: {
     color: theme.colors.accentStrong,
+    fontSize: 13,
+    fontWeight: '800',
   },
   summaryCard: {
     marginTop: 18,
@@ -706,15 +694,19 @@ const styles = StyleSheet.create({
   },
   summaryHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 16,
     marginBottom: 16,
+  },
+  summaryCopy: {
+    flex: 1,
   },
   summaryLabel: {
     color: theme.colors.accentStrong,
     fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.9,
     textTransform: 'uppercase',
   },
   summaryTitle: {
@@ -725,13 +717,13 @@ const styles = StyleSheet.create({
   },
   summaryDay: {
     color: theme.colors.accentStrong,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
-    backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: 999,
-    overflow: 'hidden',
+    backgroundColor: theme.colors.accentSoft,
+    borderRadius: theme.radius.pill,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    overflow: 'hidden',
   },
   summaryColumns: {
     flexDirection: 'row',
@@ -764,18 +756,15 @@ const styles = StyleSheet.create({
   },
   refreshBanner: {
     marginTop: 14,
-    borderRadius: 22,
-    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: 24,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  refreshBannerRow: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
   refreshBannerCopy: {
-    flex: 1,
+    gap: 4,
   },
   refreshBannerTitle: {
     color: theme.colors.text,
@@ -783,30 +772,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   refreshBannerBody: {
-    marginTop: 4,
     color: theme.colors.textSoft,
     fontSize: 13,
     lineHeight: 18,
-  },
-  uploadButton: {
-    borderRadius: 16,
-    backgroundColor: theme.colors.accent,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minWidth: 84,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  uploadButtonDone: {
-    backgroundColor: theme.colors.surfaceStrong,
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  uploadButtonTextDone: {
-    color: '#FFFFFF',
   },
   segmentedControl: {
     marginTop: 18,
@@ -843,7 +811,7 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   dayCard: {
-    width: 82,
+    width: 84,
     borderRadius: 22,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
@@ -862,7 +830,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   dayCardTopActive: {
-    color: '#CDC3B6',
+    color: '#D2E3FC',
   },
   dayCardDate: {
     color: theme.colors.text,
@@ -878,7 +846,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   dayCardMetaActive: {
-    color: '#D8D0C7',
+    color: '#D2E3FC',
   },
   sectionHeader: {
     marginTop: 18,
@@ -897,98 +865,107 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  timelineList: {
-    gap: 12,
+  scheduleCard: {
+    borderRadius: 28,
+    backgroundColor: theme.colors.accent,
+    padding: 18,
+    ...theme.shadow.strong,
   },
-  timelineRow: {
+  scheduleHead: {
+    gap: 4,
+    marginBottom: 8,
+  },
+  scheduleCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  scheduleCardHint: {
+    color: '#D2E3FC',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  scheduleList: {
+    marginTop: 4,
+  },
+  scheduleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    paddingHorizontal: 14,
     paddingVertical: 14,
-    borderRadius: 22,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.line,
   },
-  timelineRowSelected: {
-    borderColor: theme.colors.accent,
+  scheduleRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.18)',
   },
-  timelineMarkerWrap: {
-    alignItems: 'center',
-    width: 16,
-    marginTop: 2,
+  scheduleTimeBlock: {
+    width: 64,
+    gap: 2,
   },
-  timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: theme.colors.line,
+  scheduleTime: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
   },
-  timelineDotActive: {
-    backgroundColor: theme.colors.accent,
+  scheduleTimeEnd: {
+    color: '#D2E3FC',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    minHeight: 48,
-    marginTop: 6,
-    backgroundColor: theme.colors.line,
-  },
-  timelineText: {
+  scheduleCopy: {
     flex: 1,
     gap: 3,
   },
-  timelineSubject: {
-    color: theme.colors.text,
-    fontSize: 17,
+  scheduleSubject: {
+    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: '800',
   },
-  timelineSubheading: {
-    color: theme.colors.textSoft,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  timelineMeta: {
-    color: theme.colors.textMuted,
+  scheduleMeta: {
+    color: '#D2E3FC',
     fontSize: 13,
+    lineHeight: 18,
   },
-  typeBadge: {
-    borderRadius: 999,
-    backgroundColor: theme.colors.surfaceAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  typeBadgeText: {
-    color: theme.colors.textSoft,
-    fontSize: 11,
+  scheduleType: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '700',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    overflow: 'hidden',
   },
-  detailCard: {
-    marginTop: 14,
+  hoverCard: {
+    marginTop: 12,
     borderRadius: 24,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
     padding: 16,
-    gap: 6,
+    ...theme.shadow.soft,
   },
-  detailKicker: {
+  hoverKicker: {
     color: theme.colors.accentStrong,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
     textTransform: 'uppercase',
   },
-  detailTitle: {
+  hoverTitle: {
+    marginTop: 6,
     color: theme.colors.text,
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '800',
   },
-  detailBody: {
+  hoverBody: {
+    marginTop: 8,
     color: theme.colors.textSoft,
     fontSize: 14,
     lineHeight: 20,
   },
-  detailNote: {
+  hoverNote: {
+    marginTop: 10,
     color: theme.colors.text,
     fontSize: 14,
     lineHeight: 20,
@@ -1002,7 +979,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: theme.colors.text,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
   },
   emptyBody: {
@@ -1015,27 +992,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    borderRadius: 22,
+    borderRadius: 24,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.line,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginBottom: 10,
+    padding: 14,
+    marginBottom: 12,
   },
   weekDateBlock: {
-    width: 54,
+    width: 56,
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
   weekDateDay: {
     color: theme.colors.textMuted,
     fontSize: 12,
     fontWeight: '700',
+    textTransform: 'uppercase',
   },
   weekDateNumber: {
     color: theme.colors.text,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
   },
   weekSummaryBlock: {
@@ -1044,8 +1021,8 @@ const styles = StyleSheet.create({
   },
   weekSummaryTitle: {
     color: theme.colors.text,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
   },
   weekSummaryBody: {
     color: theme.colors.textSoft,
@@ -1053,8 +1030,8 @@ const styles = StyleSheet.create({
   },
   weekChevron: {
     color: theme.colors.textMuted,
-    fontSize: 24,
-    lineHeight: 24,
+    fontSize: 26,
+    lineHeight: 28,
   },
   weekdayRow: {
     flexDirection: 'row',
@@ -1063,12 +1040,13 @@ const styles = StyleSheet.create({
   weekdayLabel: {
     flex: 1,
     color: theme.colors.textMuted,
+    textAlign: 'center',
     fontSize: 12,
     fontWeight: '700',
-    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   calendarGrid: {
-    gap: 8,
+    gap: 10,
   },
   calendarRow: {
     flexDirection: 'row',
@@ -1082,14 +1060,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.line,
     padding: 8,
-    gap: 4,
   },
   calendarCellActive: {
     borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentSoft,
   },
   calendarCellBlank: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
+    opacity: 0,
   },
   calendarDate: {
     color: theme.colors.text,
@@ -1100,13 +1077,14 @@ const styles = StyleSheet.create({
     color: theme.colors.accentStrong,
   },
   calendarTag: {
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    marginTop: 6,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   calendarTagText: {
     color: theme.colors.text,
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

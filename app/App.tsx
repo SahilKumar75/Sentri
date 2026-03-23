@@ -30,7 +30,6 @@ export default function App() {
   const [authStatusMessage, setAuthStatusMessage] = useState<string | null>(null);
   const [accountView, setAccountView] = useState<'account' | 'settings'>('account');
 
-  const darkChrome = authenticatedUser !== null && activeTab === 'calorie';
   const userName = authenticatedUser
     ? `${authenticatedUser.firstName} ${authenticatedUser.lastName}`.trim()
     : 'Guest';
@@ -180,8 +179,8 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, darkChrome && styles.safeAreaDark]}>
-      <StatusBar style={darkChrome ? 'light' : 'dark'} />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar style="dark" />
 
       <View style={styles.shell}>{renderActiveScreen(activeTab, screenProps)}</View>
 
@@ -191,7 +190,7 @@ export default function App() {
         onSentriPress={() => {
           // Reserved for the future assistant surface.
         }}
-        tone={darkChrome ? 'dark' : 'light'}
+        tone="light"
       />
 
       <DrawerSheet
@@ -237,9 +236,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  safeAreaDark: {
-    backgroundColor: theme.colors.darkBackground,
   },
   shell: {
     flex: 1,

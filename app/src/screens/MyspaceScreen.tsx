@@ -16,7 +16,6 @@ import {
   captureOptions,
   savedItems,
   searchSavedItems,
-  subjectChips,
   type CaptureOption,
   type SavedItem,
 } from './myspace/data';
@@ -36,14 +35,12 @@ const noteTones = {
 
 export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScreenProps) {
   const [query, setQuery] = useState('');
-  const [subject, setSubject] = useState('All');
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const filteredItems = useMemo(
-    () => searchSavedItems(savedItems, query, subject),
-    [query, subject]
+    () => searchSavedItems(savedItems, query, 'All'),
+    [query]
   );
   const pinnedItems = filteredItems.filter((item) => item.pinned);
   const libraryItems = filteredItems.filter((item) => !item.pinned);
@@ -67,44 +64,11 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
           </View>
         </View>
 
-        <View style={styles.headerCopy}>
-          <Text style={styles.kicker}>Myspace</Text>
-          <Text style={styles.title}>Everything you saved, easier to find.</Text>
-          <Text style={styles.subtitle}>
-            Search OCR text, subject, source, date, or the thing you remember first.
-          </Text>
-        </View>
-
-        {statusMessage ? (
-          <View style={styles.statusBanner}>
-            <Text style={styles.statusBannerText}>{statusMessage}</Text>
-          </View>
-        ) : null}
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-        >
-          {subjectChips.map((chip) => {
-            const active = chip === subject;
-            return (
-              <Pressable
-                key={chip}
-                onPress={() => setSubject(chip)}
-                style={[styles.chip, active && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{chip}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
         {pinnedItems.length ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Pinned</Text>
-              <Text style={styles.sectionMeta}>Quick recall</Text>
+              <Text style={styles.sectionMeta}>{pinnedItems.length}</Text>
             </View>
             <ScrollView
               horizontal
@@ -120,11 +84,11 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{query ? 'Results' : 'Board'}</Text>
-            <Text style={styles.sectionMeta}>{filteredItems.length} notes</Text>
+            <Text style={styles.sectionTitle}>Others</Text>
+            <Text style={styles.sectionMeta}>{libraryItems.length}</Text>
           </View>
 
-          {filteredItems.length ? (
+          {libraryItems.length ? (
             <View style={styles.masonry}>
               <View style={styles.column}>
                 {columns[0].map((item) => (
@@ -137,11 +101,18 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
                 ))}
               </View>
             </View>
+          ) : filteredItems.length ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Only pinned matches right now</Text>
+              <Text style={styles.emptyBody}>
+                Your search found results in the pinned section above, and nothing else in Others.
+              </Text>
+            </View>
           ) : (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>Nothing matched yet</Text>
               <Text style={styles.emptyBody}>
-                Try a board phrase, a subject chip, a date, or an OCR keyword from the saved image.
+                Try a board phrase, a date, or an OCR keyword from the saved image.
               </Text>
             </View>
           )}
@@ -162,7 +133,6 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
         onClose={() => setAddSheetOpen(false)}
         onSelectOption={(option) => {
           setAddSheetOpen(false);
-          setStatusMessage(`${option.label} capture staged for Myspace`);
         }}
       />
       <DetailSheet
@@ -170,7 +140,6 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
         query={query}
         onClose={() => setSelectedItem(null)}
         onAction={(action, item) => {
-          setStatusMessage(`${action} ready for ${item.title}`);
           if (action === 'Copy' || action === 'Share') {
             setSelectedItem(null);
           }
@@ -404,67 +373,8 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: 15,
   },
-  headerCopy: {
-    marginTop: 18,
-    gap: 4,
-  },
-  kicker: {
-    color: theme.colors.accentStrong,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: theme.colors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 34,
-  },
-  subtitle: {
-    color: theme.colors.textSoft,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  statusBanner: {
-    marginTop: 14,
-    borderRadius: 18,
-    backgroundColor: theme.colors.surfaceAlt,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  statusBannerText: {
-    color: theme.colors.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  chipRow: {
-    marginTop: 16,
-    gap: 8,
-    paddingRight: 4,
-  },
-  chip: {
-    borderRadius: 999,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.line,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  chipActive: {
-    backgroundColor: theme.colors.surfaceStrong,
-    borderColor: theme.colors.surfaceStrong,
-  },
-  chipText: {
-    color: theme.colors.textSoft,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  chipTextActive: {
-    color: theme.colors.surface,
-  },
   section: {
-    marginTop: 20,
+    marginTop: 18,
   },
   sectionHeader: {
     flexDirection: 'row',
