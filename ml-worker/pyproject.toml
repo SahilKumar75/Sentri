@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentri-worker"
+version = "0.1.0"
+description = "Zero-budget OCR and timetable parsing worker for Sentri"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[project.scripts]
+sentri-worker = "sentri_worker.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

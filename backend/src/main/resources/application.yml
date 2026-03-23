@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: sentri-backend
+  datasource:
+    url: ${SENTRI_DATABASE_URL:jdbc:postgresql://localhost:5432/sentri}
+    username: ${SENTRI_DATABASE_USERNAME:sentri}
+    password: ${SENTRI_DATABASE_PASSWORD:sentri}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}

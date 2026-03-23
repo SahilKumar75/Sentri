@@ -1,0 +1,462 @@
+from __future__ import annotations
+
+import re
+from collections import Counter
+from datetime import datetime
+from typing import Sequence
+
+from .models import OCRCell, ParseIssue, ParseResult, TimetableBatch, TimetableEntry
+
+DAY_ALIASES = {
+    "MON": "MON",
+    "MONDAY": "MON",
+    "TUE": "TUE",
+    "TUES": "TUE",
+    "TUESDAY": "TUE",
+    "WED": "WED",
+    "WEDNES": "WED",
+    "WEDNESDAY": "WED",
+    "THU": "THU",
+    "THUR": "THU",
+    "THURS": "THU",
+    "THURSDAY": "THU",
+    "FRI": "FRI",
+    "FRIDAY": "FRI",
+    "SAT": "SAT",
+    "SATURDAY": "SAT",
+    "SUN": "SUN",
+    "SUNDAY": "SUN",
+}
+
+DAY_PATTERN = re.compile(r"\b(MON(?:DAY)?|TUE(?:S|SDAY)?|WED(?:NESDAY)?|THU(?:RS(?:DAY)?)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?)\b", re.IGNORECASE)
+TIME_PATTERN = re.compile(r"(?P<start>\d{1,2}(?:[:.]\d{2})?)\s*(?:-|–|to)\s*(?P<end>\d{1,2}(?:[:.]\d{2})?)", re.IGNORECASE)
+CLASS_PATTERN = re.compile(r"\b(?:Class|CLASS)\s*[:\-]\s*(?P<class>[A-Z0-9 &/-]+)", re.IGNORECASE)
+VENUE_PATTERN = re.compile(r"\bVenue\s*[:\-]\s*(?P<venue>.+)$", re.IGNORECASE)
+ACADEMIC_PATTERN = re.compile(r"\bAcademic Year\b.*?(?P<year>\d{4}\s*[-/]\s*\d{2,4})", re.IGNORECASE)
+SEMESTER_PATTERN = re.compile(r"\bSEM(?:ESTER)?\s*([IVX]+|\d+)\b", re.IGNORECASE)
+WEF_PATTERN = re.compile(r"\b(?:WEF|Week Effective From)\s*[:\-]\s*(?P<date>.+)$", re.IGNORECASE)
+PARENTHESES_CODE_PATTERN = re.compile(r"^\(([A-Z0-9]{1,6})\)$")
+
+
+def normalize_whitespace(value: str) -> str:
+    return re.sub(r"\s+", " ", value.strip())
+
+
+def normalize_day(value: str) -> str | None:
+    token = re.sub(r"[^A-Z]", "", value.upper())
+    return DAY_ALIASES.get(token)
+
+
+def normalize_time_label(value: str) -> str | None:
+    value = value.strip().replace(".", ":")
+    value = value.replace(" ", "")
+    if not value:
+        return None
+    if ":" not in value:
+        if len(value) in {3, 4}:
+            value = f"{value[:-2]}:{value[-2:]}"
+        else:
+            value = f"{value}:00"
+    try:
+        parsed = datetime.strptime(value, "%H:%M")
+    except ValueError:
+        try:
+            parsed = datetime.strptime(value, "%I:%M")
+        except ValueError:
+            return None
+    return parsed.strftime("%H:%M")
+
+
+def _time_label_to_minutes(value: str | None) -> int | None:
+    if not value:
+        return None
+    try:
+        hour, minute = value.split(":", 1)
+        return int(hour) * 60 + int(minute)
+    except ValueError:
+        return None
+
+
+def _minutes_to_time_label(value: int | None) -> str | None:
+    if value is None:
+        return None
+    value %= 24 * 60
+    return f"{value // 60:02d}:{value % 60:02d}"
+
+
+def _make_monotonic_range(
+    start_label: str | None,
+    end_label: str | None,
+    previous_end_minutes: int | None,
+) -> tuple[str | None, str | None, int | None]:
+    start_minutes = _time_label_to_minutes(start_label)
+    end_minutes = _time_label_to_minutes(end_label)
+    if start_minutes is None or end_minutes is None:
+        return start_label, end_label, previous_end_minutes
+
+    while previous_end_minutes is not None and start_minutes < previous_end_minutes:
+        start_minutes += 12 * 60
+        end_minutes += 12 * 60
+
+    while end_minutes <= start_minutes:
+        end_minutes += 12 * 60
+
+    return _minutes_to_time_label(start_minutes), _minutes_to_time_label(end_minutes), end_minutes
+
+
+def normalize_time_range(value: str) -> tuple[str | None, str | None] | None:
+    match = TIME_PATTERN.search(value.replace(".", ":"))
+    if not match:
+        return None
+    start = normalize_time_label(match.group("start"))
+    end = normalize_time_label(match.group("end"))
+    if not start or not end:
+        return None
+    return start, end
+
+
+def split_lines(raw_text: str) -> list[str]:
+    return [normalize_whitespace(line) for line in raw_text.splitlines() if normalize_whitespace(line)]
+
+
+def parse_date_value(value: str) -> str | None:
+    cleaned = normalize_whitespace(value)
+    cleaned = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", cleaned, flags=re.IGNORECASE)
+    formats = [
+        "%d %B %Y",
+        "%d %b %Y",
+        "%d %B %y",
+        "%d %b %y",
+        "%d-%m-%Y",
+        "%d/%m/%Y",
+        "%d %m %Y",
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(cleaned, fmt).date().isoformat()
+        except ValueError:
+            continue
+    match = re.search(r"(\d{1,2})\s+([A-Za-z]+)\s+(\d{2,4})", cleaned)
+    if match:
+        day, month, year = match.groups()
+        if len(year) == 2:
+            year = f"20{year}"
+        try:
+            return datetime.strptime(f"{day} {month} {year}", "%d %B %Y").date().isoformat()
+        except ValueError:
+            try:
+                return datetime.strptime(f"{day} {month} {year}", "%d %b %Y").date().isoformat()
+            except ValueError:
+                return None
+    return None
+
+
+def parse_class_label(class_label: str | None) -> tuple[str | None, str | None, str | None]:
+    if not class_label:
+        return None, None, None
+    cleaned = normalize_whitespace(class_label).upper()
+    match = re.match(r"^(?P<year>FY|SY|TY|BE|SE|TE|FE)\s+(?P<branch>[A-Z0-9 &/]+?)(?:-(?P<division>[A-Z0-9]+))?$", cleaned)
+    if not match:
+        return None, None, None
+    return match.group("year"), normalize_whitespace(match.group("branch")), match.group("division")
+
+
+def extract_batch_metadata(lines: Sequence[str]) -> TimetableBatch:
+    batch = TimetableBatch()
+    for line in lines:
+        class_match = CLASS_PATTERN.search(line)
+        if class_match:
+            batch.class_label = normalize_whitespace(class_match.group("class"))
+            year, branch, division = parse_class_label(batch.class_label)
+            batch.year_label = year
+            batch.branch_label = branch
+            batch.division_label = division
+
+        venue_match = VENUE_PATTERN.search(line)
+        if venue_match:
+            batch.venue = normalize_whitespace(venue_match.group("venue"))
+
+        academic_match = ACADEMIC_PATTERN.search(line)
+        if academic_match:
+            batch.academic_year = normalize_whitespace(academic_match.group("year"))
+
+        semester_match = SEMESTER_PATTERN.search(line)
+        if semester_match:
+            batch.semester_label = f"SEM {semester_match.group(1).upper()}"
+
+        wef_match = WEF_PATTERN.search(line)
+        if wef_match:
+            batch.effective_from = parse_date_value(wef_match.group("date"))
+
+        normalized = line.upper()
+        if "AUTONOMOUS" in normalized:
+            batch.pattern_label = "AUTONOMOUS"
+        elif "NEP 2024" in normalized:
+            batch.pattern_label = "NEP 2024"
+        elif "2019 CREDIT PATTERN" in normalized:
+            batch.pattern_label = "SPPU 2019"
+
+        if "DEPARTMENT OF INFORMATION TECHNOLOGY" in normalized:
+            batch.branch_label = batch.branch_label or "IT"
+    if batch.class_label and not batch.year_label:
+        year, branch, division = parse_class_label(batch.class_label)
+        batch.year_label = year
+        batch.branch_label = batch.branch_label or branch
+        batch.division_label = batch.division_label or division
+    return batch
+
+
+def classify_entry(text: str) -> str:
+    upper = text.upper()
+    if not upper.strip():
+        return "blank"
+    if "HOLIDAY" in upper:
+        return "holiday"
+    if "BREAK" in upper:
+        return "break"
+    if "LAB" in upper:
+        return "lab"
+    if "TUT" in upper or "TUTORIAL" in upper:
+        return "tutorial"
+    return "lecture"
+
+
+def parse_cell_text(text: str) -> tuple[str, str | None, str | None, list[str]]:
+    lines = split_lines(text)
+    if not lines:
+        return "", None, None, []
+    subject = lines[0]
+    faculty_code = None
+    location = None
+    notes: list[str] = []
+    for line in lines[1:]:
+        if not faculty_code:
+            code_match = PARENTHESES_CODE_PATTERN.match(line)
+            if code_match:
+                faculty_code = code_match.group(1)
+                continue
+            short_code_match = re.fullmatch(r"\(([A-Z0-9]{2,6})\)", line)
+            if short_code_match:
+                faculty_code = short_code_match.group(1)
+                continue
+        if not location and re.search(r"\b(Lab-[IVX]+|Lab-\d+|Library [A-Z]|Tut Room|Room [A-Z0-9]+|NGC|CGL|Classroom)\b", line, re.IGNORECASE):
+            location = line
+            continue
+        notes.append(line)
+    if location is None:
+        location_guess = next((line for line in lines if re.search(r"\b(Lab|Library|Room|Tut|NGC|CGL)\b", line, re.IGNORECASE)), None)
+        if location_guess and location_guess != subject:
+            location = location_guess
+    return subject, faculty_code, location, notes
+
+
+def _find_header_row(cells: Sequence[OCRCell]) -> int | None:
+    score_by_row: Counter[int] = Counter()
+    for cell in cells:
+        if normalize_time_range(cell.text):
+            score_by_row[cell.row] += 1
+    if not score_by_row:
+        return None
+    return score_by_row.most_common(1)[0][0]
+
+
+def _find_day_col(cells: Sequence[OCRCell]) -> int | None:
+    score_by_col: Counter[int] = Counter()
+    for cell in cells:
+        if normalize_day(cell.text):
+            score_by_col[cell.col] += 1
+    if not score_by_col:
+        return None
+    return score_by_col.most_common(1)[0][0]
+
+
+def _build_time_map(cells: Sequence[OCRCell], header_row: int, day_col: int | None) -> dict[int, tuple[str | None, str | None]]:
+    time_map: dict[int, tuple[str | None, str | None]] = {}
+    previous_end_minutes: int | None = None
+    for cell in sorted(cells, key=lambda item: item.col):
+        if cell.row != header_row:
+            continue
+        if day_col is not None and cell.col == day_col:
+            continue
+        time_range = normalize_time_range(cell.text)
+        if time_range:
+            start_label, end_label, previous_end_minutes = _make_monotonic_range(
+                time_range[0],
+                time_range[1],
+                previous_end_minutes,
+            )
+            time_map[cell.col] = (start_label, end_label)
+    return time_map
+
+
+def _build_day_map(cells: Sequence[OCRCell], day_col: int, header_row: int) -> dict[int, str]:
+    day_map: dict[int, str] = {}
+    for cell in cells:
+        if cell.col != day_col or cell.row == header_row:
+            continue
+        day = normalize_day(cell.text)
+        if day:
+            day_map[cell.row] = day
+    return day_map
+
+
+def _span_times(time_map: dict[int, tuple[str | None, str | None]], start_col: int, col_span: int) -> tuple[str | None, str | None]:
+    columns = [time_map.get(col) for col in range(start_col, start_col + max(col_span, 1))]
+    columns = [slot for slot in columns if slot]
+    if not columns:
+        return None, None
+    return columns[0][0], columns[-1][1]
+
+
+def parse_cells(cells: Sequence[OCRCell], raw_text: str = "", source: dict[str, object] | None = None) -> ParseResult:
+    source = dict(source or {})
+    issues: list[ParseIssue] = []
+    if not cells:
+        batch = extract_batch_metadata(split_lines(raw_text))
+        if source:
+            batch.source_name = source.get("source_name") if isinstance(source.get("source_name"), str) else None
+            batch.image_path = source.get("image_path") if isinstance(source.get("image_path"), str) else None
+        return ParseResult(source=source, batch=batch, entries=[], issues=[ParseIssue(code="no_cells", message="No timetable cells were supplied.")], raw_text=raw_text, cells_count=0)
+
+    header_row = _find_header_row(cells)
+    if header_row is None:
+        issues.append(ParseIssue(code="header_row_missing", message="Could not infer a time header row."))
+        header_row = min(cell.row for cell in cells)
+
+    day_col = _find_day_col(cells)
+    if day_col is None:
+        issues.append(ParseIssue(code="day_column_missing", message="Could not infer a day label column."))
+        day_col = min(cell.col for cell in cells)
+
+    time_map = _build_time_map(cells, header_row, day_col)
+    day_map = _build_day_map(cells, day_col, header_row) if day_col is not None else {}
+    batch = extract_batch_metadata(split_lines(raw_text))
+    if source.get("source_name"):
+        batch.source_name = str(source["source_name"])
+    if source.get("image_path"):
+        batch.image_path = str(source["image_path"])
+
+    entries: list[TimetableEntry] = []
+    for cell in cells:
+        if cell.row == header_row or cell.col == day_col:
+            continue
+        raw_cell_text = cell.text.strip()
+        normalized_text = normalize_whitespace(raw_cell_text)
+        if not normalized_text:
+            continue
+
+        day = day_map.get(cell.row)
+        if not day:
+            continue
+
+        entry_type = classify_entry(raw_cell_text)
+        if entry_type == "blank":
+            continue
+
+        subject_text, faculty_code, location_label, notes = parse_cell_text(raw_cell_text)
+        start_time, end_time = _span_times(time_map, cell.col, cell.col_span)
+        entries.append(
+            TimetableEntry(
+                day_of_week=day,
+                start_time=start_time,
+                end_time=end_time,
+                subject_text=subject_text,
+                entry_type=entry_type,
+                faculty_code=faculty_code,
+                location_label=location_label,
+                notes=notes,
+                raw_text=raw_cell_text,
+                source_row=cell.row,
+                source_col=cell.col,
+                row_span=cell.row_span,
+                col_span=cell.col_span,
+            )
+        )
+
+    if not entries and raw_text:
+        issues.append(ParseIssue(code="no_entries_from_cells", message="No schedule entries were produced from the supplied cells."))
+    return ParseResult(source=source, batch=batch, entries=entries, issues=issues, raw_text=raw_text, cells_count=len(cells))
+
+
+def parse_text_schedule(raw_text: str, source: dict[str, object] | None = None) -> ParseResult:
+    lines = split_lines(raw_text)
+    source = dict(source or {})
+    batch = extract_batch_metadata(lines)
+    if source.get("source_name"):
+        batch.source_name = str(source["source_name"])
+    if source.get("image_path"):
+        batch.image_path = str(source["image_path"])
+
+    entries: list[TimetableEntry] = []
+    current_day: str | None = None
+    pending_time: tuple[str, str] | None = None
+    previous_end_minutes: int | None = None
+    issues: list[ParseIssue] = []
+    for line in lines:
+        day = normalize_day(line)
+        if day:
+            current_day = day
+            pending_time = None
+            previous_end_minutes = None
+            continue
+        time_range = normalize_time_range(line)
+        if time_range:
+            start_label, end_label, previous_end_minutes = _make_monotonic_range(
+                time_range[0],
+                time_range[1],
+                previous_end_minutes,
+            )
+            pending_time = (start_label, end_label)
+            remainder = normalize_whitespace(line)
+            remainder = re.sub(TIME_PATTERN, "", remainder).strip()
+            if remainder and current_day:
+                subject_text, faculty_code, location_label, notes = parse_cell_text(remainder)
+                entry_type = classify_entry(remainder)
+                if entry_type != "blank":
+                    entries.append(
+                        TimetableEntry(
+                            day_of_week=current_day,
+                            start_time=pending_time[0],
+                            end_time=pending_time[1],
+                            subject_text=subject_text,
+                            entry_type=entry_type,
+                            faculty_code=faculty_code,
+                            location_label=location_label,
+                            notes=notes,
+                            raw_text=line,
+                        )
+                    )
+                    continue
+            continue
+        if not current_day:
+            continue
+        if not pending_time:
+            pending_time = (None, None)
+        subject_text, faculty_code, location_label, notes = parse_cell_text(line)
+        entry_type = classify_entry(line)
+        if entry_type == "blank":
+            continue
+        entries.append(
+            TimetableEntry(
+                day_of_week=current_day,
+                start_time=pending_time[0],
+                end_time=pending_time[1],
+                subject_text=subject_text,
+                entry_type=entry_type,
+                faculty_code=faculty_code,
+                location_label=location_label,
+                notes=notes,
+                raw_text=line,
+            )
+        )
+
+    if not entries:
+        issues.append(ParseIssue(code="no_entries_from_text", message="Could not infer timetable entries from OCR text."))
+
+    return ParseResult(source=source, batch=batch, entries=entries, issues=issues, raw_text=raw_text, cells_count=0)
+
+
+def parse_timetable(raw_text: str = "", cells: Sequence[OCRCell] | None = None, source: dict[str, object] | None = None) -> ParseResult:
+    if cells:
+        return parse_cells(cells=cells, raw_text=raw_text, source=source)
+    return parse_text_schedule(raw_text=raw_text, source=source)

@@ -1,0 +1,12 @@
+.DS_Store
+
+app/node_modules/
+app/.expo/
+
+backend/.m2/
+backend/target/
+
+ml-worker/__pycache__/
+ml-worker/tests/__pycache__/
+ml-worker/src/sentri_worker/__pycache__/
+ml-worker/sentri_worker/__pycache__/
