@@ -27,11 +27,11 @@ type MyspaceScreenProps = {
 };
 
 const noteTones = {
-  sand: { backgroundColor: '#F2E7D4', pin: '#D2B684' },
-  sky: { backgroundColor: '#DFE7FF', pin: '#4E72F5' },
-  mint: { backgroundColor: '#DCEDE6', pin: '#4B8B79' },
-  rose: { backgroundColor: '#F6E1E5', pin: '#BA6A73' },
-  ink: { backgroundColor: '#EAE4DD', pin: '#423A33' },
+  sand: { backgroundColor: '#F8F9FA', pin: '#9AA0A6' },
+  sky: { backgroundColor: '#E8F0FE', pin: '#1A73E8' },
+  mint: { backgroundColor: '#F1F3F4', pin: '#5F6368' },
+  rose: { backgroundColor: '#EEF3FD', pin: '#185ABC' },
+  ink: { backgroundColor: '#ECEFF1', pin: '#202124' },
 } as const;
 
 export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScreenProps) {

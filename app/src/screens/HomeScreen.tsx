@@ -198,6 +198,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
   const [viewMode, setViewMode] = useState<ViewMode>('today');
   const [focusedDate, setFocusedDate] = useState(todayAnchor);
   const [selectedClassId, setSelectedClassId] = useState(scheduleByDay.mon[0]?.id ?? null);
+  const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'updated'>('idle');
 
   const weekDays = useMemo(() => buildWeekDates(focusedDate), [focusedDate]);
   const selectedDayKey = dayKeyForDate(focusedDate);
@@ -260,12 +261,39 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
       </View>
 
       <View style={styles.refreshBanner}>
-        <Text style={styles.refreshBannerTitle}>
-          {refreshDue ? 'Upload the next timetable this Saturday' : 'Next timetable prompt comes on Saturday'}
-        </Text>
-        <Text style={styles.refreshBannerBody}>
-          AIT sends a new weekly timetable every Saturday, so Sentri should nudge the user to refresh that screenshot.
-        </Text>
+        <View style={styles.refreshBannerRow}>
+          <View style={styles.refreshBannerCopy}>
+            <Text style={styles.refreshBannerTitle}>
+              {uploadState === 'updated'
+                ? 'Timetable screenshot received'
+                : refreshDue
+                  ? 'Upload the next timetable this Saturday'
+                  : 'Next timetable prompt comes on Saturday'}
+            </Text>
+            <Text style={styles.refreshBannerBody}>
+              {uploadState === 'updated'
+                ? 'The new screenshot is queued so Sentri can refresh this week.'
+                : 'Upload the latest timetable screenshot here whenever AIT sends the new week.'}
+            </Text>
+          </View>
+          <Pressable
+            style={[styles.uploadButton, uploadState === 'updated' && styles.uploadButtonDone]}
+            onPress={() => {
+              setUploadState('uploading');
+              setTimeout(() => {
+                setUploadState('updated');
+              }, 250);
+            }}
+          >
+            <Text style={[styles.uploadButtonText, uploadState === 'updated' && styles.uploadButtonTextDone]}>
+              {uploadState === 'uploading'
+                ? 'Uploading'
+                : uploadState === 'updated'
+                  ? 'Updated'
+                  : 'Upload'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.segmentedControl}>
@@ -741,6 +769,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
+  refreshBannerRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  refreshBannerCopy: {
+    flex: 1,
+  },
   refreshBannerTitle: {
     color: theme.colors.text,
     fontSize: 15,
@@ -751,6 +787,26 @@ const styles = StyleSheet.create({
     color: theme.colors.textSoft,
     fontSize: 13,
     lineHeight: 18,
+  },
+  uploadButton: {
+    borderRadius: 16,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minWidth: 84,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadButtonDone: {
+    backgroundColor: theme.colors.surfaceStrong,
+  },
+  uploadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  uploadButtonTextDone: {
+    color: '#FFFFFF',
   },
   segmentedControl: {
     marginTop: 18,
