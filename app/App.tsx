@@ -1,9 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
-import { SafeAreaView, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
 
 import { CapsuleTabBar, DrawerSheet } from './src/components/sentri-ui';
 import { theme, type TabKey } from './src/design/tokens';
+import { clearStoredSessionToken, getStoredSessionToken, storeSessionToken } from './src/lib/auth-storage';
+import * as authApi from './src/lib/api';
 import AccountSheet from './src/screens/AccountSheet';
 import AuthScreen from './src/screens/AuthScreen';
 import CalorieScreen from './src/screens/CalorieScreen';
@@ -23,12 +25,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [registeredUser, setRegisteredUser] = useState<UserProfile | null>(null);
   const [authenticatedUser, setAuthenticatedUser] = useState<UserProfile | null>(null);
   const [pendingSignup, setPendingSignup] = useState<PendingSignup | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>('signup');
   const [authStatusMessage, setAuthStatusMessage] = useState<string | null>(null);
   const [accountView, setAccountView] = useState<'account' | 'settings'>('account');
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [authInitializing, setAuthInitializing] = useState(true);
 
   const userName = authenticatedUser
     ? `${authenticatedUser.firstName} ${authenticatedUser.lastName}`.trim()
@@ -43,103 +46,112 @@ export default function App() {
     [avatarLabel]
   );
 
-  const handleSignup = ({
+  useEffect(() => {
+    void restoreSavedSession();
+  }, []);
+
+  const restoreSavedSession = async () => {
+    const storedToken = await getStoredSessionToken();
+    if (!storedToken) {
+      setAuthInitializing(false);
+      return;
+    }
+
+    const result = await authApi.restoreSession(storedToken);
+    if (result.ok && result.user) {
+      setSessionToken(storedToken);
+      setAuthenticatedUser(result.user);
+      setAuthStatusMessage(result.message);
+    } else {
+      await clearStoredSessionToken();
+      setSessionToken(null);
+      setAuthMode('login');
+      setAuthStatusMessage(result.message);
+    }
+
+    setAuthInitializing(false);
+  };
+
+  const handleSignup = async ({
     profile,
     contactMethod,
   }: {
     profile: UserProfile;
     contactMethod: ContactMethod;
   }) => {
-    const normalizedProfile: UserProfile = {
-      ...profile,
-      firstName: profile.firstName.trim(),
-      lastName: profile.lastName.trim(),
-      dob: profile.dob.trim(),
-      phone: profile.phone?.trim(),
-      email: profile.email?.trim().toLowerCase(),
-      password: profile.password,
-      verifiedPhone: false,
-    };
+    const result = await authApi.signup({ profile, contactMethod });
+    setAuthStatusMessage(result.message);
 
-    if (!normalizedProfile.firstName || !normalizedProfile.lastName || !normalizedProfile.dob || !normalizedProfile.password) {
-      return { ok: false, message: 'Please fill first name, last name, DOB, and password.' };
+    if (!result.ok) {
+      return result;
     }
 
-    if (contactMethod === 'phone') {
-      if (!normalizedProfile.phone) {
-        return { ok: false, message: 'Enter your phone number to continue with OTP.' };
-      }
-
-      const otpCode = `${Math.floor(1000 + Math.random() * 9000)}`;
+    if (result.requiresOtp && result.pendingUserId) {
       setPendingSignup({
-        profile: normalizedProfile,
+        pendingUserId: result.pendingUserId,
         contactMethod,
-        otpCode,
+        phone: profile.phone?.trim(),
+        otpCode: result.otpCode,
       });
       setAuthMode('otp');
-      setAuthStatusMessage(`OTP sent to ${normalizedProfile.phone}.`);
-      return { ok: true, message: `OTP sent to ${normalizedProfile.phone}.` };
+      return result;
     }
 
-    if (!normalizedProfile.email) {
-      return { ok: false, message: 'Enter your email to create the account.' };
+    if (result.sessionToken && result.user) {
+      await storeSessionToken(result.sessionToken);
+      setSessionToken(result.sessionToken);
+      setAuthenticatedUser(result.user);
+      setPendingSignup(null);
     }
 
-    setRegisteredUser(normalizedProfile);
-    setAuthenticatedUser(normalizedProfile);
-    setPendingSignup(null);
-    setAuthStatusMessage(`Welcome, ${normalizedProfile.firstName}. Your account is ready.`);
-    return { ok: true, message: `Welcome, ${normalizedProfile.firstName}. Your account is ready.` };
+    return result;
   };
 
-  const handleVerifyOtp = (otp: string) => {
+  const handleVerifyOtp = async (otp: string) => {
     if (!pendingSignup) {
       return { ok: false, message: 'No phone verification is waiting right now.' };
     }
 
-    if (otp.trim() !== pendingSignup.otpCode) {
-      return { ok: false, message: 'The OTP did not match. Try the code again.' };
+    const result = await authApi.verifyOtp({
+      pendingUserId: pendingSignup.pendingUserId,
+      otpCode: otp,
+    });
+    setAuthStatusMessage(result.message);
+
+    if (result.ok && result.sessionToken && result.user) {
+      await storeSessionToken(result.sessionToken);
+      setSessionToken(result.sessionToken);
+      setAuthenticatedUser(result.user);
+      setPendingSignup(null);
+      setAuthMode('login');
     }
 
-    const verifiedProfile = {
-      ...pendingSignup.profile,
-      verifiedPhone: true,
-    };
-
-    setRegisteredUser(verifiedProfile);
-    setAuthenticatedUser(verifiedProfile);
-    setPendingSignup(null);
-    setAuthMode('login');
-    setAuthStatusMessage(`Phone verified for ${verifiedProfile.firstName}.`);
-    return { ok: true, message: `Phone verified for ${verifiedProfile.firstName}.` };
+    return result;
   };
 
-  const handleLogin = ({ identifier, password }: { identifier: string; password: string }) => {
-    if (!registeredUser) {
-      return { ok: false, message: 'No account exists yet. Please sign up first.' };
+  const handleLogin = async ({ identifier, password }: { identifier: string; password: string }) => {
+    const result = await authApi.login({ identifier, password });
+    setAuthStatusMessage(result.message);
+
+    if (result.ok && result.sessionToken && result.user) {
+      await storeSessionToken(result.sessionToken);
+      setSessionToken(result.sessionToken);
+      setAuthenticatedUser(result.user);
+      setPendingSignup(null);
     }
 
-    const normalizedIdentifier = identifier.trim().toLowerCase();
-    const phoneMatch =
-      normalizePhone(registeredUser.phone || '') !== '' &&
-      normalizePhone(registeredUser.phone || '') === normalizePhone(identifier);
-    const emailMatch = (registeredUser.email || '').toLowerCase() === normalizedIdentifier;
-
-    if (!(phoneMatch || emailMatch)) {
-      return { ok: false, message: 'That phone number or email is not registered yet.' };
-    }
-
-    if (registeredUser.password !== password) {
-      return { ok: false, message: 'Password mismatch. Please try again.' };
-    }
-
-    setAuthenticatedUser(registeredUser);
-    setAuthStatusMessage(`Welcome back, ${registeredUser.firstName}.`);
-    return { ok: true, message: `Welcome back, ${registeredUser.firstName}.` };
+    return result;
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (sessionToken) {
+      await authApi.logout(sessionToken);
+    }
+
+    await clearStoredSessionToken();
+    setSessionToken(null);
     setAuthenticatedUser(null);
+    setPendingSignup(null);
     setDrawerOpen(false);
     setAccountOpen(false);
     setActiveTab('home');
@@ -149,7 +161,7 @@ export default function App() {
 
   const handleDrawerSelection = (item: 'account' | 'settings' | 'logout') => {
     if (item === 'logout') {
-      handleLogout();
+      void handleLogout();
       return;
     }
 
@@ -157,13 +169,23 @@ export default function App() {
     setAccountOpen(true);
   };
 
+  if (authInitializing) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="dark" />
+        <View style={styles.loadingShell}>
+          <ActivityIndicator size="large" color={theme.colors.accent} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!authenticatedUser) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="dark" />
         <AuthScreen
           mode={authMode}
-          registeredUser={registeredUser}
           pendingSignup={pendingSignup}
           statusMessage={authStatusMessage}
           onModeChange={(mode) => {
@@ -206,7 +228,9 @@ export default function App() {
         profile={authenticatedUser}
         viewMode={accountView}
         onClose={() => setAccountOpen(false)}
-        onLogout={handleLogout}
+        onLogout={() => {
+          void handleLogout();
+        }}
       />
     </SafeAreaView>
   );
@@ -227,15 +251,15 @@ function renderActiveScreen(activeTab: TabKey, props: ScreenProps) {
   }
 }
 
-function normalizePhone(input: string) {
-  const digits = input.replace(/\D/g, '');
-  return digits.length > 10 ? digits.slice(-10) : digits;
-}
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  loadingShell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   shell: {
     flex: 1,

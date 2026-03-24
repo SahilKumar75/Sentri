@@ -18,19 +18,17 @@ type AuthMode = 'signup' | 'login' | 'otp';
 
 type AuthScreenProps = {
   mode: AuthMode;
-  registeredUser: UserProfile | null;
   pendingSignup: PendingSignup | null;
   statusMessage?: string | null;
   onModeChange: (mode: Exclude<AuthMode, 'otp'>) => void;
-  onSignup: (payload: { profile: UserProfile; contactMethod: ContactMethod }) => { ok: boolean; message: string };
-  onVerifyOtp: (otp: string) => { ok: boolean; message: string };
-  onLogin: (payload: { identifier: string; password: string }) => { ok: boolean; message: string };
+  onSignup: (payload: { profile: UserProfile; contactMethod: ContactMethod }) => Promise<{ ok: boolean; message: string }>;
+  onVerifyOtp: (otp: string) => Promise<{ ok: boolean; message: string }>;
+  onLogin: (payload: { identifier: string; password: string }) => Promise<{ ok: boolean; message: string }>;
 };
 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export default function AuthScreen({
   mode,
-  registeredUser,
   pendingSignup,
   statusMessage,
   onModeChange,
@@ -52,19 +50,17 @@ export default function AuthScreen({
   const [loginPassword, setLoginPassword] = useState('');
   const [otpInput, setOtpInput] = useState('');
   const [localMessage, setLocalMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [dobPickerOpen, setDobPickerOpen] = useState(false);
   const [pickerDay, setPickerDay] = useState(23);
   const [pickerMonth, setPickerMonth] = useState(2);
   const [pickerYear, setPickerYear] = useState(2005);
 
   const activeMessage = localMessage ?? statusMessage;
-  const helperLabel = useMemo(() => {
-    if (!registeredUser) {
-      return 'Create your Sentri account to unlock timetable, Myspace, calorie, and hangout.';
-    }
-
-    return `Existing account found for ${registeredUser.firstName} ${registeredUser.lastName}.`;
-  }, [registeredUser]);
+  const helperLabel = useMemo(
+    () => 'Create your Sentri account to unlock timetable, Myspace, calorie, and hangout.',
+    []
+  );
 
   const selectedDobLabel = `${String(pickerDay).padStart(2, '0')} ${monthNames[pickerMonth]} ${pickerYear}`;
 
@@ -188,7 +184,7 @@ export default function AuthScreen({
 
             <Field
               label="Password"
-              value={signupForm.password}
+              value={signupForm.password ?? ''}
               onChangeText={(value) => updateSignupField('password', value)}
               placeholder="Choose a password"
               secureTextEntry
@@ -196,14 +192,17 @@ export default function AuthScreen({
             />
 
             <Pressable
-              style={styles.primaryButton}
-              onPress={() => {
-                const result = onSignup({ profile: signupForm, contactMethod });
+              style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]}
+              disabled={submitting}
+              onPress={async () => {
+                setSubmitting(true);
+                const result = await onSignup({ profile: signupForm, contactMethod });
+                setSubmitting(false);
                 setLocalMessage(result.message);
               }}
             >
               <Text style={styles.primaryButtonText}>
-                {contactMethod === 'phone' ? 'Send OTP' : 'Create account'}
+                {submitting ? 'Please wait' : contactMethod === 'phone' ? 'Send OTP' : 'Create account'}
               </Text>
             </Pressable>
           </View>
@@ -228,13 +227,16 @@ export default function AuthScreen({
               autoCapitalize="none"
             />
             <Pressable
-              style={styles.primaryButton}
-              onPress={() => {
-                const result = onLogin({ identifier: loginIdentifier, password: loginPassword });
+              style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]}
+              disabled={submitting}
+              onPress={async () => {
+                setSubmitting(true);
+                const result = await onLogin({ identifier: loginIdentifier, password: loginPassword });
+                setSubmitting(false);
                 setLocalMessage(result.message);
               }}
             >
-              <Text style={styles.primaryButtonText}>Login</Text>
+              <Text style={styles.primaryButtonText}>{submitting ? 'Please wait' : 'Login'}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -243,7 +245,7 @@ export default function AuthScreen({
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Verify phone number</Text>
             <Text style={styles.supportText}>
-              Sentri sent an OTP to {pendingSignup.profile.phone}. Enter it below to finish account creation.
+              Sentri sent an OTP to {pendingSignup.phone}. Enter it below to finish account creation.
             </Text>
             <Text style={styles.demoText}>Demo OTP for now: {pendingSignup.otpCode}</Text>
             <Field
@@ -255,13 +257,16 @@ export default function AuthScreen({
               autoCapitalize="none"
             />
             <Pressable
-              style={styles.primaryButton}
-              onPress={() => {
-                const result = onVerifyOtp(otpInput);
+              style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]}
+              disabled={submitting}
+              onPress={async () => {
+                setSubmitting(true);
+                const result = await onVerifyOtp(otpInput);
+                setSubmitting(false);
                 setLocalMessage(result.message);
               }}
             >
-              <Text style={styles.primaryButtonText}>Verify and continue</Text>
+              <Text style={styles.primaryButtonText}>{submitting ? 'Please wait' : 'Verify and continue'}</Text>
             </Pressable>
             <Pressable style={styles.secondaryButton} onPress={() => changeMode('signup')}>
               <Text style={styles.secondaryButtonText}>Back to sign up</Text>
@@ -610,6 +615,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6,
   },
   primaryButtonText: {
     color: '#FFFFFF',

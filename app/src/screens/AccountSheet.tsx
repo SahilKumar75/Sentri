@@ -63,11 +63,12 @@ export default function AccountSheet({
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Access</Text>
               <DetailRow label="Login method" value={profile.phone ? 'Phone or email + password' : 'Email + password'} />
-              <DetailRow label="Password" value={maskPassword(profile.password)} />
+              <DetailRow label="Password" value={profile.password ? maskPassword(profile.password) : 'Stored securely on backend'} />
               <DetailRow
                 label="Phone verification"
                 value={profile.phone ? (profile.verifiedPhone ? 'Verified' : 'Pending') : 'Not added'}
               />
+              <DetailRow label="Account created" value={profile.createdAt ? formatDateTime(profile.createdAt) : 'Unknown'} />
             </View>
 
             {viewMode === 'settings' ? (
@@ -108,6 +109,20 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function maskPassword(password: string) {
   return password ? '•'.repeat(Math.max(password.length, 8)) : 'Not set';
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }
 
 const styles = StyleSheet.create({
