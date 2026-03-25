@@ -88,6 +88,7 @@ export default function HangoutScreen({
   const [handRaised, setHandRaised] = useState(false);
   const [recordingOn, setRecordingOn] = useState(false);
   const [focusedParticipantId, setFocusedParticipantId] = useState<string | null>(null);
+  const [reactionBurst, setReactionBurst] = useState<{ icon: string; label: string } | null>(null);
 
   useEffect(() => {
     onMeetingModeChange(meetingOpen);
@@ -104,6 +105,14 @@ export default function HangoutScreen({
     }
     void handleJoinByCode(incomingRoomCode, true);
   }, [incomingRoomCode]);
+
+  useEffect(() => {
+    if (!reactionBurst) {
+      return;
+    }
+    const timeout = setTimeout(() => setReactionBurst(null), 1800);
+    return () => clearTimeout(timeout);
+  }, [reactionBurst]);
 
   const activeRoomShareText = useMemo(() => {
     if (!activeRoom) {
@@ -160,6 +169,7 @@ export default function HangoutScreen({
     setHandRaised(false);
     setRecordingOn(false);
     setFocusedParticipantId(participants[1]?.id ?? participants[0]?.id ?? null);
+    setReactionBurst(null);
   }
 
   async function handleCreateRoom() {
@@ -327,6 +337,19 @@ export default function HangoutScreen({
 
   function toggleRecording() {
     setRecordingOn((current) => !current);
+  }
+
+  function sendReaction(icon: string, label: string) {
+    setReactionBurst({ icon, label });
+    setActivityFeed((current) => [
+      {
+        id: `reaction-${Date.now()}`,
+        title: 'Reaction sent',
+        detail: `You sent ${label} in the room`,
+        timeLabel: 'Now',
+      },
+      ...current,
+    ]);
   }
 
   function renderLobby() {
@@ -585,6 +608,13 @@ export default function HangoutScreen({
                 <Text style={styles.captionText}>Prof. Deshmukh: Let&apos;s revise normalization before we solve the next DBMS problem.</Text>
               </View>
             ) : null}
+
+            {reactionBurst ? (
+              <View style={styles.reactionBubble}>
+                <Text style={styles.reactionEmoji}>{reactionBurst.icon}</Text>
+                <Text style={styles.reactionLabel}>{reactionBurst.label}</Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.tileStrip}>
@@ -615,6 +645,24 @@ export default function HangoutScreen({
               </Pressable>
             ))}
           </View>
+        </View>
+
+        <View style={styles.reactionRow}>
+          {[
+            { icon: '👏', label: 'Clap' },
+            { icon: '🔥', label: 'Fire' },
+            { icon: '👍', label: 'Thumbs up' },
+            { icon: '🙌', label: 'Celebrate' },
+          ].map((reaction) => (
+            <Pressable
+              key={reaction.label}
+              style={styles.reactionChip}
+              onPress={() => sendReaction(reaction.icon, reaction.label)}
+            >
+              <Text style={styles.reactionChipEmoji}>{reaction.icon}</Text>
+              <Text style={styles.reactionChipText}>{reaction.label}</Text>
+            </Pressable>
+          ))}
         </View>
 
         <View style={styles.controlDock}>
@@ -1492,6 +1540,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
   },
+  reactionBubble: {
+    position: 'absolute',
+    right: 16,
+    top: 62,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 4,
+  },
+  reactionEmoji: {
+    fontSize: 30,
+  },
+  reactionLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   tileStrip: {
     marginTop: 14,
     flexDirection: 'row',
@@ -1530,6 +1597,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 28,
     fontWeight: '800',
+  },
+  reactionRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: theme.radius.pill,
+    backgroundColor: '#16181B',
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  reactionChipEmoji: {
+    fontSize: 16,
+  },
+  reactionChipText: {
+    color: theme.colors.darkText,
+    fontSize: 12,
+    fontWeight: '700',
   },
   controlDock: {
     marginTop: 14,
