@@ -413,6 +413,31 @@ export default function HangoutScreen({
               {activeRoom.roomType} • {activeRoom.ownerDisplayName} • {activeRoom.participantCount} in room
             </Text>
             <Text style={styles.joinLinkText}>{activeRoom.joinLink}</Text>
+            <View style={styles.previewCard}>
+              <View style={styles.previewVisual}>
+                <Text style={styles.previewInitials}>{getInitials(userName)}</Text>
+                <View style={styles.previewBadgeRow}>
+                  <View style={styles.previewBadge}>
+                    <Ionicons name={micOn ? 'mic' : 'mic-off'} size={14} color="#FFFFFF" />
+                    <Text style={styles.previewBadgeText}>{micOn ? 'Mic ready' : 'Muted'}</Text>
+                  </View>
+                  <View style={styles.previewBadge}>
+                    <Ionicons name={cameraOn ? 'videocam' : 'videocam-off'} size={14} color="#FFFFFF" />
+                    <Text style={styles.previewBadgeText}>{cameraOn ? 'Camera on' : 'Camera off'}</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.previewActions}>
+                <Pressable style={styles.previewToggle} onPress={toggleMic}>
+                  <Ionicons name={micOn ? 'mic' : 'mic-off'} size={16} color={theme.colors.text} />
+                  <Text style={styles.previewToggleText}>{micOn ? 'Mute mic' : 'Unmute mic'}</Text>
+                </Pressable>
+                <Pressable style={styles.previewToggle} onPress={toggleCamera}>
+                  <Ionicons name={cameraOn ? 'videocam' : 'videocam-off'} size={16} color={theme.colors.text} />
+                  <Text style={styles.previewToggleText}>{cameraOn ? 'Turn camera off' : 'Turn camera on'}</Text>
+                </Pressable>
+              </View>
+            </View>
             <View style={styles.lobbyCtaRow}>
               <Pressable style={[styles.actionButton, styles.actionButtonFilled]} onPress={handleEnterMeeting}>
                 <Text style={styles.actionFilledText}>Join now</Text>
@@ -1126,6 +1151,65 @@ const styles = StyleSheet.create({
     marginTop: 16,
     flexDirection: 'row',
     gap: 10,
+  },
+  previewCard: {
+    marginTop: 16,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surfaceAlt,
+    padding: 14,
+    gap: 12,
+  },
+  previewVisual: {
+    minHeight: 140,
+    borderRadius: 18,
+    backgroundColor: theme.colors.accentStrong,
+    padding: 14,
+    justifyContent: 'space-between',
+  },
+  previewInitials: {
+    color: '#FFFFFF',
+    fontSize: 34,
+    fontWeight: '800',
+  },
+  previewBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  previewBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: theme.radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  previewBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  previewActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  previewToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  previewToggleText: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '700',
   },
   section: {
     marginTop: 22,
