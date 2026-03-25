@@ -27,6 +27,7 @@ type HangoutScreenProps = {
   userName: string;
   incomingRoomCode: string | null;
   onConsumeIncomingRoomCode: () => void;
+  onMeetingModeChange: (visible: boolean) => void;
 };
 
 type Friend = {
@@ -50,7 +51,13 @@ export default function HangoutScreen({
   userName,
   incomingRoomCode,
   onConsumeIncomingRoomCode,
+  onMeetingModeChange,
 }: HangoutScreenProps) {
+  useEffect(() => {
+    onMeetingModeChange(false);
+    return () => onMeetingModeChange(false);
+  }, [onMeetingModeChange]);
+
   const [rooms, setRooms] = useState<HangoutRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<HangoutRoom | null>(null);
   const [roomName, setRoomName] = useState('DBMS Revision Room');

@@ -33,6 +33,7 @@ export default function App() {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [authInitializing, setAuthInitializing] = useState(true);
   const [incomingHangoutCode, setIncomingHangoutCode] = useState<string | null>(null);
+  const [hangoutMeetingMode, setHangoutMeetingMode] = useState(false);
 
   const userName = authenticatedUser
     ? `${authenticatedUser.firstName} ${authenticatedUser.lastName}`.trim()
@@ -176,6 +177,7 @@ export default function App() {
     setDrawerOpen(false);
     setAccountOpen(false);
     setActiveTab('home');
+    setHangoutMeetingMode(false);
     setAuthMode('login');
     setAuthStatusMessage('You are logged out. Login again to continue.');
   };
@@ -231,17 +233,20 @@ export default function App() {
           userName,
           incomingHangoutCode,
           onConsumeHangoutCode: () => setIncomingHangoutCode(null),
+          onMeetingModeChange: setHangoutMeetingMode,
         })}
       </View>
 
-      <CapsuleTabBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onSentriPress={() => {
-          // Reserved for the future assistant surface.
-        }}
-        tone="light"
-      />
+      {!hangoutMeetingMode ? (
+        <CapsuleTabBar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onSentriPress={() => {
+            // Reserved for the future assistant surface.
+          }}
+          tone="light"
+        />
+      ) : null}
 
       <DrawerSheet
         visible={drawerOpen}
@@ -272,6 +277,7 @@ function renderActiveScreen(
     userName: string;
     incomingHangoutCode: string | null;
     onConsumeHangoutCode: () => void;
+    onMeetingModeChange: (visible: boolean) => void;
   }
 ) {
   switch (activeTab) {
@@ -289,6 +295,7 @@ function renderActiveScreen(
           userName={extras.userName}
           incomingRoomCode={extras.incomingHangoutCode}
           onConsumeIncomingRoomCode={extras.onConsumeHangoutCode}
+          onMeetingModeChange={extras.onMeetingModeChange}
         />
       );
     default:
