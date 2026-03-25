@@ -146,6 +146,15 @@ export default function HangoutScreen({
     [meetingParticipants, meetingSettings.layout, stageParticipant]
   );
 
+  const isHost = useMemo(() => {
+    if (!activeRoom) {
+      return true;
+    }
+    return activeRoom.ownerDisplayName.trim().toLowerCase() === userName.trim().toLowerCase();
+  }, [activeRoom, userName]);
+
+  const canShareScreen = isHost || meetingSettings.allowGuestScreenShare;
+
   async function refreshRooms() {
     const result = await listRooms();
     if (result.ok) {
@@ -306,6 +315,10 @@ export default function HangoutScreen({
   }
 
   function toggleShareScreen() {
+    if (!canShareScreen) {
+      setStatusMessage('The host has not enabled guest screen sharing for this room yet.');
+      return;
+    }
     setShareScreenOn((current) => !current);
     setFocusedParticipantId(meetingParticipants[0]?.id ?? null);
   }
@@ -319,6 +332,10 @@ export default function HangoutScreen({
   }
 
   function sendChatMessage() {
+    if (!meetingSettings.allowChat) {
+      setStatusMessage('The host has turned in-call chat off for this room.');
+      return;
+    }
     const text = chatDraft.trim();
     if (!text) {
       return;
@@ -337,6 +354,35 @@ export default function HangoutScreen({
 
   function toggleRecording() {
     setRecordingOn((current) => !current);
+  }
+
+  function muteAllGuests() {
+    setMeetingParticipants((current) =>
+      current.map((participant, index) => (index === 0 ? participant : { ...participant, muted: true }))
+    );
+    setActivityFeed((current) => [
+      {
+        id: `mute-all-${Date.now()}`,
+        title: 'Host action',
+        detail: 'All guest microphones were muted',
+        timeLabel: 'Now',
+      },
+      ...current,
+    ]);
+  }
+
+  function lowerAllHands() {
+    setMeetingParticipants((current) => current.map((participant) => ({ ...participant, handRaised: false })));
+    setHandRaised(false);
+    setActivityFeed((current) => [
+      {
+        id: `lower-hands-${Date.now()}`,
+        title: 'Host action',
+        detail: 'Raised hands were cleared',
+        timeLabel: 'Now',
+      },
+      ...current,
+    ]);
   }
 
   function sendReaction(icon: string, label: string) {
@@ -740,6 +786,9 @@ export default function HangoutScreen({
           recordingOn={recordingOn}
           onShareRoom={() => void handleShareRoom()}
           onUpdateSettings={setMeetingSettings}
+          isHost={isHost}
+          onMuteAllGuests={muteAllGuests}
+          onLowerAllHands={lowerAllHands}
         />
       </View>
     );
@@ -782,6 +831,9 @@ function MeetingPanelSheet({
   recordingOn,
   onShareRoom,
   onUpdateSettings,
+  isHost,
+  onMuteAllGuests,
+  onLowerAllHands,
 }: {
   visible: boolean;
   panel: MeetingPanel;
@@ -797,6 +849,9 @@ function MeetingPanelSheet({
   recordingOn: boolean;
   onShareRoom: () => void;
   onUpdateSettings: (value: MeetingSettings) => void;
+  isHost: boolean;
+  onMuteAllGuests: () => void;
+  onLowerAllHands: () => void;
 }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -812,16 +867,22 @@ function MeetingPanelSheet({
 
           {panel === 'people' ? (
             <ScrollView style={styles.panelScroll} showsVerticalScrollIndicator={false}>
-              <View style={styles.hostToolsRow}>
-                <Pressable style={styles.hostToolButton}>
-                  <Ionicons name="mic-off" size={15} color={theme.colors.accentStrong} />
-                  <Text style={styles.hostToolText}>Mute all</Text>
-                </Pressable>
-                <Pressable style={styles.hostToolButton}>
-                  <Ionicons name="hand-left" size={15} color={theme.colors.accentStrong} />
-                  <Text style={styles.hostToolText}>Lower hands</Text>
-                </Pressable>
-              </View>
+              {isHost ? (
+                <View style={styles.hostToolsRow}>
+                  <Pressable style={styles.hostToolButton} onPress={onMuteAllGuests}>
+                    <Ionicons name="mic-off" size={15} color={theme.colors.accentStrong} />
+                    <Text style={styles.hostToolText}>Mute all</Text>
+                  </Pressable>
+                  <Pressable style={styles.hostToolButton} onPress={onLowerAllHands}>
+                    <Ionicons name="hand-left" size={15} color={theme.colors.accentStrong} />
+                    <Text style={styles.hostToolText}>Lower hands</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={styles.guestNotice}>
+                  <Text style={styles.guestNoticeText}>Only the host can change room-wide controls.</Text>
+                </View>
+              )}
               {participants.map((participant) => (
                 <View key={participant.id} style={styles.panelRow}>
                   <View style={[styles.panelAvatar, { backgroundColor: participant.tileTone }]}>
@@ -898,6 +959,25 @@ function MeetingPanelSheet({
                 <Ionicons name="radio-button-on" size={18} color={theme.colors.accentStrong} />
                 <Text style={styles.detailActionText}>{recordingOn ? 'Stop recording' : 'Start recording'}</Text>
               </Pressable>
+              <View style={styles.detailSection}>
+                <Text style={styles.detailSectionTitle}>Room policy</Text>
+                <View style={styles.policyRow}>
+                  <Text style={styles.policyLabel}>Host role</Text>
+                  <Text style={styles.policyValue}>{isHost ? 'You are host' : 'Guest view'}</Text>
+                </View>
+                <View style={styles.policyRow}>
+                  <Text style={styles.policyLabel}>In-call chat</Text>
+                  <Text style={styles.policyValue}>{settings.allowChat ? 'On' : 'Off'}</Text>
+                </View>
+                <View style={styles.policyRow}>
+                  <Text style={styles.policyLabel}>Guest screen share</Text>
+                  <Text style={styles.policyValue}>{settings.allowGuestScreenShare ? 'Allowed' : 'Host only'}</Text>
+                </View>
+                <View style={styles.policyRow}>
+                  <Text style={styles.policyLabel}>Waiting room</Text>
+                  <Text style={styles.policyValue}>{settings.waitingRoomEnabled ? 'Enabled' : 'Disabled'}</Text>
+                </View>
+              </View>
               <View style={styles.detailSection}>
                 <Text style={styles.detailSectionTitle}>Activity</Text>
                 {activityFeed.map((item) => (
@@ -1759,6 +1839,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  guestNotice: {
+    marginBottom: 12,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  guestNoticeText: {
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    lineHeight: 19,
+  },
   panelAvatar: {
     width: 44,
     height: 44,
@@ -1888,6 +1980,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     marginBottom: 10,
+  },
+  policyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.line,
+  },
+  policyLabel: {
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  policyValue: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '800',
   },
   activityRow: {
     flexDirection: 'row',
