@@ -33,7 +33,7 @@ type BackendAuthResult = {
   user?: BackendUser | null;
 };
 
-const API_BASE_URL = detectApiBaseUrl();
+export const API_BASE_URL = detectApiBaseUrl();
 
 export async function signup(payload: {
   profile: UserProfile;

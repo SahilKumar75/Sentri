@@ -1,12 +1,32 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
+import {
+  createRoom,
+  extractRoomCode,
+  getRoom,
+  joinRoom,
+  listRooms,
+  type HangoutRoom,
+} from '../lib/hangout-api';
 
 type HangoutScreenProps = {
   onOpenDrawer: () => void;
   avatarLabel: string;
+  sessionToken: string | null;
+  userName: string;
+  incomingRoomCode: string | null;
+  onConsumeIncomingRoomCode: () => void;
 };
 
 type Friend = {
@@ -14,18 +34,6 @@ type Friend = {
   status: 'online' | 'offline';
   note: string;
 };
-
-type Room = {
-  name: string;
-  time: string;
-  invited: string;
-};
-
-const rooms: Room[] = [
-  { name: 'DBMS Revision Room', time: 'Today • 8:30 PM', invited: '5 invited' },
-  { name: 'Friday Movie Room', time: 'Friday • 9:00 PM', invited: '12 invited' },
-  { name: 'Gym Accountability', time: 'Daily • 7:00 AM', invited: '3 invited' },
-];
 
 const friends: Friend[] = [
   { name: 'Ananya', status: 'online', note: 'Free now' },
@@ -35,9 +43,140 @@ const friends: Friend[] = [
   { name: 'Pranav', status: 'offline', note: 'In class' },
 ];
 
-export default function HangoutScreen({ onOpenDrawer, avatarLabel }: HangoutScreenProps) {
-  const [linkValue, setLinkValue] = useState('sentri.meet/DBMS-REV-84K');
-  const [statusMessage, setStatusMessage] = useState('Room link ready to share.');
+export default function HangoutScreen({
+  onOpenDrawer,
+  avatarLabel,
+  sessionToken,
+  userName,
+  incomingRoomCode,
+  onConsumeIncomingRoomCode,
+}: HangoutScreenProps) {
+  const [rooms, setRooms] = useState<HangoutRoom[]>([]);
+  const [activeRoom, setActiveRoom] = useState<HangoutRoom | null>(null);
+  const [roomName, setRoomName] = useState('DBMS Revision Room');
+  const [roomType, setRoomType] = useState('Study');
+  const [joinInput, setJoinInput] = useState('');
+  const [statusMessage, setStatusMessage] = useState('Create a room or paste a link to join one.');
+  const [loading, setLoading] = useState(false);
+
+  const shareText = useMemo(() => {
+    if (!activeRoom) {
+      return '';
+    }
+    return [
+      `Join my Sentri room: ${activeRoom.roomName}`,
+      `Code: ${activeRoom.roomCode}`,
+      `Link: ${activeRoom.joinLink}`,
+    ].join('\n');
+  }, [activeRoom]);
+
+  useEffect(() => {
+    void refreshRooms();
+  }, []);
+
+  useEffect(() => {
+    if (!incomingRoomCode) {
+      return;
+    }
+
+    void handleJoinByCode(incomingRoomCode, true);
+  }, [incomingRoomCode]);
+
+  const refreshRooms = async () => {
+    const result = await listRooms();
+    if (result.ok) {
+      setRooms(result.rooms);
+    } else {
+      setStatusMessage(result.message);
+    }
+  };
+
+  const handleCreateRoom = async () => {
+    if (!sessionToken) {
+      setStatusMessage('Login first so Sentri can create a room under your account.');
+      return;
+    }
+
+    setLoading(true);
+    const result = await createRoom(sessionToken, {
+      roomName: roomName.trim() || 'Sentri Room',
+      roomType,
+    });
+    setLoading(false);
+
+    if (!result.ok) {
+      setStatusMessage(result.message);
+      return;
+    }
+
+    setActiveRoom(result.room);
+    setJoinInput(result.room.joinLink);
+    setStatusMessage(`Room ${result.room.roomCode} is live and ready to share.`);
+    await refreshRooms();
+  };
+
+  const handleJoinByCode = async (rawValue?: string, fromIncomingLink = false) => {
+    const code = extractRoomCode(rawValue ?? joinInput);
+    if (!code) {
+      setStatusMessage('Paste a Sentri room link or room code first.');
+      if (fromIncomingLink) {
+        onConsumeIncomingRoomCode();
+      }
+      return;
+    }
+
+    setLoading(true);
+    const result = await joinRoom(code, userName);
+    setLoading(false);
+
+    if (!result.ok) {
+      setStatusMessage(result.message);
+      if (fromIncomingLink) {
+        onConsumeIncomingRoomCode();
+      }
+      return;
+    }
+
+    setActiveRoom(result.room);
+    setJoinInput(result.room.roomCode);
+    setStatusMessage(`Joined ${result.room.roomName}.`);
+    await refreshRooms();
+    if (fromIncomingLink) {
+      onConsumeIncomingRoomCode();
+    }
+  };
+
+  const handleOpenRoom = async (roomCode: string) => {
+    setLoading(true);
+    const result = await getRoom(roomCode);
+    setLoading(false);
+
+    if (!result.ok) {
+      setStatusMessage(result.message);
+      return;
+    }
+
+    setActiveRoom(result.room);
+    setJoinInput(result.room.roomCode);
+    setStatusMessage(`${result.room.roomName} is ready.`);
+  };
+
+  const handleShareRoom = async (friendName?: string) => {
+    if (!activeRoom) {
+      setStatusMessage('Create or join a room before sharing it.');
+      return;
+    }
+
+    const message = friendName
+      ? `${shareText}\nInviting ${friendName} from Sentri.`
+      : shareText;
+
+    await Share.share({
+      title: activeRoom.roomName,
+      message,
+    });
+    setStatusMessage(friendName ? `Share sheet opened for ${friendName}.` : 'Share sheet opened.');
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -45,25 +184,61 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel }: HangoutScre
         <AvatarButton onPress={onOpenDrawer} label={avatarLabel} />
         <View style={styles.topCopy}>
           <Text style={styles.kicker}>Hangout</Text>
-          <Text style={styles.title}>Rooms for calls, study, and watch parties.</Text>
+          <Text style={styles.title}>Create, share, and join real Sentri rooms.</Text>
         </View>
       </View>
 
-      <View style={styles.actionRow}>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Create room</Text>
+        <TextInput
+          style={styles.input}
+          value={roomName}
+          onChangeText={setRoomName}
+          placeholder="Room name"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <View style={styles.typeRow}>
+          {['Study', 'Watch', 'Call'].map((type) => {
+            const active = roomType === type;
+            return (
+              <Pressable
+                key={type}
+                onPress={() => setRoomType(type)}
+                style={[styles.typeChip, active && styles.typeChipActive]}
+              >
+                <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>{type}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={styles.actionRow}>
+          <Pressable
+            style={[styles.actionButton, styles.actionButtonFilled, loading && styles.disabledButton]}
+            onPress={() => void handleCreateRoom()}
+            disabled={loading}
+          >
+            <Text style={styles.actionFilledText}>{loading ? 'Please wait' : 'Create room'}</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Join room</Text>
+        <TextInput
+          style={styles.input}
+          value={joinInput}
+          onChangeText={setJoinInput}
+          placeholder="Paste room code or sentri://hangout/ABCD1234"
+          placeholderTextColor={theme.colors.textMuted}
+          autoCapitalize="characters"
+          autoCorrect={false}
+        />
         <Pressable
-          style={[styles.actionButton, styles.actionButtonGhost]}
-          onPress={() => setStatusMessage('Join flow staged. Paste the room link next.')}
+          style={[styles.actionButton, styles.actionButtonGhost, loading && styles.disabledButton]}
+          onPress={() => void handleJoinByCode()}
+          disabled={loading}
         >
-          <Text style={styles.actionGhostText}>Join room</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.actionButton, styles.actionButtonFilled]}
-          onPress={() => {
-            setLinkValue(`sentri.meet/ROOM-${Math.floor(100 + Math.random() * 900)}K`);
-            setStatusMessage('New room created. Share the fresh link below.');
-          }}
-        >
-          <Text style={styles.actionFilledText}>Create room</Text>
+          <Text style={styles.actionGhostText}>{loading ? 'Please wait' : 'Join room'}</Text>
         </Pressable>
       </View>
 
@@ -71,47 +246,59 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel }: HangoutScre
         <Text style={styles.statusBannerText}>{statusMessage}</Text>
       </View>
 
-      <View style={styles.linkCard}>
-        <View style={styles.linkHeader}>
-          <Text style={styles.linkLabel}>Generated link</Text>
-          <View style={styles.linkStatus}>
-            <Text style={styles.linkStatusText}>Ready to share</Text>
+      {activeRoom ? (
+        <View style={styles.linkCard}>
+          <View style={styles.linkHeader}>
+            <View>
+              <Text style={styles.linkLabel}>Active room</Text>
+              <Text style={styles.linkValue}>{activeRoom.roomName}</Text>
+            </View>
+            <View style={styles.linkStatus}>
+              <Text style={styles.linkStatusText}>{activeRoom.roomCode}</Text>
+            </View>
+          </View>
+          <Text style={styles.roomMetaLine}>
+            {activeRoom.roomType} • {activeRoom.ownerDisplayName} • {activeRoom.participantCount} in room
+          </Text>
+          <Text style={styles.joinLinkText}>{activeRoom.joinLink}</Text>
+          <View style={styles.linkActions}>
+            <InlineButton
+              label="Share link"
+              icon="share-social"
+              onPress={() => void handleShareRoom()}
+            />
+            <InlineButton
+              label="Refresh room"
+              icon="refresh"
+              onPress={() => void handleOpenRoom(activeRoom.roomCode)}
+            />
           </View>
         </View>
-        <Text style={styles.linkValue}>{linkValue}</Text>
-        <View style={styles.linkActions}>
-          <InlineButton
-            label="Copy link"
-            icon="copy-outline"
-            onPress={() => setStatusMessage(`Copied ${linkValue}`)}
-          />
-          <InlineButton
-            label="Share"
-            icon="share-social-outline"
-            onPress={() => setStatusMessage(`Share sheet prepared for ${linkValue}`)}
-          />
-        </View>
-      </View>
+      ) : null}
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Rooms</Text>
-          <Text style={styles.sectionMeta}>Quick access</Text>
+          <Text style={styles.sectionTitle}>Live rooms</Text>
+          <Pressable onPress={() => void refreshRooms()}>
+            <Text style={styles.sectionMeta}>Refresh</Text>
+          </Pressable>
         </View>
         {rooms.map((room) => (
-          <View key={room.name} style={styles.roomCard}>
+          <Pressable key={room.roomCode} style={styles.roomCard} onPress={() => void handleOpenRoom(room.roomCode)}>
             <View style={styles.roomBadge}>
-              <Text style={styles.roomBadgeText}>S</Text>
+              <Text style={styles.roomBadgeText}>{room.roomName.charAt(0).toUpperCase()}</Text>
             </View>
             <View style={styles.roomCopy}>
-              <Text style={styles.roomTitle}>{room.name}</Text>
-              <Text style={styles.roomMeta}>{room.time}</Text>
+              <Text style={styles.roomTitle}>{room.roomName}</Text>
+              <Text style={styles.roomMeta}>
+                {room.roomType} • {room.ownerDisplayName}
+              </Text>
             </View>
             <View style={styles.roomRight}>
-              <Text style={styles.roomInvited}>{room.invited}</Text>
-              <Text style={styles.roomLinkLabel}>Link ready</Text>
+              <Text style={styles.roomInvited}>{room.participantCount} in room</Text>
+              <Text style={styles.roomLinkLabel}>{room.roomCode}</Text>
             </View>
-          </View>
+          </Pressable>
         ))}
       </View>
 
@@ -135,8 +322,9 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel }: HangoutScre
               </View>
             </View>
             <Pressable
-              style={styles.inviteButton}
-              onPress={() => setStatusMessage(`Invite queued for ${friend.name}`)}
+              style={[styles.inviteButton, !activeRoom && styles.disabledButton]}
+              onPress={() => void handleShareRoom(friend.name)}
+              disabled={!activeRoom}
             >
               <Text style={styles.inviteButtonText}>Invite</Text>
             </Pressable>
@@ -196,10 +384,87 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 34,
   },
-  actionRow: {
+  card: {
     marginTop: 18,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    padding: 16,
+    ...theme.shadow.soft,
+  },
+  sectionTitle: {
+    color: theme.colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  input: {
+    marginTop: 14,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    color: theme.colors.text,
+    fontSize: 15,
+  },
+  typeRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  typeChip: {
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  typeChipActive: {
+    backgroundColor: theme.colors.accent,
+  },
+  typeChipText: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  typeChipTextActive: {
+    color: '#FFFFFF',
+  },
+  actionRow: {
+    marginTop: 14,
     flexDirection: 'row',
     gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  actionButtonGhost: {
+    marginTop: 14,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderColor: theme.colors.line,
+  },
+  actionButtonFilled: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  actionGhostText: {
+    color: theme.colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  actionFilledText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  disabledButton: {
+    opacity: 0.55,
   },
   statusBanner: {
     marginTop: 14,
@@ -213,32 +478,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  actionButton: {
-    flex: 1,
-    minHeight: 52,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  actionButtonGhost: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.line,
-  },
-  actionButtonFilled: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
-  },
-  actionGhostText: {
-    color: theme.colors.text,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  actionFilledText: {
-    color: '#FFF9F5',
-    fontSize: 15,
-    fontWeight: '800',
-  },
   linkCard: {
     marginTop: 16,
     backgroundColor: theme.colors.surface,
@@ -251,7 +490,8 @@ const styles = StyleSheet.create({
   linkHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 16,
   },
   linkLabel: {
     color: theme.colors.textSoft,
@@ -261,22 +501,34 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
   },
   linkStatus: {
-    borderRadius: 999,
-    backgroundColor: theme.colors.greenSoft,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.accentSoft,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   linkStatusText: {
-    color: theme.colors.green,
+    color: theme.colors.accentStrong,
     fontSize: 12,
     fontWeight: '800',
   },
   linkValue: {
-    marginTop: 12,
+    marginTop: 8,
     color: theme.colors.text,
     fontSize: 22,
     fontWeight: '800',
     lineHeight: 28,
+  },
+  roomMetaLine: {
+    marginTop: 12,
+    color: theme.colors.textSoft,
+    fontSize: 14,
+  },
+  joinLinkText: {
+    marginTop: 10,
+    color: theme.colors.accentStrong,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   linkActions: {
     marginTop: 16,
@@ -305,11 +557,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-  },
-  sectionTitle: {
-    color: theme.colors.text,
-    fontSize: 22,
-    fontWeight: '800',
   },
   sectionMeta: {
     color: theme.colors.textSoft,
@@ -390,7 +637,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   statusDotOnline: {
-    backgroundColor: theme.colors.green,
+    backgroundColor: theme.colors.accent,
   },
   statusDotOffline: {
     backgroundColor: theme.colors.textMuted,

@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, SafeAreaView, StyleSheet, View } from 'react-native';
 
 import { CapsuleTabBar, DrawerSheet } from './src/components/sentri-ui';
 import { theme, type TabKey } from './src/design/tokens';
@@ -32,6 +32,7 @@ export default function App() {
   const [accountView, setAccountView] = useState<'account' | 'settings'>('account');
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [authInitializing, setAuthInitializing] = useState(true);
+  const [incomingHangoutCode, setIncomingHangoutCode] = useState<string | null>(null);
 
   const userName = authenticatedUser
     ? `${authenticatedUser.firstName} ${authenticatedUser.lastName}`.trim()
@@ -48,6 +49,26 @@ export default function App() {
 
   useEffect(() => {
     void restoreSavedSession();
+  }, []);
+
+  useEffect(() => {
+    const consumeUrl = (url: string | null) => {
+      if (!url) {
+        return;
+      }
+
+      const match = url.match(/sentri:\/\/hangout\/([A-Z0-9-]+)/i);
+      if (!match?.[1]) {
+        return;
+      }
+
+      setIncomingHangoutCode(match[1].toUpperCase());
+      setActiveTab('hangout');
+    };
+
+    void Linking.getInitialURL().then(consumeUrl);
+    const subscription = Linking.addEventListener('url', ({ url }) => consumeUrl(url));
+    return () => subscription.remove();
   }, []);
 
   const restoreSavedSession = async () => {
@@ -204,7 +225,14 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      <View style={styles.shell}>{renderActiveScreen(activeTab, screenProps)}</View>
+      <View style={styles.shell}>
+        {renderActiveScreen(activeTab, screenProps, {
+          sessionToken,
+          userName,
+          incomingHangoutCode,
+          onConsumeHangoutCode: () => setIncomingHangoutCode(null),
+        })}
+      </View>
 
       <CapsuleTabBar
         activeTab={activeTab}
@@ -236,7 +264,16 @@ export default function App() {
   );
 }
 
-function renderActiveScreen(activeTab: TabKey, props: ScreenProps) {
+function renderActiveScreen(
+  activeTab: TabKey,
+  props: ScreenProps,
+  extras: {
+    sessionToken: string | null;
+    userName: string;
+    incomingHangoutCode: string | null;
+    onConsumeHangoutCode: () => void;
+  }
+) {
   switch (activeTab) {
     case 'home':
       return <HomeScreen {...props} />;
@@ -245,7 +282,15 @@ function renderActiveScreen(activeTab: TabKey, props: ScreenProps) {
     case 'calorie':
       return <CalorieScreen {...props} />;
     case 'hangout':
-      return <HangoutScreen {...props} />;
+      return (
+        <HangoutScreen
+          {...props}
+          sessionToken={extras.sessionToken}
+          userName={extras.userName}
+          incomingRoomCode={extras.incomingHangoutCode}
+          onConsumeIncomingRoomCode={extras.onConsumeHangoutCode}
+        />
+      );
     default:
       return <HomeScreen {...props} />;
   }
