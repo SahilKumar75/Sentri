@@ -38,6 +38,9 @@ export type MeetingSettings = {
   captionsLanguage: 'English';
   audioOutput: 'Speaker' | 'Earpiece' | 'Bluetooth';
   videoQuality: 'Auto' | '720p';
+  allowChat: boolean;
+  allowGuestScreenShare: boolean;
+  waitingRoomEnabled: boolean;
 };
 
 const palette = ['#1A73E8', '#185ABC', '#5F6368', '#8AB4F8', '#3C4043'];
@@ -50,6 +53,9 @@ export const defaultMeetingSettings: MeetingSettings = {
   captionsLanguage: 'English',
   audioOutput: 'Speaker',
   videoQuality: 'Auto',
+  allowChat: true,
+  allowGuestScreenShare: false,
+  waitingRoomEnabled: true,
 };
 
 export function buildSeedParticipants(room: HangoutRoom, userName: string): MeetingParticipant[] {

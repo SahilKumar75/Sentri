@@ -812,6 +812,16 @@ function MeetingPanelSheet({
 
           {panel === 'people' ? (
             <ScrollView style={styles.panelScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.hostToolsRow}>
+                <Pressable style={styles.hostToolButton}>
+                  <Ionicons name="mic-off" size={15} color={theme.colors.accentStrong} />
+                  <Text style={styles.hostToolText}>Mute all</Text>
+                </Pressable>
+                <Pressable style={styles.hostToolButton}>
+                  <Ionicons name="hand-left" size={15} color={theme.colors.accentStrong} />
+                  <Text style={styles.hostToolText}>Lower hands</Text>
+                </Pressable>
+              </View>
               {participants.map((participant) => (
                 <View key={participant.id} style={styles.panelRow}>
                   <View style={[styles.panelAvatar, { backgroundColor: participant.tileTone }]}>
@@ -920,6 +930,21 @@ function MeetingPanelSheet({
                 label="Mirror self view"
                 value={settings.mirrorSelfView}
                 onValueChange={(value) => onUpdateSettings({ ...settings, mirrorSelfView: value })}
+              />
+              <SettingsRow
+                label="Allow in-call chat"
+                value={settings.allowChat}
+                onValueChange={(value) => onUpdateSettings({ ...settings, allowChat: value })}
+              />
+              <SettingsRow
+                label="Allow guest screen share"
+                value={settings.allowGuestScreenShare}
+                onValueChange={(value) => onUpdateSettings({ ...settings, allowGuestScreenShare: value })}
+              />
+              <SettingsRow
+                label="Waiting room"
+                value={settings.waitingRoomEnabled}
+                onValueChange={(value) => onUpdateSettings({ ...settings, waitingRoomEnabled: value })}
               />
 
               <Text style={styles.settingsLabel}>Layout</Text>
@@ -1714,6 +1739,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.line,
+  },
+  hostToolsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  hostToolButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 16,
+    backgroundColor: theme.colors.accentSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  hostToolText: {
+    color: theme.colors.accentStrong,
+    fontSize: 13,
+    fontWeight: '700',
   },
   panelAvatar: {
     width: 44,
