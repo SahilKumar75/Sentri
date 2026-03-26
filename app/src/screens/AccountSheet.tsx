@@ -76,6 +76,10 @@ export default function AccountSheet({
                 label="Phone verification"
                 value={profile.phone ? (profile.verifiedPhone ? 'Verified' : 'Pending') : 'Not added'}
               />
+              <DetailRow
+                label="Last login"
+                value={profile.lastLoginAt ? formatDateTime(profile.lastLoginAt) : 'This device session is current'}
+              />
               <DetailRow label="Account created" value={profile.createdAt ? formatDateTime(profile.createdAt) : 'Unknown'} />
             </View>
 
