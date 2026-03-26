@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
+import { getStoredJson, setStoredJson } from '../lib/device-store';
 import {
   captureOptions,
   savedItems,
@@ -47,6 +48,14 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
   const columns = splitIntoColumns(otherItems);
   const queryActive = query.trim().length > 0;
   const emptySearch = queryActive && filteredItems.length === 0;
+
+  useEffect(() => {
+    void getStoredJson<SavedItem[]>('sentri.myspace.items', savedItems).then(setItems);
+  }, []);
+
+  useEffect(() => {
+    void setStoredJson('sentri.myspace.items', items);
+  }, [items]);
 
   return (
     <SafeAreaView style={styles.screen}>
