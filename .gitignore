@@ -1,4 +1,6 @@
 .DS_Store
+.vscode/
+.idea/
 
 app/node_modules/
 app/.expo/
