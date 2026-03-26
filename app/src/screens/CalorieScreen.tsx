@@ -1,12 +1,5 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 
@@ -35,6 +28,26 @@ type CalorieSetup = {
   cheatDay: string;
 };
 
+type MealEntry = {
+  label: string;
+  kcal: number;
+  note: string;
+  time: string;
+};
+
+type BurnEntry = {
+  label: string;
+  kcal: number;
+  meta: string;
+};
+
+type MacroTargets = {
+  protein: number;
+  carbs: number;
+  fats: number;
+  cheatAllowance: number;
+};
+
 const defaultSetup: CalorieSetup = {
   age: '21',
   height: '176',
@@ -51,50 +64,91 @@ const defaultSetup: CalorieSetup = {
   cheatDay: 'Friday',
 };
 
-const baseMeals = [
-  { label: 'Breakfast', kcal: 480, note: 'Poha, eggs, milk', time: '08:40' },
-  { label: 'Lunch', kcal: 665, note: 'Rice, dal, paneer bhurji', time: '13:15' },
-  { label: 'Snack', kcal: 245, note: 'Banana and whey shake', time: '17:30' },
+const baseMeals: MealEntry[] = [
+  { label: 'Breakfast', kcal: 430, note: 'Poha, eggs, milk', time: '08:40' },
+  { label: 'Lunch', kcal: 640, note: 'Rice, dal, paneer bhurji', time: '13:15' },
+  { label: 'Snack', kcal: 240, note: 'Banana and whey shake', time: '17:30' },
 ];
 
-const baseBurns = [
+const baseBurns: BurnEntry[] = [
   { label: 'Gym session', kcal: 220, meta: '58 min lifting' },
   { label: 'Walk', kcal: 96, meta: '34 min walk' },
+];
+
+const mealPresets: MealEntry[] = [
+  { label: 'Mess breakfast', kcal: 320, note: 'Poha + eggs estimate', time: '08:30' },
+  { label: 'Hostel lunch', kcal: 620, note: 'Rice + dal + sabzi', time: '13:10' },
+  { label: 'Evening snack', kcal: 180, note: 'Fruit and tea', time: '17:45' },
+];
+
+const burnPresets: BurnEntry[] = [
+  { label: 'Walk', kcal: 95, meta: '30 min campus walk' },
+  { label: 'Gym', kcal: 210, meta: '45 min weight training' },
+  { label: 'Run', kcal: 160, meta: '20 min easy run' },
 ];
 
 export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScreenProps) {
   const [setup, setSetup] = useState<CalorieSetup>(defaultSetup);
   const [setupComplete, setSetupComplete] = useState(false);
-  const [meals, setMeals] = useState(baseMeals);
-  const [burns, setBurns] = useState(baseBurns);
-  const [statusMessage, setStatusMessage] = useState('Complete your setup to generate a calorie target.');
+  const [meals, setMeals] = useState<MealEntry[]>(baseMeals);
+  const [burns, setBurns] = useState<BurnEntry[]>(baseBurns);
+  const [statusMessage, setStatusMessage] = useState('Finish your setup to unlock today tracking.');
+  const [mealDraftLabel, setMealDraftLabel] = useState('');
+  const [mealDraftCalories, setMealDraftCalories] = useState('');
+  const [burnDraftLabel, setBurnDraftLabel] = useState('');
+  const [burnDraftCalories, setBurnDraftCalories] = useState('');
 
   const dailyTarget = useMemo(() => estimateDailyTarget(setup), [setup]);
+  const macroTargets = useMemo(() => estimateMacros(setup, dailyTarget), [setup, dailyTarget]);
   const consumed = meals.reduce((sum, meal) => sum + meal.kcal, 0);
   const burned = burns.reduce((sum, entry) => sum + entry.kcal, 0);
-  const remaining = dailyTarget - consumed + burned;
+  const netCalories = consumed - burned;
+  const remaining = dailyTarget - netCalories;
+  const completion = Math.max(Math.min(Math.round((netCalories / Math.max(dailyTarget, 1)) * 100), 100), 0);
+  const setupReadiness = useMemo(() => {
+    const filled = [setup.age, setup.height, setup.weight, setup.goalWeight, setup.journeyMonths, setup.idealBodyType].filter(
+      (value) => value.trim().length > 0
+    ).length;
+    return Math.round((filled / 6) * 100);
+  }, [setup]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.topRow}>
-        <AvatarButton onPress={onOpenDrawer} label={avatarLabel} />
+        <AvatarButton onPress={onOpenDrawer} label={avatarLabel} tone="dark" />
         <View style={styles.topCopy}>
-          <Text style={styles.eyebrow}>Calorie</Text>
-          <Text style={styles.title}>{setupComplete ? 'Your plan' : 'Build your plan'}</Text>
+          <Text style={styles.eyebrow}>Apple Health inspired</Text>
+          <Text style={styles.title}>{setupComplete ? 'Today' : 'Build your plan'}</Text>
+          <Text style={styles.subtitle}>
+            {setupComplete
+              ? 'Track meals, gym burn, and cheat-day rhythm in one calm view.'
+              : 'Tell Sentri your body details and goal so the plan actually fits student life.'}
+          </Text>
         </View>
       </View>
 
       {!setupComplete ? (
         <>
+          <View style={styles.progressCard}>
+            <View>
+              <Text style={styles.progressLabel}>Setup readiness</Text>
+              <Text style={styles.progressValue}>{setupReadiness}%</Text>
+            </View>
+            <View style={styles.ring}>
+              <View style={styles.ringInner}>
+                <Text style={styles.ringText}>{setupReadiness}%</Text>
+              </View>
+            </View>
+          </View>
+
           <View style={styles.heroCard}>
-            <Text style={styles.heroTitle}>Tell Sentri about your current body and goal.</Text>
+            <Text style={styles.heroTitle}>One setup. One daily target. Built for hostel meals and student gym sessions.</Text>
             <Text style={styles.heroBody}>
-              We’ll use your details, journey time, and cheat-day rhythm to set a realistic daily target for hostel life and gym days.
+              We use age, height, weight, optional measurements, body type, goal weight, journey time, and cheat-day rhythm.
             </Text>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Basics</Text>
+          <Section title="Starting point">
             <View style={styles.row}>
               <InputField
                 label="Age"
@@ -127,10 +181,9 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
                 suffix="kg"
               />
             </View>
-          </View>
+          </Section>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Optional measurements</Text>
+          <Section title="Optional measurements">
             <View style={styles.row}>
               <InputField
                 label="Waist"
@@ -154,10 +207,9 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
               keyboardType="number-pad"
               suffix="cm"
             />
-          </View>
+          </Section>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Body and goal</Text>
+          <Section title="Goal direction">
             <Text style={styles.fieldLabel}>Current body type</Text>
             <View style={styles.choiceRow}>
               {(['Lean', 'Average', 'Heavy'] as BodyType[]).map((option) => (
@@ -188,10 +240,9 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
               onChangeText={(value) => updateSetup(setSetup, 'idealBodyType', value)}
               placeholder="Athletic, lean bulk, toned..."
             />
-          </View>
+          </Section>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Timeline and cheat days</Text>
+          <Section title="Timeline and cheat days">
             <InputField
               label="Journey time"
               value={setup.journeyMonths}
@@ -222,21 +273,28 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
                 />
               ))}
             </View>
-          </View>
+          </Section>
 
-          <View style={styles.planPreview}>
-            <Text style={styles.planLabel}>Estimated daily intake</Text>
-            <Text style={styles.planValue}>{dailyTarget} kcal</Text>
-            <Text style={styles.planBody}>
-              Based on {setup.goal.toLowerCase()} mode, {setup.journeyMonths || '3'} months, and a {setup.cheatFrequency.toLowerCase()} rhythm.
+          <View style={styles.previewCard}>
+            <Text style={styles.previewLabel}>Estimated daily intake</Text>
+            <Text style={styles.previewValue}>{dailyTarget} kcal</Text>
+            <Text style={styles.previewBody}>
+              Built from {setup.goal.toLowerCase()} mode, {setup.journeyMonths || '3'} months, and a {setup.cheatFrequency.toLowerCase()} rhythm.
             </Text>
+            <View style={styles.previewMacroRow}>
+              <MacroChip label="Protein" value={`${macroTargets.protein}g`} />
+              <MacroChip label="Carbs" value={`${macroTargets.carbs}g`} />
+              <MacroChip label="Fats" value={`${macroTargets.fats}g`} />
+            </View>
           </View>
 
           <Pressable
             style={styles.primaryButton}
             onPress={() => {
               setSetupComplete(true);
-              setStatusMessage(`Daily target set to ${dailyTarget} kcal for your ${setup.goal.toLowerCase()} plan.`);
+              setStatusMessage(
+                `Plan ready. Your target is ${dailyTarget} kcal with ${macroTargets.protein}g protein and ${setup.cheatFrequency.toLowerCase()} cheat rhythm.`
+              );
             }}
           >
             <Text style={styles.primaryButtonText}>Build my plan</Text>
@@ -245,14 +303,14 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
       ) : (
         <>
           <View style={styles.summaryHero}>
-            <View>
+            <View style={styles.summaryCopy}>
               <Text style={styles.heroLabel}>Remaining today</Text>
               <Text style={styles.summaryValue}>{remaining}</Text>
-              <Text style={styles.summaryUnit}>kcal</Text>
+              <Text style={styles.summaryUnit}>kcal left after meals and burn</Text>
             </View>
-            <View style={styles.ring}>
-              <View style={styles.ringInner}>
-                <Text style={styles.ringText}>{Math.max(Math.round((consumed / Math.max(dailyTarget, 1)) * 100), 0)}%</Text>
+            <View style={styles.ringLarge}>
+              <View style={styles.ringLargeInner}>
+                <Text style={styles.ringLargeText}>{completion}%</Text>
               </View>
             </View>
           </View>
@@ -261,15 +319,16 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
             <Text style={styles.statusText}>{statusMessage}</Text>
           </View>
 
-          <View style={styles.metricRow}>
+          <View style={styles.metricGrid}>
             <MetricCard label="Target" value={`${dailyTarget}`} suffix="kcal" />
             <MetricCard label="Consumed" value={`${consumed}`} suffix="kcal" />
             <MetricCard label="Burned" value={`${burned}`} suffix="kcal" />
+            <MetricCard label="Net" value={`${netCalories}`} suffix="kcal" />
           </View>
 
-          <View style={styles.card}>
+          <View style={styles.cardDark}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Your setup</Text>
+              <Text style={styles.sectionTitleDark}>Macro targets</Text>
               <Pressable
                 style={styles.secondaryButton}
                 onPress={() => {
@@ -277,80 +336,188 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
                   setStatusMessage('Update your body details to rebuild the plan.');
                 }}
               >
-                <Text style={styles.secondaryButtonText}>Edit</Text>
+                <Text style={styles.secondaryButtonText}>Edit plan</Text>
               </Pressable>
             </View>
-            <View style={styles.setupGrid}>
-              <SetupPill label="Age" value={`${setup.age} y`} />
-              <SetupPill label="Height" value={`${setup.height} cm`} />
-              <SetupPill label="Weight" value={`${setup.weight} kg`} />
-              <SetupPill label="Goal" value={setup.goal} />
-              <SetupPill label="Goal weight" value={`${setup.goalWeight} kg`} />
-              <SetupPill label="Cheat day" value={setup.cheatDay} />
+            <View style={styles.macroGrid}>
+              <MacroCard label="Protein" value={`${macroTargets.protein} g`} note="Keep this high for recovery." />
+              <MacroCard label="Carbs" value={`${macroTargets.carbs} g`} note="Fuel for class + training." />
+              <MacroCard label="Fats" value={`${macroTargets.fats} g`} note="Hormones and satiety." />
+              <MacroCard label="Cheat budget" value={`${macroTargets.cheatAllowance} kcal`} note={`${setup.cheatFrequency} on ${setup.cheatDay}`} />
             </View>
           </View>
 
-          <View style={styles.card}>
+          <View style={styles.cardDark}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Meals</Text>
+              <Text style={styles.sectionTitleDark}>Quick log</Text>
+              <Text style={styles.sectionMetaDark}>Fast add for hostel meals and workouts</Text>
+            </View>
+
+            <Text style={styles.fieldLabelDark}>Meal label</Text>
+            <View style={styles.composerRow}>
+              <TextInput
+                value={mealDraftLabel}
+                onChangeText={setMealDraftLabel}
+                placeholder="Mess lunch, snack, dinner..."
+                placeholderTextColor={theme.colors.darkTextSoft}
+                style={styles.composerInput}
+              />
+              <TextInput
+                value={mealDraftCalories}
+                onChangeText={setMealDraftCalories}
+                placeholder="kcal"
+                placeholderTextColor={theme.colors.darkTextSoft}
+                keyboardType="number-pad"
+                style={[styles.composerInput, styles.composerInputSmall]}
+              />
               <Pressable
-                style={styles.secondaryButton}
+                style={styles.composerButton}
                 onPress={() => {
+                  const kcal = Number(mealDraftCalories) || 0;
+                  const label = mealDraftLabel.trim() || 'Manual meal';
+                  if (!kcal) {
+                    setStatusMessage('Add a meal calorie value first.');
+                    return;
+                  }
                   setMeals((current) => [
                     ...current,
-                    { label: 'Quick add', kcal: 210, note: 'Hostel snack estimate', time: '21:30' },
+                    { label, kcal, note: 'Manual meal entry', time: 'Now' },
                   ]);
-                  setStatusMessage('Quick meal added.');
+                  setMealDraftLabel('');
+                  setMealDraftCalories('');
+                  setStatusMessage(`Added ${label} (${kcal} kcal).`);
                 }}
               >
-                <Text style={styles.secondaryButtonText}>Add meal</Text>
+                <Text style={styles.composerButtonText}>Add meal</Text>
               </Pressable>
             </View>
+
+            <View style={styles.presetRow}>
+              {mealPresets.map((preset) => (
+                <Pressable
+                  key={preset.label}
+                  style={styles.presetChip}
+                  onPress={() => {
+                    setMeals((current) => [...current, preset]);
+                    setStatusMessage(`Added ${preset.label}.`);
+                  }}
+                >
+                  <Text style={styles.presetChipText}>{preset.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
             {meals.map((meal) => (
-              <View key={`${meal.label}-${meal.time}`} style={styles.listRow}>
+              <View key={`${meal.label}-${meal.time}`} style={styles.listRowDark}>
                 <View style={styles.listCopy}>
-                  <Text style={styles.listTitle}>{meal.label}</Text>
-                  <Text style={styles.listMeta}>
+                  <Text style={styles.listTitleDark}>{meal.label}</Text>
+                  <Text style={styles.listMetaDark}>
                     {meal.time} • {meal.note}
                   </Text>
                 </View>
-                <Text style={styles.listValue}>{meal.kcal}</Text>
+                <Text style={styles.listValueDark}>{meal.kcal}</Text>
               </View>
             ))}
           </View>
 
-          <View style={styles.card}>
+          <View style={styles.cardDark}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Calories burned</Text>
+              <Text style={styles.sectionTitleDark}>Calories burned</Text>
+              <Text style={styles.sectionMetaDark}>Manual burn minus from your day</Text>
+            </View>
+
+            <View style={styles.composerRow}>
+              <TextInput
+                value={burnDraftLabel}
+                onChangeText={setBurnDraftLabel}
+                placeholder="Gym, walk, run..."
+                placeholderTextColor={theme.colors.darkTextSoft}
+                style={styles.composerInput}
+              />
+              <TextInput
+                value={burnDraftCalories}
+                onChangeText={setBurnDraftCalories}
+                placeholder="kcal"
+                placeholderTextColor={theme.colors.darkTextSoft}
+                keyboardType="number-pad"
+                style={[styles.composerInput, styles.composerInputSmall]}
+              />
               <Pressable
-                style={styles.secondaryButton}
+                style={styles.composerButton}
                 onPress={() => {
+                  const kcal = Number(burnDraftCalories) || 0;
+                  const label = burnDraftLabel.trim() || 'Manual burn';
+                  if (!kcal) {
+                    setStatusMessage('Add a burn calorie value first.');
+                    return;
+                  }
                   setBurns((current) => [
                     ...current,
-                    { label: 'Manual run', kcal: 110, meta: '20 min quick add' },
+                    { label, kcal, meta: 'Manual burn entry' },
                   ]);
-                  setStatusMessage('Manual burn added.');
+                  setBurnDraftLabel('');
+                  setBurnDraftCalories('');
+                  setStatusMessage(`Logged ${label} (${kcal} kcal).`);
                 }}
               >
-                <Text style={styles.secondaryButtonText}>Log burn</Text>
+                <Text style={styles.composerButtonText}>Log burn</Text>
               </Pressable>
             </View>
+
+            <View style={styles.presetRow}>
+              {burnPresets.map((preset) => (
+                <Pressable
+                  key={preset.label}
+                  style={styles.presetChip}
+                  onPress={() => {
+                    setBurns((current) => [...current, preset]);
+                    setStatusMessage(`Added ${preset.label}.`);
+                  }}
+                >
+                  <Text style={styles.presetChipText}>{preset.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
             {burns.map((entry) => (
-              <View key={`${entry.label}-${entry.meta}`} style={styles.listRow}>
+              <View key={`${entry.label}-${entry.meta}`} style={styles.listRowDark}>
                 <View style={styles.listCopy}>
-                  <Text style={styles.listTitle}>{entry.label}</Text>
-                  <Text style={styles.listMeta}>{entry.meta}</Text>
+                  <Text style={styles.listTitleDark}>{entry.label}</Text>
+                  <Text style={styles.listMetaDark}>{entry.meta}</Text>
                 </View>
-                <Text style={styles.listValue}>{entry.kcal}</Text>
+                <Text style={styles.listValueDark}>{entry.kcal}</Text>
               </View>
             ))}
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Cheat day rhythm</Text>
-            <Text style={styles.cheatText}>
-              {setup.cheatFrequency} is active, with {setup.cheatDay} set as the primary relaxed day so the plan stays realistic.
+          <View style={styles.cardDark}>
+            <Text style={styles.sectionTitleDark}>Cheat day rhythm</Text>
+            <Text style={styles.cheatTextDark}>
+              {setup.cheatFrequency} is active, with {setup.cheatDay} set as the relaxed day so the plan stays realistic.
             </Text>
+          </View>
+
+          <View style={styles.cardDark}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitleDark}>Plan snapshot</Text>
+              <Pressable
+                style={styles.secondaryButtonDark}
+                onPress={() => {
+                  setSetupComplete(false);
+                  setStatusMessage('Update your setup to recalculate the target.');
+                }}
+              >
+                <Text style={styles.secondaryButtonTextDark}>Update</Text>
+              </Pressable>
+            </View>
+            <View style={styles.snapshotGrid}>
+              <SnapshotPill label="Age" value={`${setup.age} y`} />
+              <SnapshotPill label="Height" value={`${setup.height} cm`} />
+              <SnapshotPill label="Weight" value={`${setup.weight} kg`} />
+              <SnapshotPill label="Goal" value={setup.goal} />
+              <SnapshotPill label="Goal weight" value={`${setup.goalWeight} kg`} />
+              <SnapshotPill label="Cheat day" value={setup.cheatDay} />
+            </View>
           </View>
         </>
       )}
@@ -358,11 +525,7 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
   );
 }
 
-function updateSetup(
-  setSetup: Dispatch<SetStateAction<CalorieSetup>>,
-  key: keyof CalorieSetup,
-  value: string
-) {
+function updateSetup(setSetup: Dispatch<SetStateAction<CalorieSetup>>, key: keyof CalorieSetup, value: string) {
   setSetup((current) => ({ ...current, [key]: value }));
 }
 
@@ -390,7 +553,7 @@ function InputField({
           onChangeText={onChangeText}
           keyboardType={keyboardType}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.textMuted}
+          placeholderTextColor={theme.colors.darkTextSoft}
           style={styles.input}
         />
         {suffix ? <Text style={styles.inputSuffix}>{suffix}</Text> : null}
@@ -415,6 +578,15 @@ function ChoiceChip({
   );
 }
 
+function MacroChip({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.macroChip}>
+      <Text style={styles.macroChipLabel}>{label}</Text>
+      <Text style={styles.macroChipValue}>{value}</Text>
+    </View>
+  );
+}
+
 function MetricCard({ label, value, suffix }: { label: string; value: string; suffix: string }) {
   return (
     <View style={styles.metricCard}>
@@ -425,11 +597,30 @@ function MetricCard({ label, value, suffix }: { label: string; value: string; su
   );
 }
 
-function SetupPill({ label, value }: { label: string; value: string }) {
+function MacroCard({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <View style={styles.setupPill}>
-      <Text style={styles.setupPillLabel}>{label}</Text>
-      <Text style={styles.setupPillValue}>{value}</Text>
+    <View style={styles.macroCard}>
+      <Text style={styles.macroCardLabel}>{label}</Text>
+      <Text style={styles.macroCardValue}>{value}</Text>
+      <Text style={styles.macroCardNote}>{note}</Text>
+    </View>
+  );
+}
+
+function SnapshotPill({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.snapshotPill}>
+      <Text style={styles.snapshotLabel}>{label}</Text>
+      <Text style={styles.snapshotValue}>{value}</Text>
+    </View>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitleLight}>{title}</Text>
+      {children}
     </View>
   );
 }
@@ -441,19 +632,36 @@ function estimateDailyTarget(setup: CalorieSetup) {
   const months = Math.max(Number(setup.journeyMonths) || 3, 1);
   const goalWeight = Number(setup.goalWeight) || weight;
 
-  const base = Math.round(10 * weight + 6.25 * height - 5 * age + 500);
-  const delta = goalWeight - weight;
-  const pace = Math.round((delta * 7700) / (months * 30));
+  const bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+  const maintenance = Math.round(bmr * 1.45);
+  const paceAdjustment = Math.round(((goalWeight - weight) * 7700) / (months * 30));
+  const cheatAdjustment = setup.cheatFrequency === '2 days / week' ? 90 : 60;
 
-  if (setup.goal === 'Lose') return Math.max(base - Math.abs(pace), 1400);
-  if (setup.goal === 'Bulk') return base + Math.max(pace, 220);
-  return base;
+  if (setup.goal === 'Lose') {
+    return Math.max(maintenance - 320 + Math.round(paceAdjustment / 5) - cheatAdjustment, 1400);
+  }
+  if (setup.goal === 'Bulk') {
+    return maintenance + 260 + Math.max(Math.round(paceAdjustment / 5), 180) + cheatAdjustment;
+  }
+  return Math.max(maintenance + Math.round(paceAdjustment / 6), 1500);
+}
+
+function estimateMacros(setup: CalorieSetup, dailyTarget: number): MacroTargets {
+  const weight = Number(setup.weight) || 70;
+  const proteinMultiplier = setup.goal === 'Bulk' ? 2 : setup.goal === 'Lose' ? 1.8 : 1.65;
+  const protein = Math.max(Math.round(weight * proteinMultiplier), 90);
+  const fats = Math.max(Math.round(weight * 0.8), 45);
+  const remainingCalories = Math.max(dailyTarget - protein * 4 - fats * 9, 0);
+  const carbs = Math.max(Math.round(remainingCalories / 4), 80);
+  const cheatAllowance = Math.round(dailyTarget * (setup.cheatFrequency === '2 days / week' ? 0.22 : 0.16));
+
+  return { protein, carbs, fats, cheatAllowance };
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.darkBackground,
   },
   content: {
     paddingHorizontal: theme.chrome.horizontalPadding,
@@ -466,60 +674,101 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   topCopy: {
-    gap: 2,
+    flex: 1,
+    gap: 4,
   },
   eyebrow: {
-    color: theme.colors.accentStrong,
+    color: theme.colors.fitnessBlue,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   title: {
-    color: theme.colors.text,
-    fontSize: 28,
+    color: theme.colors.darkText,
+    fontSize: 30,
     fontWeight: '800',
   },
-  heroCard: {
-    marginTop: 18,
-    borderRadius: 28,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.line,
-    padding: 18,
-    ...theme.shadow.soft,
-  },
-  heroTitle: {
-    color: theme.colors.text,
-    fontSize: 22,
-    fontWeight: '800',
-    lineHeight: 28,
-  },
-  heroBody: {
-    marginTop: 10,
-    color: theme.colors.textSoft,
+  subtitle: {
+    color: theme.colors.darkTextSoft,
     fontSize: 14,
     lineHeight: 20,
   },
-  card: {
-    marginTop: 16,
-    borderRadius: 24,
-    backgroundColor: theme.colors.surface,
+  progressCard: {
+    marginTop: 18,
+    borderRadius: 28,
+    backgroundColor: theme.colors.darkSurface,
     borderWidth: 1,
-    borderColor: theme.colors.line,
-    padding: 16,
-    ...theme.shadow.soft,
-  },
-  sectionHeader: {
+    borderColor: theme.colors.darkLine,
+    padding: 18,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
   },
-  sectionTitle: {
-    color: theme.colors.text,
+  progressLabel: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  progressValue: {
+    marginTop: 8,
+    color: theme.colors.darkText,
+    fontSize: 34,
+    fontWeight: '800',
+  },
+  ring: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    borderWidth: 12,
+    borderColor: theme.colors.accent,
+    backgroundColor: '#0D2746',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.darkBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringText: {
+    color: theme.colors.darkText,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  heroCard: {
+    marginTop: 16,
+    borderRadius: 28,
+    backgroundColor: theme.colors.darkSurface,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    padding: 18,
+  },
+  heroTitle: {
+    color: theme.colors.darkText,
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 30,
+  },
+  heroBody: {
+    marginTop: 10,
+    color: theme.colors.darkTextSoft,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  section: {
+    marginTop: 18,
+  },
+  sectionTitleLight: {
+    color: theme.colors.darkText,
     fontSize: 20,
     fontWeight: '800',
+    marginBottom: 12,
   },
   row: {
     flexDirection: 'row',
@@ -530,7 +779,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   fieldLabel: {
-    color: theme.colors.textSoft,
+    color: theme.colors.darkTextSoft,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -543,19 +792,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderRadius: 18,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: theme.colors.darkSurfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.line,
+    borderColor: theme.colors.darkLine,
     paddingHorizontal: 14,
   },
   input: {
     flex: 1,
     minHeight: 50,
-    color: theme.colors.text,
+    color: theme.colors.darkText,
     fontSize: 15,
   },
   inputSuffix: {
-    color: theme.colors.textMuted,
+    color: theme.colors.darkTextSoft,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -567,50 +816,82 @@ const styles = StyleSheet.create({
   },
   choiceChip: {
     borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   choiceChipActive: {
     backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
   },
   choiceChipText: {
-    color: theme.colors.text,
+    color: theme.colors.darkText,
     fontSize: 13,
     fontWeight: '700',
   },
   choiceChipTextActive: {
     color: '#FFFFFF',
   },
-  planPreview: {
+  previewCard: {
     marginTop: 16,
-    borderRadius: 24,
-    backgroundColor: theme.colors.accent,
+    borderRadius: 26,
+    backgroundColor: '#0F223D',
+    borderWidth: 1,
+    borderColor: 'rgba(138,180,248,0.24)',
     padding: 18,
   },
-  planLabel: {
-    color: '#D2E3FC',
+  previewLabel: {
+    color: theme.colors.fitnessBlue,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  planValue: {
+  previewValue: {
     marginTop: 8,
     color: '#FFFFFF',
     fontSize: 36,
     fontWeight: '800',
   },
-  planBody: {
+  previewBody: {
     marginTop: 8,
-    color: '#D2E3FC',
+    color: theme.colors.darkTextSoft,
     fontSize: 14,
     lineHeight: 20,
   },
+  previewMacroRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  macroChip: {
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  macroChipLabel: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+  },
+  macroChipValue: {
+    marginTop: 4,
+    color: theme.colors.darkText,
+    fontSize: 15,
+    fontWeight: '800',
+  },
   primaryButton: {
     marginTop: 16,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surfaceStrong,
+    borderRadius: 22,
+    backgroundColor: theme.colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
@@ -626,15 +907,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
-    borderRadius: 28,
-    backgroundColor: theme.colors.surface,
+    borderRadius: 30,
+    backgroundColor: theme.colors.darkSurface,
     borderWidth: 1,
-    borderColor: theme.colors.line,
+    borderColor: theme.colors.darkLine,
     padding: 18,
-    ...theme.shadow.soft,
+  },
+  summaryCopy: {
+    flex: 1,
   },
   heroLabel: {
-    color: theme.colors.textSoft,
+    color: theme.colors.darkTextSoft,
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -642,65 +925,69 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     marginTop: 8,
-    color: theme.colors.text,
-    fontSize: 40,
+    color: theme.colors.darkText,
+    fontSize: 42,
     fontWeight: '800',
   },
   summaryUnit: {
-    color: theme.colors.textSoft,
-    fontSize: 15,
-    fontWeight: '700',
+    marginTop: 4,
+    color: theme.colors.darkTextSoft,
+    fontSize: 14,
+    fontWeight: '600',
   },
-  ring: {
-    width: 116,
-    height: 116,
-    borderRadius: 58,
+  ringLarge: {
+    width: 118,
+    height: 118,
+    borderRadius: 59,
     borderWidth: 12,
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.fitnessPink,
+    backgroundColor: '#281024',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ringInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: theme.colors.surface,
+  ringLargeInner: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: theme.colors.darkBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ringText: {
-    color: theme.colors.accentStrong,
+  ringLargeText: {
+    color: theme.colors.darkText,
     fontSize: 18,
     fontWeight: '800',
   },
   statusCard: {
     marginTop: 14,
     borderRadius: 18,
-    backgroundColor: theme.colors.accentSoft,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   statusText: {
-    color: theme.colors.accentStrong,
+    color: theme.colors.darkTextSoft,
     fontSize: 13,
     fontWeight: '700',
   },
-  metricRow: {
+  metricGrid: {
     marginTop: 14,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   metricCard: {
-    flex: 1,
+    width: '48.3%',
     borderRadius: 22,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.darkSurface,
     borderWidth: 1,
-    borderColor: theme.colors.line,
+    borderColor: theme.colors.darkLine,
     padding: 16,
   },
   metricLabel: {
-    color: theme.colors.textSoft,
+    color: theme.colors.darkTextSoft,
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -708,82 +995,216 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     marginTop: 8,
-    color: theme.colors.text,
+    color: theme.colors.darkText,
     fontSize: 28,
     fontWeight: '800',
   },
   metricSuffix: {
     marginTop: 4,
-    color: theme.colors.textMuted,
-    fontSize: 13,
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  cardDark: {
+    marginTop: 16,
+    borderRadius: 26,
+    backgroundColor: theme.colors.darkSurface,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    padding: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitleDark: {
+    color: theme.colors.darkText,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  sectionMetaDark: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
     fontWeight: '700',
   },
   secondaryButton: {
     borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   secondaryButtonText: {
-    color: theme.colors.text,
+    color: theme.colors.darkText,
     fontSize: 13,
     fontWeight: '700',
   },
-  setupGrid: {
+  macroGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
   },
-  setupPill: {
-    width: '47%',
-    borderRadius: 18,
-    backgroundColor: theme.colors.surfaceAlt,
-    padding: 12,
-    gap: 4,
+  macroCard: {
+    width: '48.4%',
+    borderRadius: 20,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    padding: 14,
   },
-  setupPillLabel: {
-    color: theme.colors.textSoft,
+  macroCardLabel: {
+    color: theme.colors.darkTextSoft,
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
-  setupPillValue: {
-    color: theme.colors.text,
-    fontSize: 17,
+  macroCardValue: {
+    marginTop: 8,
+    color: theme.colors.darkText,
+    fontSize: 24,
     fontWeight: '800',
   },
-  listRow: {
+  macroCardNote: {
+    marginTop: 6,
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  fieldLabelDark: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  composerRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  composerInput: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 16,
+    backgroundColor: theme.colors.darkBackground,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    paddingHorizontal: 14,
+    color: theme.colors.darkText,
+    fontSize: 14,
+  },
+  composerInputSmall: {
+    flex: 0.5,
+  },
+  composerButton: {
+    borderRadius: 16,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 14,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  composerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  presetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 8,
+  },
+  presetChip: {
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  presetChipText: {
+    color: theme.colors.darkText,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  listRowDark: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.line,
+    borderTopColor: theme.colors.darkLine,
   },
   listCopy: {
     flex: 1,
     paddingRight: 12,
   },
-  listTitle: {
-    color: theme.colors.text,
-    fontSize: 16,
+  listTitleDark: {
+    color: theme.colors.darkText,
+    fontSize: 15,
     fontWeight: '700',
   },
-  listMeta: {
+  listMetaDark: {
     marginTop: 4,
-    color: theme.colors.textSoft,
-    fontSize: 13,
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
     lineHeight: 18,
   },
-  listValue: {
-    color: theme.colors.accentStrong,
-    fontSize: 22,
+  listValueDark: {
+    color: theme.colors.fitnessBlue,
+    fontSize: 20,
     fontWeight: '800',
   },
-  cheatText: {
+  cheatTextDark: {
     marginTop: 10,
-    color: theme.colors.textSoft,
+    color: theme.colors.darkTextSoft,
     fontSize: 14,
     lineHeight: 20,
+  },
+  secondaryButtonDark: {
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  secondaryButtonTextDark: {
+    color: theme.colors.darkText,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  snapshotGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  snapshotPill: {
+    width: '47.5%',
+    borderRadius: 18,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    padding: 12,
+    gap: 4,
+  },
+  snapshotLabel: {
+    color: theme.colors.darkTextSoft,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  snapshotValue: {
+    color: theme.colors.darkText,
+    fontSize: 16,
+    fontWeight: '800',
   },
 });

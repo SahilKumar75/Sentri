@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 
@@ -26,9 +26,6 @@ type CalendarTag = {
   title: string;
   tone: 'accent' | 'blue' | 'green';
 };
-
-const todayAnchor = new Date('2026-03-23T14:30:00+05:30');
-const saturdayRefreshDate = new Date('2026-03-28T00:00:00+05:30');
 
 const scheduleByDay: Record<string, ClassEntry[]> = {
   mon: [
@@ -195,18 +192,35 @@ const calendarTags: Record<string, CalendarTag[]> = {
 };
 
 export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProps) {
+  const [todayAnchor] = useState(() => new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('today');
-  const [focusedDate, setFocusedDate] = useState(todayAnchor);
+  const [focusedDate, setFocusedDate] = useState(() => new Date());
   const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'updated'>('idle');
+  const [uploadSheetOpen, setUploadSheetOpen] = useState(false);
+  const [uploadSource, setUploadSource] = useState<'share' | 'mail' | 'photos'>('share');
 
   const weekDays = useMemo(() => buildWeekDates(focusedDate), [focusedDate]);
   const monthRows = useMemo(() => buildMonthRows(focusedDate), [focusedDate]);
   const selectedDayKey = dayKeyForDate(focusedDate);
   const selectedEntries = scheduleByDay[selectedDayKey] || [];
   const hoveredClass = selectedEntries.find((entry) => entry.id === hoveredClassId) ?? null;
+  const saturdayRefreshDate = useMemo(() => getRefreshSaturday(todayAnchor), [todayAnchor]);
   const refreshDue = todayAnchor >= saturdayRefreshDate;
+  const isFocusedToday = isSameDate(focusedDate, todayAnchor);
   const summaryState = resolveScheduleState(selectedEntries, focusedDate, todayAnchor);
+  const timelineTitle = isFocusedToday
+    ? 'Today timeline'
+    : `${formatWeekdayShort(focusedDate)}, ${focusedDate.getDate()} ${formatMonthShort(focusedDate)}`;
+
+  useEffect(() => {
+    if (uploadState !== 'updated') {
+      return;
+    }
+
+    const timeout = setTimeout(() => setUploadState('idle'), 2200);
+    return () => clearTimeout(timeout);
+  }, [uploadState]);
 
   return (
     <ScrollView
@@ -222,10 +236,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
         </View>
         <Pressable
           style={[styles.topUploadButton, uploadState === 'updated' && styles.topUploadButtonDone]}
-          onPress={() => {
-            setUploadState('uploading');
-            setTimeout(() => setUploadState('updated'), 260);
-          }}
+          onPress={() => setUploadSheetOpen(true)}
         >
           <Text style={styles.topUploadButtonText}>
             {uploadState === 'uploading' ? 'Uploading' : uploadState === 'updated' ? 'Updated' : 'Upload'}
@@ -269,6 +280,21 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
         </View>
       </View>
 
+      <View style={styles.statusPills}>
+        <View style={styles.statusPill}>
+          <Text style={styles.statusPillLabel}>Campus</Text>
+          <Text style={styles.statusPillValue}>AIT</Text>
+        </View>
+        <View style={styles.statusPill}>
+          <Text style={styles.statusPillLabel}>Pattern</Text>
+          <Text style={styles.statusPillValue}>SE IT-B</Text>
+        </View>
+        <View style={styles.statusPill}>
+          <Text style={styles.statusPillLabel}>Selected</Text>
+          <Text style={styles.statusPillValue}>{isFocusedToday ? 'Today' : formatWeekdayShort(focusedDate)}</Text>
+        </View>
+      </View>
+
       <View style={styles.refreshBanner}>
         <View style={styles.refreshBannerCopy}>
           <Text style={styles.refreshBannerTitle}>
@@ -284,6 +310,14 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
               : 'Every Saturday, upload the new screenshot when the timetable mail arrives.'}
           </Text>
         </View>
+        <Pressable
+          style={[styles.refreshBannerButton, uploadState === 'updated' && styles.refreshBannerButtonDone]}
+          onPress={() => setUploadSheetOpen(true)}
+        >
+          <Text style={styles.refreshBannerButtonText}>
+            {uploadState === 'uploading' ? 'Uploading' : uploadState === 'updated' ? 'Refreshed' : 'Upload'}
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.segmentedControl}>
@@ -334,8 +368,10 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
           </ScrollView>
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today timeline</Text>
-            <Text style={styles.sectionAction}>{formatLongDate(focusedDate)}</Text>
+            <Text style={styles.sectionTitle}>{timelineTitle}</Text>
+            <Text style={styles.sectionAction}>
+              {selectedEntries.length ? `${selectedEntries.length} items` : 'No items'}
+            </Text>
           </View>
 
           {selectedEntries.length ? (
@@ -371,12 +407,14 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
           ) : (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>Nothing planned for this day</Text>
-              <Text style={styles.emptyBody}>Tap another date in the week strip or switch to month view.</Text>
+              <Text style={styles.emptyBody}>
+                Tap another date in the week strip or switch to month view to open a different day.
+              </Text>
             </View>
           )}
 
-          {hoveredClass ? (
-            <View style={styles.hoverCard}>
+      {hoveredClass ? (
+        <View style={styles.hoverCard}>
               <Text style={styles.hoverKicker}>Class detail</Text>
               <Text style={styles.hoverTitle}>{hoveredClass.title}</Text>
               <Text style={styles.hoverBody}>
@@ -479,9 +517,105 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
               </View>
             ))}
           </View>
+
+          <View style={styles.monthPreviewCard}>
+            <View style={styles.monthPreviewHeader}>
+              <Text style={styles.monthPreviewTitle}>{formatLongDate(focusedDate)}</Text>
+              <Text style={styles.monthPreviewMeta}>
+                {selectedEntries.length ? `${selectedEntries.length} timetable items` : 'No items on this day'}
+              </Text>
+            </View>
+            {selectedEntries[0] ? (
+              <View style={styles.monthPreviewRow}>
+                <View style={styles.monthPreviewTime}>
+                  <Text style={styles.monthPreviewTimeStart}>{selectedEntries[0].start}</Text>
+                  <Text style={styles.monthPreviewTimeEnd}>{selectedEntries[0].end}</Text>
+                </View>
+                <View style={styles.monthPreviewCopy}>
+                  <Text style={styles.monthPreviewSubject}>{selectedEntries[0].title}</Text>
+                  <Text style={styles.monthPreviewNote}>
+                    {selectedEntries[0].room} • {selectedEntries[0].teacher}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.monthPreviewEmpty}>
+                Tap any highlighted date above to open the day timeline view.
+              </Text>
+            )}
+          </View>
         </View>
       ) : null}
+
+      <UploadSheet
+        visible={uploadSheetOpen}
+        uploadSource={uploadSource}
+        onSelectSource={setUploadSource}
+        onClose={() => setUploadSheetOpen(false)}
+        onConfirm={() => {
+          setUploadState('uploading');
+          setUploadSheetOpen(false);
+          setTimeout(() => setUploadState('updated'), 260);
+        }}
+      />
     </ScrollView>
+  );
+}
+
+function UploadSheet({
+  visible,
+  uploadSource,
+  onSelectSource,
+  onClose,
+  onConfirm,
+}: {
+  visible: boolean;
+  uploadSource: 'share' | 'mail' | 'photos';
+  onSelectSource: (source: 'share' | 'mail' | 'photos') => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={styles.modalScrim} onPress={onClose} />
+        <View style={styles.modalCard}>
+          <Text style={styles.modalKicker}>Weekly refresh</Text>
+          <Text style={styles.modalTitle}>How are you adding the new timetable?</Text>
+          <Text style={styles.modalBody}>
+            Pick the source you usually use. The screenshot parser can plug into this step next.
+          </Text>
+
+          <View style={styles.modalOptions}>
+            {[
+              ['share', 'Share into Sentri'],
+              ['mail', 'From Outlook screenshot'],
+              ['photos', 'From Photos'],
+            ].map(([value, label]) => {
+              const active = uploadSource === value;
+              return (
+                <Pressable
+                  key={value}
+                  style={[styles.modalOption, active && styles.modalOptionActive]}
+                  onPress={() => onSelectSource(value as 'share' | 'mail' | 'photos')}
+                >
+                  <Text style={[styles.modalOptionText, active && styles.modalOptionTextActive]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.modalActions}>
+            <Pressable style={styles.modalActionGhost} onPress={onClose}>
+              <Text style={styles.modalActionGhostText}>Cancel</Text>
+            </Pressable>
+            <Pressable style={styles.modalActionFilled} onPress={onConfirm}>
+              <Text style={styles.modalActionFilledText}>Stage upload</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -600,6 +734,10 @@ function formatWeekdayShort(date: Date) {
   return new Intl.DateTimeFormat('en-IN', { weekday: 'short' }).format(date);
 }
 
+function formatMonthShort(date: Date) {
+  return new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(date);
+}
+
 function startOfWeek(date: Date) {
   const result = new Date(date);
   const day = result.getDay();
@@ -607,6 +745,13 @@ function startOfWeek(date: Date) {
   result.setDate(result.getDate() + offset);
   result.setHours(0, 0, 0, 0);
   return result;
+}
+
+function getRefreshSaturday(date: Date) {
+  const saturday = startOfWeek(date);
+  saturday.setDate(saturday.getDate() + 5);
+  saturday.setHours(0, 0, 0, 0);
+  return saturday;
 }
 
 function dayKeyForDate(date: Date) {
@@ -683,6 +828,96 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(17, 17, 17, 0.18)',
+  },
+  modalScrim: {
+    flex: 1,
+  },
+  modalCard: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
+  },
+  modalKicker: {
+    color: theme.colors.accentStrong,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  modalTitle: {
+    marginTop: 8,
+    color: theme.colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  modalBody: {
+    marginTop: 8,
+    color: theme.colors.textSoft,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  modalOptions: {
+    marginTop: 16,
+    gap: 10,
+  },
+  modalOption: {
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  modalOptionActive: {
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accent,
+  },
+  modalOptionText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalOptionTextActive: {
+    color: theme.colors.accentStrong,
+  },
+  modalActions: {
+    marginTop: 18,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalActionGhost: {
+    flex: 1,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+  },
+  modalActionGhostText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalActionFilled: {
+    flex: 1,
+    borderRadius: 18,
+    backgroundColor: theme.colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+  },
+  modalActionFilledText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
   summaryCard: {
     marginTop: 18,
     backgroundColor: theme.colors.surface,
@@ -691,6 +926,35 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.line,
     padding: 18,
     ...theme.shadow.soft,
+  },
+  statusPills: {
+    marginTop: 14,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  statusPill: {
+    flexGrow: 1,
+    minWidth: 92,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  statusPillLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statusPillValue: {
+    marginTop: 4,
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '800',
   },
   summaryHeader: {
     flexDirection: 'row',
@@ -762,9 +1026,13 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.line,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   refreshBannerCopy: {
     gap: 4,
+    flex: 1,
   },
   refreshBannerTitle: {
     color: theme.colors.text,
@@ -775,6 +1043,20 @@ const styles = StyleSheet.create({
     color: theme.colors.textSoft,
     fontSize: 13,
     lineHeight: 18,
+  },
+  refreshBannerButton: {
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.accentSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  refreshBannerButtonDone: {
+    backgroundColor: theme.colors.accent,
+  },
+  refreshBannerButtonText: {
+    color: theme.colors.accentStrong,
+    fontSize: 13,
+    fontWeight: '800',
   },
   segmentedControl: {
     marginTop: 18,
@@ -1086,5 +1368,70 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: 11,
     fontWeight: '700',
+  },
+  monthPreviewCard: {
+    marginTop: 14,
+    borderRadius: 24,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    padding: 16,
+    ...theme.shadow.soft,
+  },
+  monthPreviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  monthPreviewTitle: {
+    color: theme.colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  monthPreviewMeta: {
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  monthPreviewRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  monthPreviewTime: {
+    width: 68,
+    gap: 3,
+  },
+  monthPreviewTimeStart: {
+    color: theme.colors.accentStrong,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  monthPreviewTimeEnd: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  monthPreviewCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  monthPreviewSubject: {
+    color: theme.colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  monthPreviewNote: {
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  monthPreviewEmpty: {
+    marginTop: 12,
+    color: theme.colors.textSoft,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

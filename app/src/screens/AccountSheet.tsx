@@ -49,6 +49,14 @@ export default function AccountSheet({
                     : 'Phone number still needs verification.'
                   : 'Email-based account active.'}
               </Text>
+              <View style={styles.heroTags}>
+                <View style={styles.heroTag}>
+                  <Text style={styles.heroTagText}>{profile.verifiedPhone ? 'Verified' : 'Needs review'}</Text>
+                </View>
+                <View style={styles.heroTag}>
+                  <Text style={styles.heroTagText}>{profile.phone ? 'Phone login' : 'Email login'}</Text>
+                </View>
+              </View>
             </View>
 
             <View style={styles.sectionCard}>
@@ -87,6 +95,14 @@ export default function AccountSheet({
                 <DetailRow label="Privacy" value="Account data is visible only to you" />
               </View>
             )}
+
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Sentri flow</Text>
+              <DetailRow label="Home" value="Timetable, current class, next class, and weekly refresh" />
+              <DetailRow label="Myspace" value="Search, save, and resurface screenshots, links, and notes" />
+              <DetailRow label="Calorie" value="Body-goal setup, daily target, meals, burns, and cheat days" />
+              <DetailRow label="Hangout" value="Create room, share link, join room, and meeting controls" />
+            </View>
 
             <Pressable onPress={onLogout} style={styles.logoutButton}>
               <Text style={styles.logoutButtonText}>Logout</Text>
@@ -196,6 +212,23 @@ const styles = StyleSheet.create({
     color: theme.colors.textSoft,
     fontSize: 14,
     lineHeight: 20,
+  },
+  heroTags: {
+    marginTop: 14,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  heroTag: {
+    borderRadius: 999,
+    backgroundColor: theme.colors.accentSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  heroTagText: {
+    color: theme.colors.accentStrong,
+    fontSize: 12,
+    fontWeight: '800',
   },
   sectionCard: {
     backgroundColor: theme.colors.surface,

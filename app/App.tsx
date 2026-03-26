@@ -12,6 +12,7 @@ import CalorieScreen from './src/screens/CalorieScreen';
 import HangoutScreen from './src/screens/HangoutScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import MyspaceScreen from './src/screens/MyspaceScreen';
+import SentriSheet from './src/screens/SentriSheet';
 import type { ContactMethod, PendingSignup, UserProfile } from './src/types/auth';
 
 type ScreenProps = {
@@ -34,6 +35,7 @@ export default function App() {
   const [authInitializing, setAuthInitializing] = useState(true);
   const [incomingHangoutCode, setIncomingHangoutCode] = useState<string | null>(null);
   const [hangoutMeetingMode, setHangoutMeetingMode] = useState(false);
+  const [sentriSheetOpen, setSentriSheetOpen] = useState(false);
 
   const userName = authenticatedUser
     ? `${authenticatedUser.firstName} ${authenticatedUser.lastName}`.trim()
@@ -176,6 +178,7 @@ export default function App() {
     setPendingSignup(null);
     setDrawerOpen(false);
     setAccountOpen(false);
+    setSentriSheetOpen(false);
     setActiveTab('home');
     setHangoutMeetingMode(false);
     setAuthMode('login');
@@ -228,13 +231,24 @@ export default function App() {
       <StatusBar style="dark" />
 
       <View style={styles.shell}>
-        {renderActiveScreen(activeTab, screenProps, {
-          sessionToken,
-          userName,
-          incomingHangoutCode,
-          onConsumeHangoutCode: () => setIncomingHangoutCode(null),
-          onMeetingModeChange: setHangoutMeetingMode,
-        })}
+        {(['home', 'myspace', 'calorie', 'hangout'] as TabKey[]).map((tab) => (
+          <View
+            key={tab}
+            style={[
+              styles.screenLayer,
+              activeTab === tab ? styles.screenLayerVisible : styles.screenLayerHidden,
+            ]}
+            pointerEvents={activeTab === tab ? 'auto' : 'none'}
+          >
+            {renderActiveScreen(tab, screenProps, {
+              sessionToken,
+              userName,
+              incomingHangoutCode,
+              onConsumeHangoutCode: () => setIncomingHangoutCode(null),
+              onMeetingModeChange: setHangoutMeetingMode,
+            })}
+          </View>
+        ))}
       </View>
 
       {!hangoutMeetingMode ? (
@@ -242,7 +256,7 @@ export default function App() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           onSentriPress={() => {
-            // Reserved for the future assistant surface.
+            setSentriSheetOpen(true);
           }}
           tone="light"
         />
@@ -264,6 +278,12 @@ export default function App() {
         onLogout={() => {
           void handleLogout();
         }}
+      />
+
+      <SentriSheet
+        visible={sentriSheetOpen}
+        userName={userName}
+        onClose={() => setSentriSheetOpen(false)}
       />
     </SafeAreaView>
   );
@@ -315,5 +335,14 @@ const styles = StyleSheet.create({
   },
   shell: {
     flex: 1,
+  },
+  screenLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  screenLayerVisible: {
+    opacity: 1,
+  },
+  screenLayerHidden: {
+    opacity: 0,
   },
 });

@@ -146,6 +146,13 @@ export default function HangoutScreen({
     [meetingParticipants, meetingSettings.layout, stageParticipant]
   );
 
+  const visibleParticipantCount = useMemo(() => {
+    if (meetingSettings.layout === 'grid') {
+      return meetingParticipants.length;
+    }
+    return Math.max(meetingParticipants.length - 1, 0);
+  }, [meetingParticipants.length, meetingSettings.layout]);
+
   const isHost = useMemo(() => {
     if (!activeRoom) {
       return true;
@@ -302,6 +309,7 @@ export default function HangoutScreen({
     setMicOn((current) => {
       const next = !current;
       updateSelfParticipant((participant) => ({ ...participant, muted: !next }));
+      setStatusMessage(next ? 'Microphone is on.' : 'Microphone muted.');
       return next;
     });
   }
@@ -310,6 +318,7 @@ export default function HangoutScreen({
     setCameraOn((current) => {
       const next = !current;
       updateSelfParticipant((participant) => ({ ...participant, videoOn: next }));
+      setStatusMessage(next ? 'Camera is on.' : 'Camera turned off.');
       return next;
     });
   }
@@ -319,7 +328,11 @@ export default function HangoutScreen({
       setStatusMessage('The host has not enabled guest screen sharing for this room yet.');
       return;
     }
-    setShareScreenOn((current) => !current);
+    setShareScreenOn((current) => {
+      const next = !current;
+      setStatusMessage(next ? 'You are presenting your screen.' : 'Screen sharing stopped.');
+      return next;
+    });
     setFocusedParticipantId(meetingParticipants[0]?.id ?? null);
   }
 
@@ -327,6 +340,7 @@ export default function HangoutScreen({
     setHandRaised((current) => {
       const next = !current;
       updateSelfParticipant((participant) => ({ ...participant, handRaised: next }));
+      setStatusMessage(next ? 'Hand raised.' : 'Hand lowered.');
       return next;
     });
   }
@@ -353,7 +367,11 @@ export default function HangoutScreen({
   }
 
   function toggleRecording() {
-    setRecordingOn((current) => !current);
+    setRecordingOn((current) => {
+      const next = !current;
+      setStatusMessage(next ? 'Recording started for the room.' : 'Recording stopped.');
+      return next;
+    });
   }
 
   function muteAllGuests() {
@@ -383,6 +401,7 @@ export default function HangoutScreen({
       },
       ...current,
     ]);
+    setStatusMessage('Raised hands were cleared for everyone.');
   }
 
   function sendReaction(icon: string, label: string) {
@@ -396,6 +415,7 @@ export default function HangoutScreen({
       },
       ...current,
     ]);
+    setStatusMessage(`Reaction sent: ${label}.`);
   }
 
   function renderLobby() {
@@ -542,6 +562,14 @@ export default function HangoutScreen({
               </View>
             </Pressable>
           ))}
+          {rooms.length === 0 ? (
+            <View style={styles.emptyRooms}>
+              <Text style={styles.emptyRoomsTitle}>No rooms yet</Text>
+              <Text style={styles.emptyRoomsBody}>
+                Create the first study room or join one from a Sentri link.
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -578,8 +606,6 @@ export default function HangoutScreen({
   }
 
   function renderMeeting() {
-    const participantCount = Math.max(activeRoom?.participantCount ?? 1, meetingParticipants.length);
-
     return (
       <View style={styles.meetingScreen}>
         <View style={styles.meetingHeader}>
@@ -589,7 +615,7 @@ export default function HangoutScreen({
           <View style={styles.meetingHeaderCopy}>
             <Text style={styles.meetingTitle}>{activeRoom?.roomName ?? 'Sentri call'}</Text>
             <Text style={styles.meetingMeta}>
-              {activeRoom?.roomCode ?? 'ROOM'} • {participantCount} people • {recordingOn ? 'Recording' : 'Live'}
+              {activeRoom?.roomCode ?? 'ROOM'} • {visibleParticipantCount} visible • {recordingOn ? 'Recording' : 'Live'}
             </Text>
           </View>
           <Pressable style={styles.meetingHeaderButton} onPress={() => setMeetingPanel('details')}>
@@ -601,7 +627,9 @@ export default function HangoutScreen({
           <View style={styles.stageCard}>
             <View style={styles.stageTopRow}>
               <View style={styles.stageChip}>
-                <Text style={styles.stageChipText}>{shareScreenOn ? 'Presenting now' : 'Active speaker'}</Text>
+                <Text style={styles.stageChipText}>
+                  {meetingSettings.layout === 'grid' ? 'Grid view' : shareScreenOn ? 'Presenting now' : 'Active speaker'}
+                </Text>
               </View>
               {recordingOn ? (
                 <View style={styles.recordingChip}>
@@ -712,6 +740,21 @@ export default function HangoutScreen({
         </View>
 
         <View style={styles.controlDock}>
+          <View style={styles.quickSummaryRow}>
+            <View style={styles.quickSummaryChip}>
+              <Text style={styles.quickSummaryValue}>{micOn ? 'Mic on' : 'Muted'}</Text>
+              <Text style={styles.quickSummaryLabel}>{micOn ? 'Audio ready' : 'You are muted'}</Text>
+            </View>
+            <View style={styles.quickSummaryChip}>
+              <Text style={styles.quickSummaryValue}>{cameraOn ? 'Video on' : 'Video off'}</Text>
+              <Text style={styles.quickSummaryLabel}>{cameraOn ? 'Visible to room' : 'Camera paused'}</Text>
+            </View>
+            <View style={styles.quickSummaryChip}>
+              <Text style={styles.quickSummaryValue}>{meetingSettings.layout === 'grid' ? 'Grid' : 'Spotlight'}</Text>
+              <Text style={styles.quickSummaryLabel}>{meetingSettings.audioOutput}</Text>
+            </View>
+          </View>
+
           <View style={styles.controlRow}>
             <MeetingControlButton
               label={micOn ? 'Mic on' : 'Mic off'}
@@ -916,6 +959,11 @@ function MeetingPanelSheet({
 
           {panel === 'chat' ? (
             <View style={styles.chatSheet}>
+              {!settings.allowChat ? (
+                <View style={styles.guestNotice}>
+                  <Text style={styles.guestNoticeText}>Chat is off for this room, so new messages are blocked.</Text>
+                </View>
+              ) : null}
               <ScrollView style={styles.panelScroll} showsVerticalScrollIndicator={false}>
                 {messages.map((message) => (
                   <View key={message.id} style={styles.messageCard}>
@@ -929,13 +977,18 @@ function MeetingPanelSheet({
               </ScrollView>
               <View style={styles.chatComposer}>
                 <TextInput
-                  style={styles.chatInput}
+                  style={[styles.chatInput, !settings.allowChat && styles.chatInputDisabled]}
                   value={chatDraft}
                   onChangeText={onChangeChatDraft}
-                  placeholder="Send a message"
+                  placeholder={settings.allowChat ? 'Send a message' : 'Chat disabled by host'}
                   placeholderTextColor={theme.colors.textMuted}
+                  editable={settings.allowChat}
                 />
-                <Pressable style={styles.chatSendButton} onPress={onSendChat}>
+                <Pressable
+                  style={[styles.chatSendButton, !settings.allowChat && styles.chatSendButtonDisabled]}
+                  onPress={onSendChat}
+                  disabled={!settings.allowChat}
+                >
                   <Ionicons name="send" size={16} color="#FFFFFF" />
                 </Pressable>
               </View>
@@ -976,6 +1029,14 @@ function MeetingPanelSheet({
                 <View style={styles.policyRow}>
                   <Text style={styles.policyLabel}>Waiting room</Text>
                   <Text style={styles.policyValue}>{settings.waitingRoomEnabled ? 'Enabled' : 'Disabled'}</Text>
+                </View>
+                <View style={styles.policyRow}>
+                  <Text style={styles.policyLabel}>Audio output</Text>
+                  <Text style={styles.policyValue}>{settings.audioOutput}</Text>
+                </View>
+                <View style={styles.policyRow}>
+                  <Text style={styles.policyLabel}>Video quality</Text>
+                  <Text style={styles.policyValue}>{settings.videoQuality}</Text>
                 </View>
               </View>
               <View style={styles.detailSection}>
@@ -1367,6 +1428,24 @@ const styles = StyleSheet.create({
   section: {
     marginTop: 22,
   },
+  emptyRooms: {
+    marginTop: 6,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  emptyRoomsTitle: {
+    color: theme.colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  emptyRoomsBody: {
+    marginTop: 6,
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    lineHeight: 19,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1737,6 +1816,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.darkLine,
   },
+  quickSummaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  quickSummaryChip: {
+    flex: 1,
+    minHeight: 58,
+    borderRadius: 18,
+    backgroundColor: '#1E2024',
+    borderWidth: 1,
+    borderColor: theme.colors.darkLine,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: 'center',
+  },
+  quickSummaryValue: {
+    color: theme.colors.darkText,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  quickSummaryLabel: {
+    marginTop: 3,
+    color: theme.colors.darkTextSoft,
+    fontSize: 11,
+    fontWeight: '600',
+  },
   controlRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1925,6 +2031,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: theme.colors.text,
   },
+  chatInputDisabled: {
+    opacity: 0.55,
+  },
   chatSendButton: {
     width: 44,
     height: 44,
@@ -1932,6 +2041,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  chatSendButtonDisabled: {
+    opacity: 0.5,
   },
   detailCard: {
     borderRadius: 22,

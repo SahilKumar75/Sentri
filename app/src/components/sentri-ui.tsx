@@ -64,6 +64,17 @@ export function DrawerSheet({
             </View>
           </View>
 
+          <View style={styles.drawerSummary}>
+            <View style={styles.drawerStat}>
+              <Text style={styles.drawerStatValue}>4</Text>
+              <Text style={styles.drawerStatLabel}>Core pages</Text>
+            </View>
+            <View style={styles.drawerStat}>
+              <Text style={styles.drawerStatValue}>1</Text>
+              <Text style={styles.drawerStatLabel}>Student app</Text>
+            </View>
+          </View>
+
           <View style={styles.drawerSection}>
             {menuItems.map((item) => (
               <Pressable
@@ -165,11 +176,12 @@ function TabItem({
 }) {
   const idleColor = dark ? theme.colors.darkTextSoft : theme.colors.textMuted;
   const activeColor = active ? theme.colors.accent : idleColor;
+  const iconName = resolveTabIcon(icon, active);
 
   return (
     <Pressable onPress={onPress} style={styles.tabItem} accessibilityRole="button" accessibilityLabel={label}>
       <View style={[styles.tabIconShell, active && styles.tabIconShellActive]}>
-        <Ionicons name={icon} size={26} color={activeColor} />
+        <Ionicons name={iconName} size={26} color={activeColor} />
       </View>
       <Text
         numberOfLines={1}
@@ -181,6 +193,37 @@ function TabItem({
       </Text>
     </Pressable>
   );
+}
+
+function resolveTabIcon(icon: keyof typeof Ionicons.glyphMap, active: boolean): keyof typeof Ionicons.glyphMap {
+  if (active) {
+    if (icon === 'home') {
+      return 'home';
+    }
+    if (icon === 'grid') {
+      return 'grid';
+    }
+    if (icon === 'barbell') {
+      return 'barbell';
+    }
+    if (icon === 'people') {
+      return 'people';
+    }
+  }
+
+  if (icon === 'home') {
+    return 'home-outline';
+  }
+  if (icon === 'grid') {
+    return 'grid-outline';
+  }
+  if (icon === 'barbell') {
+    return 'barbell-outline';
+  }
+  if (icon === 'people') {
+    return 'people-outline';
+  }
+  return icon;
 }
 
 const styles = StyleSheet.create({
@@ -264,6 +307,29 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.lg,
     gap: 6,
   },
+  drawerSummary: {
+    marginTop: theme.spacing.md,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  drawerStat: {
+    flex: 1,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  drawerStatValue: {
+    color: theme.colors.accentStrong,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  drawerStatLabel: {
+    marginTop: 4,
+    color: theme.colors.textSoft,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   drawerItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -289,7 +355,7 @@ const styles = StyleSheet.create({
     bottom: theme.chrome.floatingBarOffset,
   },
   tabBar: {
-    height: 78,
+    height: 82,
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
@@ -312,12 +378,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 2,
+    paddingVertical: 3,
   },
   tabIconShell: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -329,15 +395,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sentriButton: {
-    width: 68,
+    width: 72,
     alignItems: 'center',
     gap: 4,
     transform: [{ translateY: -14 }],
   },
   sentriInner: {
-    width: 56,
-    height: 56,
-    borderRadius: 20,
+    width: 58,
+    height: 58,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.accent,
