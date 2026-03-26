@@ -1,7 +1,8 @@
-import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
+import { getStoredJson, setStoredJson } from '../lib/device-store';
 
 type CalorieScreenProps = {
   onOpenDrawer: () => void;
@@ -111,6 +112,35 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
     ).length;
     return Math.round((filled / 6) * 100);
   }, [setup]);
+
+  useEffect(() => {
+    void getStoredJson<{
+      setup: CalorieSetup;
+      setupComplete: boolean;
+      meals: MealEntry[];
+      burns: BurnEntry[];
+      statusMessage: string;
+    } | null>('sentri.calorie.state', null).then((stored) => {
+      if (!stored) {
+        return;
+      }
+      setSetup(stored.setup);
+      setSetupComplete(stored.setupComplete);
+      setMeals(stored.meals);
+      setBurns(stored.burns);
+      setStatusMessage(stored.statusMessage);
+    });
+  }, []);
+
+  useEffect(() => {
+    void setStoredJson('sentri.calorie.state', {
+      setup,
+      setupComplete,
+      meals,
+      burns,
+      statusMessage,
+    });
+  }, [setup, setupComplete, meals, burns, statusMessage]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
