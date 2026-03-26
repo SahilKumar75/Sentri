@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { theme } from '../design/tokens';
 
@@ -15,6 +16,29 @@ const starterPrompts = [
 ];
 
 export default function SentriSheet({ visible, userName, onClose }: SentriSheetProps) {
+  const [draft, setDraft] = useState('');
+  const [lastPrompt, setLastPrompt] = useState<string | null>(null);
+
+  const reply = useMemo(() => {
+    const normalized = (lastPrompt ?? draft).trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+    if (normalized.includes('next class')) {
+      return 'Your next class card on Home is the fastest place to check. We can wire this assistant to read that live timetable state next.';
+    }
+    if (normalized.includes('timetable')) {
+      return 'Use the Upload action on Home every Saturday when the new timetable screenshot lands. The parser hook is the next backend step.';
+    }
+    if (normalized.includes('dbms') || normalized.includes('notes')) {
+      return 'Myspace is set up for this flow now. Search DBMS, blackboard, date, or OCR phrases to find saved board photos and notes.';
+    }
+    if (normalized.includes('calories') || normalized.includes('left')) {
+      return 'Calorie already computes remaining intake after meals and manual burn. Open Calorie to check your today target and remaining kcal.';
+    }
+    return 'Sentri is now part of the app flow. The next step is wiring it to live timetable, Myspace, calorie, and hangout context.';
+  }, [draft, lastPrompt]);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -41,25 +65,58 @@ export default function SentriSheet({ visible, userName, onClose }: SentriSheetP
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Try asking later</Text>
               {starterPrompts.map((prompt) => (
-                <View key={prompt} style={styles.promptCard}>
+                <Pressable
+                  key={prompt}
+                  style={styles.promptCard}
+                  onPress={() => {
+                    setDraft(prompt);
+                    setLastPrompt(prompt);
+                  }}
+                >
                   <Text style={styles.promptText}>{prompt}</Text>
-                </View>
+                </Pressable>
               ))}
             </View>
 
             <View style={styles.composerCard}>
               <Text style={styles.composerLabel}>Assistant input</Text>
               <TextInput
-                editable={false}
-                value=""
-                placeholder="Assistant message box will be wired next"
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="Ask a student task question"
                 placeholderTextColor={theme.colors.textMuted}
                 style={styles.input}
               />
+              <View style={styles.composerActions}>
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={() => {
+                    setDraft('');
+                    setLastPrompt(null);
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>Clear</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.primaryButton}
+                  onPress={() => {
+                    setLastPrompt(draft.trim());
+                  }}
+                >
+                  <Text style={styles.primaryButtonText}>Ask Sentri</Text>
+                </Pressable>
+              </View>
               <View style={styles.helperRow}>
-                <Text style={styles.helperText}>Voice, text, and context-aware suggestions can plug in here.</Text>
+                <Text style={styles.helperText}>Voice and context-aware answers can plug in here next.</Text>
               </View>
             </View>
+
+            {reply ? (
+              <View style={styles.replyCard}>
+                <Text style={styles.replyLabel}>Sentri reply</Text>
+                <Text style={styles.replyText}>{reply}</Text>
+              </View>
+            ) : null}
           </ScrollView>
         </SafeAreaView>
       </View>
@@ -187,9 +244,60 @@ const styles = StyleSheet.create({
   helperRow: {
     marginTop: 12,
   },
+  composerActions: {
+    marginTop: 14,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  secondaryButton: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  secondaryButtonText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  primaryButton: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: theme.colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
   helperText: {
     color: theme.colors.textMuted,
     fontSize: 13,
     lineHeight: 19,
+  },
+  replyCard: {
+    borderRadius: 24,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    padding: 18,
+  },
+  replyLabel: {
+    color: theme.colors.accentStrong,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  replyText: {
+    marginTop: 10,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 22,
   },
 });
