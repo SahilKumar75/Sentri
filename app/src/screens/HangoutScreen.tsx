@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
+import { getStoredJson, setStoredJson } from '../lib/device-store';
 import {
   buildSeedActivity,
   buildSeedChat,
@@ -161,6 +162,35 @@ export default function HangoutScreen({
   }, [activeRoom, userName]);
 
   const canShareScreen = isHost || meetingSettings.allowGuestScreenShare;
+
+  useEffect(() => {
+    void getStoredJson<{
+      roomName: string;
+      roomType: string;
+      joinInput: string;
+      activeRoom: HangoutRoom | null;
+    } | null>('sentri.hangout.state', null).then((stored) => {
+      if (!stored) {
+        return;
+      }
+      setRoomName(stored.roomName);
+      setRoomType(stored.roomType);
+      setJoinInput(stored.joinInput);
+      setActiveRoom(stored.activeRoom);
+      if (stored.activeRoom) {
+        seedMeetingRoom(stored.activeRoom);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    void setStoredJson('sentri.hangout.state', {
+      roomName,
+      roomType,
+      joinInput,
+      activeRoom,
+    });
+  }, [roomName, roomType, joinInput, activeRoom]);
 
   async function refreshRooms() {
     const result = await listRooms();
