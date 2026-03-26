@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SESSION_TOKEN_KEY = 'sentri.sessionToken';
+const ACTIVE_TAB_KEY = 'sentri.activeTab';
 
 export async function getStoredSessionToken() {
   return AsyncStorage.getItem(SESSION_TOKEN_KEY);
@@ -12,4 +13,12 @@ export async function storeSessionToken(token: string) {
 
 export async function clearStoredSessionToken() {
   await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+}
+
+export async function getStoredActiveTab() {
+  return AsyncStorage.getItem(ACTIVE_TAB_KEY);
+}
+
+export async function storeActiveTab(tab: string) {
+  await AsyncStorage.setItem(ACTIVE_TAB_KEY, tab);
 }

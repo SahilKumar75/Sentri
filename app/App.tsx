@@ -4,7 +4,13 @@ import { ActivityIndicator, Linking, SafeAreaView, StyleSheet, View } from 'reac
 
 import { CapsuleTabBar, DrawerSheet } from './src/components/sentri-ui';
 import { theme, type TabKey } from './src/design/tokens';
-import { clearStoredSessionToken, getStoredSessionToken, storeSessionToken } from './src/lib/auth-storage';
+import {
+  clearStoredSessionToken,
+  getStoredActiveTab,
+  getStoredSessionToken,
+  storeActiveTab,
+  storeSessionToken,
+} from './src/lib/auth-storage';
 import * as authApi from './src/lib/api';
 import AccountSheet from './src/screens/AccountSheet';
 import AuthScreen from './src/screens/AuthScreen';
@@ -55,6 +61,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    void restoreActiveTab();
+  }, []);
+
+  useEffect(() => {
+    void storeActiveTab(activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
     const consumeUrl = (url: string | null) => {
       if (!url) {
         return;
@@ -94,6 +108,13 @@ export default function App() {
     }
 
     setAuthInitializing(false);
+  };
+
+  const restoreActiveTab = async () => {
+    const storedTab = await getStoredActiveTab();
+    if (storedTab === 'home' || storedTab === 'myspace' || storedTab === 'calorie' || storedTab === 'hangout') {
+      setActiveTab(storedTab);
+    }
   };
 
   const handleSignup = async ({
