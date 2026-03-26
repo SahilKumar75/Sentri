@@ -359,15 +359,27 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
           <View style={styles.cardDark}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitleDark}>Macro targets</Text>
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => {
-                  setSetupComplete(false);
-                  setStatusMessage('Update your body details to rebuild the plan.');
-                }}
-              >
-                <Text style={styles.secondaryButtonText}>Edit plan</Text>
-              </Pressable>
+              <View style={styles.headerActions}>
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={() => {
+                    setMeals(baseMeals);
+                    setBurns(baseBurns);
+                    setStatusMessage('Today tracking reset to the default hostel meal and burn baseline.');
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>Reset day</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={() => {
+                    setSetupComplete(false);
+                    setStatusMessage('Update your body details to rebuild the plan.');
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>Edit plan</Text>
+                </Pressable>
+              </View>
             </View>
             <View style={styles.macroGrid}>
               <MacroCard label="Protein" value={`${macroTargets.protein} g`} note="Keep this high for recovery." />
@@ -1048,6 +1060,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   sectionTitleDark: {
     color: theme.colors.darkText,
