@@ -1,6 +1,8 @@
 spring:
   application:
     name: sentri-backend
+  cache:
+    type: simple
   datasource:
     url: ${SENTRI_DATABASE_URL:jdbc:postgresql://localhost:5432/sentri}
     username: ${SENTRI_DATABASE_USERNAME:sentri}
