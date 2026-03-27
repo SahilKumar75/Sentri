@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
-import { getStoredJson, setStoredJson } from '../lib/device-store';
+import { PERSISTENT_KEYS } from '../lib/persistent-keys';
+import { usePersistedState } from '../lib/use-persisted-state';
 import {
   captureOptions,
   savedItems,
@@ -36,7 +37,10 @@ const noteTones = {
 } as const;
 
 export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScreenProps) {
-  const [items, setItems] = useState<SavedItem[]>(savedItems);
+  const { value: items, setValue: setItems } = usePersistedState<SavedItem[]>(
+    PERSISTENT_KEYS.myspaceItems,
+    savedItems
+  );
   const [query, setQuery] = useState('');
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
@@ -48,14 +52,6 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
   const columns = splitIntoColumns(otherItems);
   const queryActive = query.trim().length > 0;
   const emptySearch = queryActive && filteredItems.length === 0;
-
-  useEffect(() => {
-    void getStoredJson<SavedItem[]>('sentri.myspace.items', savedItems).then(setItems);
-  }, []);
-
-  useEffect(() => {
-    void setStoredJson('sentri.myspace.items', items);
-  }, [items]);
 
   return (
     <SafeAreaView style={styles.screen}>
