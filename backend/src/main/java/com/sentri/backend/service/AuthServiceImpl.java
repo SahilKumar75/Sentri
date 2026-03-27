@@ -11,9 +11,9 @@ import com.sentri.backend.exception.BadRequestException;
 import com.sentri.backend.exception.UnauthorizedException;
 import com.sentri.backend.repository.AuthSessionRepository;
 import com.sentri.backend.repository.UserAccountRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -181,7 +181,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public AuthResultResponse restoreSession(String sessionToken) {
         AuthSession session = authSessionRepository.findBySessionToken(requireSessionToken(sessionToken))
                 .orElseThrow(() -> new UnauthorizedException("Session is invalid or expired."));

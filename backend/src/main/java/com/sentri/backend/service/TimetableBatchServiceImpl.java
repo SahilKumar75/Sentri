@@ -13,10 +13,10 @@ import com.sentri.backend.dto.response.TimetableEntryResponse;
 import com.sentri.backend.exception.BadRequestException;
 import com.sentri.backend.exception.ResourceNotFoundException;
 import com.sentri.backend.repository.TimetableBatchRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
@@ -42,7 +42,7 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     @Cacheable(cacheNames = "timetableBatchSummaries")
     public List<TimetableBatchSummaryResponse> listBatches() {
         return timetableBatchRepository.findAllByOrderByCreatedAtDesc()
@@ -52,7 +52,7 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     @Cacheable(cacheNames = "timetableBatchDetails", key = "#batchId")
     public TimetableBatchDetailResponse getBatch(Long batchId) {
         TimetableBatch batch = timetableBatchRepository.findByIdWithEntries(batchId)

@@ -11,10 +11,10 @@ import com.sentri.backend.exception.ResourceNotFoundException;
 import com.sentri.backend.exception.UnauthorizedException;
 import com.sentri.backend.repository.AuthSessionRepository;
 import com.sentri.backend.repository.HangoutRoomRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -59,7 +59,7 @@ public class HangoutRoomServiceImpl implements HangoutRoomService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     @Cacheable(cacheNames = "hangoutActiveRooms")
     public List<HangoutRoomResponse> listRooms() {
         return hangoutRoomRepository.findTop12ByActiveTrueOrderByUpdatedAtDesc()
@@ -69,7 +69,7 @@ public class HangoutRoomServiceImpl implements HangoutRoomService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     @Cacheable(cacheNames = "hangoutRoomByCode", key = "#roomCode.trim().toUpperCase()")
     public HangoutRoomResponse getRoom(String roomCode) {
         return toResponse(findRoom(roomCode));
