@@ -27,6 +27,19 @@ The app should stay simple and cheap to run:
 - Spring Boot handles the main API and persistence
 - Python is used only where it helps most: OCR and deterministic parsing
 
+## Architecture
+
+- HLD: [docs/system-design-hld.md](/Users/sahilkumarsingh/Desktop/SENTRI/docs/system-design-hld.md)
+- LLD: [docs/system-design-lld.md](/Users/sahilkumarsingh/Desktop/SENTRI/docs/system-design-lld.md)
+
+Recent performance-focused work includes:
+
+- on-demand tab mounting in the mobile shell
+- shared persisted state utilities with cached storage reads
+- deferred Myspace search filtering
+- shared mobile HTTP client with request timeouts
+- backend indexes, cacheable read paths, and read-only transactions
+
 ## Run Locally
 
 ### Frontend
