@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { startTransition, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, SafeAreaView, StyleSheet, View } from 'react-native';
 
 import { CapsuleTabBar, DrawerSheet } from './src/components/sentri-ui';
@@ -12,6 +12,7 @@ import {
   storeSessionToken,
 } from './src/lib/auth-storage';
 import * as authApi from './src/lib/api';
+import { useMountedTabs } from './src/lib/use-mounted-tabs';
 import AccountSheet from './src/screens/AccountSheet';
 import AuthScreen from './src/screens/AuthScreen';
 import CalorieScreen from './src/screens/CalorieScreen';
@@ -27,6 +28,7 @@ type ScreenProps = {
 };
 
 type AuthMode = 'signup' | 'login' | 'otp';
+const ALL_TABS: TabKey[] = ['home', 'myspace', 'calorie', 'hangout'];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
@@ -42,6 +44,7 @@ export default function App() {
   const [incomingHangoutCode, setIncomingHangoutCode] = useState<string | null>(null);
   const [hangoutMeetingMode, setHangoutMeetingMode] = useState(false);
   const [sentriSheetOpen, setSentriSheetOpen] = useState(false);
+  const mountedTabs = useMountedTabs(activeTab);
 
   const userName = authenticatedUser
     ? `${authenticatedUser.firstName} ${authenticatedUser.lastName}`.trim()
@@ -252,7 +255,7 @@ export default function App() {
       <StatusBar style="dark" />
 
       <View style={styles.shell}>
-        {(['home', 'myspace', 'calorie', 'hangout'] as TabKey[]).map((tab) => (
+        {ALL_TABS.filter((tab) => mountedTabs.includes(tab)).map((tab) => (
           <View
             key={tab}
             style={[
@@ -275,7 +278,9 @@ export default function App() {
       {!hangoutMeetingMode ? (
         <CapsuleTabBar
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => {
+            startTransition(() => setActiveTab(tab));
+          }}
           onSentriPress={() => {
             setSentriSheetOpen(true);
           }}
