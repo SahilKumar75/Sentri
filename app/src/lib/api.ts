@@ -1,5 +1,5 @@
-import { NativeModules, Platform } from 'react-native';
 import type { ContactMethod, UserProfile } from '../types/auth';
+import { API_BASE_URL, extractErrorMessage, getNetworkMessage, requestJson } from './http-client';
 
 type AuthResult = {
   ok: boolean;
@@ -33,8 +33,6 @@ type BackendAuthResult = {
   user?: BackendUser | null;
 };
 
-export const API_BASE_URL = detectApiBaseUrl();
-
 export async function signup(payload: {
   profile: UserProfile;
   contactMethod: ContactMethod;
@@ -66,17 +64,16 @@ export async function login(payload: {
 
 export async function restoreSession(sessionToken: string): Promise<AuthResult> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/session`, {
+    const response = await requestJson<BackendAuthResult>('/auth/session', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${sessionToken}`,
       },
     });
-    const data = (await response.json()) as BackendAuthResult | { message?: string; details?: string[] };
     if (!response.ok) {
-      return { ok: false, message: extractErrorMessage(data, 'Session restore failed.') };
+      return { ok: false, message: extractErrorMessage(response.error, 'Session restore failed.') };
     }
-    return mapAuthResult(data as BackendAuthResult);
+    return mapAuthResult(response.data);
   } catch (error) {
     return { ok: false, message: getNetworkMessage(error) };
   }
@@ -97,18 +94,17 @@ export async function logout(sessionToken: string) {
 
 async function postAuth(path: string, payload: object): Promise<AuthResult> {
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await requestJson<BackendAuthResult>(path, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
     });
-    const data = (await response.json()) as BackendAuthResult | { message?: string; details?: string[] };
     if (!response.ok) {
-      return { ok: false, message: extractErrorMessage(data, 'Request failed.') };
+      return { ok: false, message: extractErrorMessage(response.error, 'Request failed.') };
     }
-    return mapAuthResult(data as BackendAuthResult);
+    return mapAuthResult(response.data);
   } catch (error) {
     return { ok: false, message: getNetworkMessage(error) };
   }
@@ -147,36 +143,4 @@ function formatDob(dob: string) {
   }
   const [year, month, day] = dob.split('-');
   return `${day}/${month}/${year}`;
-}
-
-function extractErrorMessage(data: { message?: string; details?: string[] }, fallback: string) {
-  if (data.details?.length) {
-    return data.details.join(' ');
-  }
-  return data.message ?? fallback;
-}
-
-function getNetworkMessage(error: unknown) {
-  if (error instanceof Error) {
-    return `${error.message}. Check that the Sentri backend is running on your Mac.`;
-  }
-  return 'Could not reach the Sentri backend. Check that it is running on your Mac.';
-}
-
-function detectApiBaseUrl() {
-  const explicit = process.env.EXPO_PUBLIC_API_BASE_URL;
-  if (explicit) {
-    return explicit;
-  }
-
-  const scriptURL = NativeModules.SourceCode?.scriptURL as string | undefined;
-  const match = scriptURL?.match(/^[a-z]+:\/\/([^/:]+)/i);
-  if (match?.[1]) {
-    return `http://${match[1]}:8080/api/v1`;
-  }
-
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8080/api/v1';
-  }
-  return 'http://localhost:8080/api/v1';
 }
