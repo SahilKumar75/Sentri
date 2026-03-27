@@ -12,6 +12,8 @@ import com.sentri.backend.exception.UnauthorizedException;
 import com.sentri.backend.repository.AuthSessionRepository;
 import com.sentri.backend.repository.HangoutRoomRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -35,6 +37,7 @@ public class HangoutRoomServiceImpl implements HangoutRoomService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = {"hangoutActiveRooms", "hangoutRoomByCode"}, allEntries = true)
     public HangoutRoomResponse createRoom(String authorization, CreateHangoutRoomRequest request) {
         if (request == null) {
             throw new BadRequestException("Room payload is required");
@@ -57,6 +60,7 @@ public class HangoutRoomServiceImpl implements HangoutRoomService {
 
     @Override
     @Transactional
+    @Cacheable(cacheNames = "hangoutActiveRooms")
     public List<HangoutRoomResponse> listRooms() {
         return hangoutRoomRepository.findTop12ByActiveTrueOrderByUpdatedAtDesc()
                 .stream()
@@ -66,12 +70,14 @@ public class HangoutRoomServiceImpl implements HangoutRoomService {
 
     @Override
     @Transactional
+    @Cacheable(cacheNames = "hangoutRoomByCode", key = "#roomCode.trim().toUpperCase()")
     public HangoutRoomResponse getRoom(String roomCode) {
         return toResponse(findRoom(roomCode));
     }
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = {"hangoutActiveRooms", "hangoutRoomByCode"}, allEntries = true)
     public HangoutRoomResponse joinRoom(String roomCode, JoinHangoutRoomRequest request) {
         HangoutRoom room = findRoom(roomCode);
         room.setLastJoinedAt(Instant.now());

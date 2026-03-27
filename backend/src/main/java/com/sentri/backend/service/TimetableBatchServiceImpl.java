@@ -14,6 +14,8 @@ import com.sentri.backend.exception.BadRequestException;
 import com.sentri.backend.exception.ResourceNotFoundException;
 import com.sentri.backend.repository.TimetableBatchRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -30,6 +32,7 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = {"timetableBatchSummaries", "timetableBatchDetails"}, allEntries = true)
     public TimetableBatchDetailResponse createPlaceholderBatch(CreateTimetableBatchRequest request) {
         TimetableBatch batch = new TimetableBatch();
         batch.setStatus(TimetableBatchStatus.PLACEHOLDER);
@@ -40,6 +43,7 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
 
     @Override
     @Transactional
+    @Cacheable(cacheNames = "timetableBatchSummaries")
     public List<TimetableBatchSummaryResponse> listBatches() {
         return timetableBatchRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
@@ -49,6 +53,7 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
 
     @Override
     @Transactional
+    @Cacheable(cacheNames = "timetableBatchDetails", key = "#batchId")
     public TimetableBatchDetailResponse getBatch(Long batchId) {
         TimetableBatch batch = timetableBatchRepository.findByIdWithEntries(batchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Timetable batch " + batchId + " was not found"));
@@ -57,6 +62,7 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = {"timetableBatchSummaries", "timetableBatchDetails"}, allEntries = true)
     public TimetableBatchDetailResponse saveParsedTimetable(Long batchId, ParsedTimetableImportRequest request) {
         if (request == null) {
             throw new BadRequestException("Parsed timetable payload is required");
