@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
-import { getStoredJson, setStoredJson } from '../lib/device-store';
+import { PERSISTENT_KEYS } from '../lib/persistent-keys';
+import { usePersistedState } from '../lib/use-persisted-state';
 import {
   buildSeedActivity,
   buildSeedChat,
@@ -50,6 +51,13 @@ type Friend = {
   note: string;
 };
 
+type PersistedHangoutState = {
+  roomName: string;
+  roomType: string;
+  joinInput: string;
+  activeRoom: HangoutRoom | null;
+};
+
 const friends: Friend[] = [
   { name: 'Ananya', status: 'online', note: 'Ready for revision' },
   { name: 'Isha', status: 'online', note: 'Can join in 2 min' },
@@ -67,6 +75,15 @@ export default function HangoutScreen({
   onConsumeIncomingRoomCode,
   onMeetingModeChange,
 }: HangoutScreenProps) {
+  const { value: persistedState, setValue: setPersistedState, hydrated } = usePersistedState<PersistedHangoutState>(
+    PERSISTENT_KEYS.hangoutState,
+    {
+      roomName: 'DBMS Revision Room',
+      roomType: 'Study',
+      joinInput: '',
+      activeRoom: null,
+    }
+  );
   const [rooms, setRooms] = useState<HangoutRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<HangoutRoom | null>(null);
   const [roomName, setRoomName] = useState('DBMS Revision Room');
@@ -164,33 +181,29 @@ export default function HangoutScreen({
   const canShareScreen = isHost || meetingSettings.allowGuestScreenShare;
 
   useEffect(() => {
-    void getStoredJson<{
-      roomName: string;
-      roomType: string;
-      joinInput: string;
-      activeRoom: HangoutRoom | null;
-    } | null>('sentri.hangout.state', null).then((stored) => {
-      if (!stored) {
-        return;
-      }
-      setRoomName(stored.roomName);
-      setRoomType(stored.roomType);
-      setJoinInput(stored.joinInput);
-      setActiveRoom(stored.activeRoom);
-      if (stored.activeRoom) {
-        seedMeetingRoom(stored.activeRoom);
-      }
-    });
-  }, []);
+    if (!hydrated) {
+      return;
+    }
+    setRoomName(persistedState.roomName);
+    setRoomType(persistedState.roomType);
+    setJoinInput(persistedState.joinInput);
+    setActiveRoom(persistedState.activeRoom);
+    if (persistedState.activeRoom) {
+      seedMeetingRoom(persistedState.activeRoom);
+    }
+  }, [hydrated, persistedState]);
 
   useEffect(() => {
-    void setStoredJson('sentri.hangout.state', {
+    if (!hydrated) {
+      return;
+    }
+    setPersistedState({
       roomName,
       roomType,
       joinInput,
       activeRoom,
     });
-  }, [roomName, roomType, joinInput, activeRoom]);
+  }, [activeRoom, hydrated, joinInput, roomName, roomType, setPersistedState]);
 
   async function refreshRooms() {
     const result = await listRooms();
