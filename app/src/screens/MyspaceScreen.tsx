@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -45,8 +45,9 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
   const [stagedCapture, setStagedCapture] = useState<CaptureOption | null>(null);
+  const deferredQuery = useDeferredValue(query);
 
-  const filteredItems = useMemo(() => searchSavedItems(items, query, 'All'), [items, query]);
+  const filteredItems = useMemo(() => searchSavedItems(items, deferredQuery, 'All'), [deferredQuery, items]);
   const pinnedItems = filteredItems.filter((item) => item.pinned);
   const otherItems = filteredItems.filter((item) => !item.pinned);
   const columns = splitIntoColumns(otherItems);
