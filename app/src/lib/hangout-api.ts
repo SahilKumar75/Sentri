@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './api';
+import { extractErrorMessage, getNetworkMessage, requestJson } from './http-client';
 
 export type HangoutRoom = {
   id: number;
@@ -24,12 +24,11 @@ type RoomsResult =
 
 export async function listRooms(): Promise<RoomsResult> {
   try {
-    const response = await fetch(`${API_BASE_URL}/hangout/rooms`);
-    const data = (await response.json()) as HangoutRoom[] | { message?: string; details?: string[] };
+    const response = await requestJson<HangoutRoom[]>('/hangout/rooms');
     if (!response.ok) {
-      return { ok: false, message: extractErrorMessage(data as { message?: string; details?: string[] }) };
+      return { ok: false, message: extractErrorMessage(response.error, 'Room request failed.') };
     }
-    return { ok: true, rooms: data as HangoutRoom[] };
+    return { ok: true, rooms: response.data };
   } catch (error) {
     return { ok: false, message: getNetworkMessage(error) };
   }
@@ -84,12 +83,11 @@ export function extractRoomCode(value: string) {
 
 async function fetchRoom(path: string): Promise<RoomResult> {
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`);
-    const data = (await response.json()) as HangoutRoom | { message?: string; details?: string[] };
+    const response = await requestJson<HangoutRoom>(path);
     if (!response.ok) {
-      return { ok: false, message: extractErrorMessage(data as { message?: string; details?: string[] }) };
+      return { ok: false, message: extractErrorMessage(response.error, 'Room request failed.') };
     }
-    return { ok: true, room: data as HangoutRoom };
+    return { ok: true, room: response.data };
   } catch (error) {
     return { ok: false, message: getNetworkMessage(error) };
   }
@@ -102,7 +100,7 @@ async function mutateRoom(
   sessionToken: string | null
 ): Promise<RoomResult> {
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await requestJson<HangoutRoom>(path, {
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -110,11 +108,10 @@ async function mutateRoom(
       },
       body: JSON.stringify(payload),
     });
-    const data = (await response.json()) as HangoutRoom | { message?: string; details?: string[] };
     if (!response.ok) {
-      return { ok: false, message: extractErrorMessage(data as { message?: string; details?: string[] }) };
+      return { ok: false, message: extractErrorMessage(response.error, 'Room request failed.') };
     }
-    return { ok: true, room: data as HangoutRoom };
+    return { ok: true, room: response.data };
   } catch (error) {
     return { ok: false, message: getNetworkMessage(error) };
   }
@@ -122,18 +119,4 @@ async function mutateRoom(
 
 function normalizeRoomCode(value: string) {
   return value.trim().toUpperCase();
-}
-
-function extractErrorMessage(data: { message?: string; details?: string[] }) {
-  if (data.details?.length) {
-    return data.details.join(' ');
-  }
-  return data.message ?? 'Room request failed.';
-}
-
-function getNetworkMessage(error: unknown) {
-  if (error instanceof Error) {
-    return `${error.message}. Check that the Sentri backend is running on your Mac.`;
-  }
-  return 'Could not reach the Sentri backend. Check that it is running on your Mac.';
 }
