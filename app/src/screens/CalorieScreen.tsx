@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetSt
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
-import { getStoredJson, setStoredJson } from '../lib/device-store';
+import { PERSISTENT_KEYS } from '../lib/persistent-keys';
+import { usePersistedState } from '../lib/use-persisted-state';
 
 type CalorieScreenProps = {
   onOpenDrawer: () => void;
@@ -49,6 +50,14 @@ type MacroTargets = {
   cheatAllowance: number;
 };
 
+type PersistedCalorieState = {
+  setup: CalorieSetup;
+  setupComplete: boolean;
+  meals: MealEntry[];
+  burns: BurnEntry[];
+  statusMessage: string;
+};
+
 const defaultSetup: CalorieSetup = {
   age: '21',
   height: '176',
@@ -88,7 +97,19 @@ const burnPresets: BurnEntry[] = [
   { label: 'Run', kcal: 160, meta: '20 min easy run' },
 ];
 
+const defaultPersistedCalorieState: PersistedCalorieState = {
+  setup: defaultSetup,
+  setupComplete: false,
+  meals: baseMeals,
+  burns: baseBurns,
+  statusMessage: 'Finish your setup to unlock today tracking.',
+};
+
 export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScreenProps) {
+  const { value: persistedState, setValue: setPersistedState, hydrated } = usePersistedState<PersistedCalorieState>(
+    PERSISTENT_KEYS.calorieState,
+    defaultPersistedCalorieState
+  );
   const [setup, setSetup] = useState<CalorieSetup>(defaultSetup);
   const [setupComplete, setSetupComplete] = useState(false);
   const [meals, setMeals] = useState<MealEntry[]>(baseMeals);
@@ -114,33 +135,28 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
   }, [setup]);
 
   useEffect(() => {
-    void getStoredJson<{
-      setup: CalorieSetup;
-      setupComplete: boolean;
-      meals: MealEntry[];
-      burns: BurnEntry[];
-      statusMessage: string;
-    } | null>('sentri.calorie.state', null).then((stored) => {
-      if (!stored) {
-        return;
-      }
-      setSetup(stored.setup);
-      setSetupComplete(stored.setupComplete);
-      setMeals(stored.meals);
-      setBurns(stored.burns);
-      setStatusMessage(stored.statusMessage);
-    });
-  }, []);
+    if (!hydrated) {
+      return;
+    }
+    setSetup(persistedState.setup);
+    setSetupComplete(persistedState.setupComplete);
+    setMeals(persistedState.meals);
+    setBurns(persistedState.burns);
+    setStatusMessage(persistedState.statusMessage);
+  }, [hydrated, persistedState]);
 
   useEffect(() => {
-    void setStoredJson('sentri.calorie.state', {
+    if (!hydrated) {
+      return;
+    }
+    setPersistedState({
       setup,
       setupComplete,
       meals,
       burns,
       statusMessage,
     });
-  }, [setup, setupComplete, meals, burns, statusMessage]);
+  }, [burns, hydrated, meals, setPersistedState, setup, setupComplete, statusMessage]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
