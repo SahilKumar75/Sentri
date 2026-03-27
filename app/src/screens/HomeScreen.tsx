@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
-import { getStoredJson, setStoredJson } from '../lib/device-store';
+import { PERSISTENT_KEYS } from '../lib/persistent-keys';
+import { usePersistedState } from '../lib/use-persisted-state';
 
 type HomeScreenProps = {
   onOpenDrawer: () => void;
@@ -200,7 +201,10 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'updated'>('idle');
   const [uploadSheetOpen, setUploadSheetOpen] = useState(false);
   const [uploadSource, setUploadSource] = useState<'share' | 'mail' | 'photos'>('share');
-  const [lastUploadMeta, setLastUploadMeta] = useState<{ source: 'share' | 'mail' | 'photos'; timestamp: string } | null>(null);
+  const { value: lastUploadMeta, setValue: setLastUploadMeta } = usePersistedState<{
+    source: 'share' | 'mail' | 'photos';
+    timestamp: string;
+  } | null>(PERSISTENT_KEYS.homeUploadMeta, null);
 
   const weekDays = useMemo(() => buildWeekDates(focusedDate), [focusedDate]);
   const monthRows = useMemo(() => buildMonthRows(focusedDate), [focusedDate]);
@@ -214,12 +218,6 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
   const timelineTitle = isFocusedToday
     ? 'Today timeline'
     : `${formatWeekdayShort(focusedDate)}, ${focusedDate.getDate()} ${formatMonthShort(focusedDate)}`;
-
-  useEffect(() => {
-    void getStoredJson<{ source: 'share' | 'mail' | 'photos'; timestamp: string } | null>('sentri.homeUploadMeta', null).then(
-      setLastUploadMeta
-    );
-  }, []);
 
   useEffect(() => {
     if (uploadState !== 'updated') {
@@ -566,7 +564,6 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
           setUploadState('uploading');
           const nextMeta = { source: uploadSource, timestamp: new Date().toISOString() };
           setLastUploadMeta(nextMeta);
-          void setStoredJson('sentri.homeUploadMeta', nextMeta);
           setUploadSheetOpen(false);
           setTimeout(() => setUploadState('updated'), 260);
         }}
