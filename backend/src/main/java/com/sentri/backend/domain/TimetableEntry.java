@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
@@ -15,7 +16,13 @@ import jakarta.persistence.Table;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "timetable_entries")
+@Table(
+        name = "timetable_entries",
+        indexes = {
+                @Index(name = "idx_timetable_entries_batch_id", columnList = "batch_id"),
+                @Index(name = "idx_timetable_entries_batch_day_sort", columnList = "batch_id, dayOfWeek, sortOrder")
+        }
+)
 public class TimetableEntry {
 
     @Id

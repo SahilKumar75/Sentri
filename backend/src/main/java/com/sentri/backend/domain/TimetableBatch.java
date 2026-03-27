@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
@@ -21,7 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "timetable_batches")
+@Table(
+        name = "timetable_batches",
+        indexes = {
+                @Index(name = "idx_timetable_batches_created_at", columnList = "createdAt"),
+                @Index(name = "idx_timetable_batches_effective_from", columnList = "effectiveFrom"),
+                @Index(name = "idx_timetable_batches_status", columnList = "status")
+        }
+)
 public class TimetableBatch {
 
     @Id

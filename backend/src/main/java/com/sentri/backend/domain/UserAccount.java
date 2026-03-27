@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -13,7 +14,14 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "user_accounts")
+@Table(
+        name = "user_accounts",
+        indexes = {
+                @Index(name = "idx_user_accounts_phone_normalized", columnList = "phoneNormalized"),
+                @Index(name = "idx_user_accounts_email_normalized", columnList = "emailNormalized"),
+                @Index(name = "idx_user_accounts_last_login_at", columnList = "lastLoginAt")
+        }
+)
 public class UserAccount {
 
     @Id

@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
@@ -15,7 +16,13 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "auth_sessions")
+@Table(
+        name = "auth_sessions",
+        indexes = {
+                @Index(name = "idx_auth_sessions_session_token", columnList = "sessionToken"),
+                @Index(name = "idx_auth_sessions_user_id", columnList = "user_id")
+        }
+)
 public class AuthSession {
 
     @Id
