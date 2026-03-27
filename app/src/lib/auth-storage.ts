@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PERSISTENT_KEYS } from './persistent-keys';
 
-const SESSION_TOKEN_KEY = 'sentri.sessionToken';
-const ACTIVE_TAB_KEY = 'sentri.activeTab';
+const SESSION_TOKEN_KEY = PERSISTENT_KEYS.sessionToken;
+const ACTIVE_TAB_KEY = PERSISTENT_KEYS.activeTab;
 
 export async function getStoredSessionToken() {
   return AsyncStorage.getItem(SESSION_TOKEN_KEY);
