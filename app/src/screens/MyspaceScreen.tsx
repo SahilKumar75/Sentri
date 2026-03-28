@@ -13,12 +13,12 @@ import {
 } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
+import { explainMatch, rankMyspaceItems, type RetrievalMatch } from '../features/myspace/retrieval-engine';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
 import { usePersistedState } from '../lib/use-persisted-state';
 import {
   captureOptions,
   savedItems,
-  searchSavedItems,
   type CaptureOption,
   type SavedItem,
 } from './myspace/data';
@@ -47,7 +47,12 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
   const [stagedCapture, setStagedCapture] = useState<CaptureOption | null>(null);
   const deferredQuery = useDeferredValue(query);
 
-  const filteredItems = useMemo(() => searchSavedItems(items, deferredQuery, 'All'), [deferredQuery, items]);
+  const rankedMatches = useMemo(() => rankMyspaceItems(items, deferredQuery, 'All'), [deferredQuery, items]);
+  const filteredItems = rankedMatches.map((match) => match.item);
+  const matchMap = useMemo(
+    () => new Map(rankedMatches.map((match) => [match.item.id, match] as const)),
+    [rankedMatches]
+  );
   const pinnedItems = filteredItems.filter((item) => item.pinned);
   const otherItems = filteredItems.filter((item) => !item.pinned);
   const columns = splitIntoColumns(otherItems);
@@ -166,12 +171,24 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
                 <View style={styles.masonry}>
                   <View style={styles.column}>
                     {columns[0].map((item) => (
-                      <NoteCard key={item.id} item={item} query={query} onPress={() => setSelectedItem(item)} />
+                      <NoteCard
+                        key={item.id}
+                        item={item}
+                        query={query}
+                        match={matchMap.get(item.id) ?? null}
+                        onPress={() => setSelectedItem(item)}
+                      />
                     ))}
                   </View>
                   <View style={styles.column}>
                     {columns[1].map((item) => (
-                      <NoteCard key={item.id} item={item} query={query} onPress={() => setSelectedItem(item)} />
+                      <NoteCard
+                        key={item.id}
+                        item={item}
+                        query={query}
+                        match={matchMap.get(item.id) ?? null}
+                        onPress={() => setSelectedItem(item)}
+                      />
                     ))}
                   </View>
                 </View>
@@ -228,6 +245,7 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
       <DetailSheet
         item={selectedItem}
         query={query}
+        match={selectedItem ? matchMap.get(selectedItem.id) ?? null : null}
         onClose={() => setSelectedItem(null)}
         onAction={async (action, item) => {
           if (action === 'Pin') {
@@ -280,10 +298,12 @@ function PinnedCard({ item, onPress }: { item: SavedItem; onPress: () => void })
 function NoteCard({
   item,
   query,
+  match,
   onPress,
 }: {
   item: SavedItem;
   query: string;
+  match: RetrievalMatch | null;
   onPress: () => void;
 }) {
   const tone = noteTones[item.accent];
@@ -301,7 +321,7 @@ function NoteCard({
         <Text style={styles.noteMeta}>{item.source}</Text>
         <Text style={styles.noteMeta}>{item.dateLabel}</Text>
       </View>
-      <Text style={styles.matchText}>{getMatchLabel(item, query)}</Text>
+      <Text style={styles.matchText}>{explainMatch(match, item, query)}</Text>
     </Pressable>
   );
 }
@@ -359,11 +379,13 @@ function CaptureRow({ option, onPress }: { option: CaptureOption; onPress: () =>
 function DetailSheet({
   item,
   query,
+  match,
   onClose,
   onAction,
 }: {
   item: SavedItem | null;
   query: string;
+  match: RetrievalMatch | null;
   onClose: () => void;
   onAction: (action: 'Pin' | 'Share', item: SavedItem) => void | Promise<void>;
 }) {
@@ -385,7 +407,7 @@ function DetailSheet({
               <MetaChip label={item.source} />
               <MetaChip label={item.dateLabel} />
             </View>
-            <Text style={styles.detailMatch}>{getMatchLabel(item, query)}</Text>
+            <Text style={styles.detailMatch}>{explainMatch(match, item, query)}</Text>
             <Text style={styles.detailHint}>
               Indexed for OCR text, subject, date, and source so you can search it later from the top bar.
             </Text>
@@ -496,25 +518,6 @@ function buildCapturePreview(option: CaptureOption): SavedItem {
     featured: true,
     ocrText: `${option.label} capture preview for search and retrieval.`,
   };
-}
-
-function getMatchLabel(item: SavedItem, query: string) {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return item.featured ? 'Suggested from recent context' : 'Search by date, OCR, or subject';
-  }
-
-  const tokens = normalized.split(/\s+/).filter(Boolean);
-  const ocrText = (item.ocrText ?? '').toLowerCase();
-
-  if (tokens.some((token) => item.title.toLowerCase().includes(token))) return 'Matched title';
-  if (tokens.some((token) => item.subject.toLowerCase().includes(token))) return 'Matched subject';
-  if (tokens.some((token) => item.source.toLowerCase().includes(token))) return 'Matched source';
-  if (tokens.some((token) => item.dateLabel.toLowerCase().includes(token))) return 'Matched date';
-  if (tokens.some((token) => ocrText.includes(token))) return 'Matched OCR text';
-  if (tokens.some((token) => item.tags.some((tag) => tag.toLowerCase().includes(token)))) return 'Matched tag';
-
-  return 'Matched by context';
 }
 
 function symbolToIcon(symbol: string): keyof typeof Ionicons.glyphMap {
