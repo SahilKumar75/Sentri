@@ -2,195 +2,27 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
+import { calendarTags } from '../features/home/timetable-fixtures';
+import {
+  buildMonthRows,
+  buildWeekDates,
+  dayKeyForDate,
+  formatLongDate,
+  formatMonthShort,
+  formatMonthYear,
+  formatWeekdayShort,
+  getEntriesForDate,
+  getRefreshInsight,
+  getScheduleInsight,
+  isSameDate,
+} from '../features/home/timetable-intelligence';
+import type { CalendarTag, ClassEntry, UploadMeta, UploadSource, ViewMode } from '../features/home/timetable-types';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
 import { usePersistedState } from '../lib/use-persisted-state';
 
 type HomeScreenProps = {
   onOpenDrawer: () => void;
   avatarLabel: string;
-};
-
-type ViewMode = 'today' | 'week' | 'month';
-
-type ClassEntry = {
-  id: string;
-  title: string;
-  teacher: string;
-  room: string;
-  start: string;
-  end: string;
-  type: 'Lecture' | 'Lab' | 'Tutorial' | 'Exam' | 'Deadline';
-  note?: string;
-};
-
-type CalendarTag = {
-  id: string;
-  title: string;
-  tone: 'accent' | 'blue' | 'green';
-};
-
-const scheduleByDay: Record<string, ClassEntry[]> = {
-  mon: [
-    {
-      id: 'mon-1',
-      title: 'DBMS',
-      teacher: 'Prof. Deshmukh',
-      room: 'LH 19',
-      start: '08:45',
-      end: '09:45',
-      type: 'Lecture',
-      note: 'Parallel database basics and attendance check.',
-    },
-    {
-      id: 'mon-2',
-      title: 'Project Management',
-      teacher: 'Dr. Kulkarni',
-      room: 'LH 20',
-      start: '09:50',
-      end: '10:45',
-      type: 'Lecture',
-      note: 'Sprint review and assignment tracker.',
-    },
-    {
-      id: 'mon-3',
-      title: 'DBMS Lab',
-      teacher: 'Prof. Deshmukh',
-      room: 'VI Lab',
-      start: '11:00',
-      end: '12:45',
-      type: 'Lab',
-      note: 'Assignment 7 submission in PL/SQL.',
-    },
-    {
-      id: 'mon-4',
-      title: 'Probability & Statistics',
-      teacher: 'Prof. Shah',
-      room: 'LH 18',
-      start: '13:45',
-      end: '14:45',
-      type: 'Tutorial',
-      note: 'Permutation and combination problem set.',
-    },
-  ],
-  tue: [
-    {
-      id: 'tue-1',
-      title: 'Computer Graphics',
-      teacher: 'Prof. Patil',
-      room: 'LH 21',
-      start: '08:45',
-      end: '09:45',
-      type: 'Lecture',
-    },
-    {
-      id: 'tue-2',
-      title: 'DBMS',
-      teacher: 'Prof. Deshmukh',
-      room: 'LH 19',
-      start: '09:50',
-      end: '10:45',
-      type: 'Lecture',
-      note: 'Distributed database overview.',
-    },
-    {
-      id: 'tue-3',
-      title: 'E-Commerce',
-      teacher: 'Prof. Ghule',
-      room: 'Tut Room',
-      start: '12:45',
-      end: '13:45',
-      type: 'Tutorial',
-      note: 'Security tools and best practices.',
-    },
-  ],
-  wed: [
-    {
-      id: 'wed-1',
-      title: 'Computer Graphics Lab',
-      teacher: 'Prof. Patil',
-      room: 'Lab III',
-      start: '08:45',
-      end: '10:45',
-      type: 'Lab',
-    },
-    {
-      id: 'wed-2',
-      title: 'Project Management',
-      teacher: 'Dr. Kulkarni',
-      room: 'LH 20',
-      start: '11:00',
-      end: '12:00',
-      type: 'Lecture',
-    },
-    {
-      id: 'wed-3',
-      title: 'EVS',
-      teacher: 'Prof. More',
-      room: 'LH 16',
-      start: '14:45',
-      end: '15:45',
-      type: 'Lecture',
-      note: 'Short lecture before placement session.',
-    },
-  ],
-  thu: [
-    {
-      id: 'thu-1',
-      title: 'Holiday',
-      teacher: 'AIT',
-      room: 'Campus',
-      start: '00:00',
-      end: '23:59',
-      type: 'Deadline',
-      note: 'No classes scheduled.',
-    },
-  ],
-  fri: [
-    {
-      id: 'fri-1',
-      title: 'Machine Learning',
-      teacher: 'Prof. Jadhav',
-      room: 'LH 17',
-      start: '08:45',
-      end: '09:45',
-      type: 'Lecture',
-    },
-    {
-      id: 'fri-2',
-      title: 'CG Lab',
-      teacher: 'Prof. Patil',
-      room: 'Lab II',
-      start: '11:00',
-      end: '12:45',
-      type: 'Lab',
-      note: 'Painter algorithm revision and viva prep.',
-    },
-  ],
-  sat: [
-    {
-      id: 'sat-1',
-      title: 'Timetable Refresh',
-      teacher: 'Sentri',
-      room: 'Share Sheet',
-      start: '10:00',
-      end: '10:15',
-      type: 'Deadline',
-      note: 'Upload next week timetable screenshot here.',
-    },
-  ],
-  sun: [],
-};
-
-const calendarTags: Record<string, CalendarTag[]> = {
-  '2026-03-23': [{ id: 'dbms', title: 'DBMS exam form', tone: 'blue' }],
-  '2026-03-24': [{ id: 'resume', title: 'Resume check', tone: 'green' }],
-  '2026-03-25': [{ id: 'cg', title: 'CG viva', tone: 'accent' }],
-  '2026-03-26': [{ id: 'holiday', title: 'Holiday', tone: 'green' }],
-  '2026-03-27': [{ id: 'pm', title: 'PM submission', tone: 'accent' }],
-  '2026-03-28': [{ id: 'refresh', title: 'Upload timetable', tone: 'blue' }],
-  '2026-03-31': [{ id: 'hackathon', title: 'Hackathon deadline', tone: 'accent' }],
-  '2026-04-02': [{ id: 'placement', title: 'Placement drive', tone: 'green' }],
-  '2026-04-04': [{ id: 'dbms-exam', title: 'DBMS exam', tone: 'blue' }],
 };
 
 export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProps) {
@@ -200,21 +32,20 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
   const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'updated'>('idle');
   const [uploadSheetOpen, setUploadSheetOpen] = useState(false);
-  const [uploadSource, setUploadSource] = useState<'share' | 'mail' | 'photos'>('share');
-  const { value: lastUploadMeta, setValue: setLastUploadMeta } = usePersistedState<{
-    source: 'share' | 'mail' | 'photos';
-    timestamp: string;
-  } | null>(PERSISTENT_KEYS.homeUploadMeta, null);
+  const [uploadSource, setUploadSource] = useState<UploadSource>('share');
+  const { value: lastUploadMeta, setValue: setLastUploadMeta } = usePersistedState<UploadMeta | null>(
+    PERSISTENT_KEYS.homeUploadMeta,
+    null
+  );
 
   const weekDays = useMemo(() => buildWeekDates(focusedDate), [focusedDate]);
   const monthRows = useMemo(() => buildMonthRows(focusedDate), [focusedDate]);
   const selectedDayKey = dayKeyForDate(focusedDate);
-  const selectedEntries = scheduleByDay[selectedDayKey] || [];
+  const selectedEntries = getEntriesForDate(focusedDate);
   const hoveredClass = selectedEntries.find((entry) => entry.id === hoveredClassId) ?? null;
-  const saturdayRefreshDate = useMemo(() => getRefreshSaturday(todayAnchor), [todayAnchor]);
-  const refreshDue = todayAnchor >= saturdayRefreshDate;
   const isFocusedToday = isSameDate(focusedDate, todayAnchor);
-  const summaryState = resolveScheduleState(selectedEntries, focusedDate, todayAnchor);
+  const summaryState = getScheduleInsight(selectedEntries, focusedDate, todayAnchor);
+  const refreshInsight = getRefreshInsight(todayAnchor, uploadState, lastUploadMeta);
   const timelineTitle = isFocusedToday
     ? 'Today timeline'
     : `${formatWeekdayShort(focusedDate)}, ${focusedDate.getDate()} ${formatMonthShort(focusedDate)}`;
@@ -253,9 +84,9 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeader}>
           <View style={styles.summaryCopy}>
-            <Text style={styles.summaryLabel}>Current + Next</Text>
-            <Text style={styles.summaryTitle}>
-              {summaryState.currentClass || summaryState.nextClass
+          <Text style={styles.summaryLabel}>Current + Next</Text>
+          <Text style={styles.summaryTitle}>
+            {summaryState.currentClass || summaryState.nextClass
                 ? summaryState.headline
                 : 'No class running right now'}
             </Text>
@@ -270,7 +101,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
             <Text style={styles.columnMeta}>
               {summaryState.currentClass
                 ? `${summaryState.currentClass.room} • ${summaryState.currentClass.teacher}`
-                : 'No active lecture right now'}
+                : summaryState.explanation}
             </Text>
           </View>
           <View style={styles.summaryDivider} />
@@ -280,10 +111,11 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
             <Text style={styles.columnMeta}>
               {summaryState.nextClass
                 ? `${summaryState.nextClass.start} - ${summaryState.nextClass.end} • ${summaryState.nextClass.room}`
-                : 'Upload next week timetable on Saturday'}
+                : summaryState.explanation}
             </Text>
           </View>
         </View>
+        <Text style={styles.summaryExplanation}>{summaryState.explanation}</Text>
       </View>
 
       <View style={styles.statusPills}>
@@ -303,20 +135,8 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
 
       <View style={styles.refreshBanner}>
         <View style={styles.refreshBannerCopy}>
-          <Text style={styles.refreshBannerTitle}>
-            {uploadState === 'updated'
-              ? 'Timetable updated'
-              : refreshDue
-                ? 'Week ready for a fresh upload'
-                : 'Week ready'}
-          </Text>
-          <Text style={styles.refreshBannerBody}>
-            {uploadState === 'updated'
-              ? 'Your next screenshot is staged so Sentri can refresh the week.'
-              : lastUploadMeta
-                ? `Last staged from ${formatUploadSource(lastUploadMeta.source)} on ${formatShortDateTime(lastUploadMeta.timestamp)}.`
-                : 'Every Saturday, upload the new screenshot when the timetable mail arrives.'}
-          </Text>
+          <Text style={styles.refreshBannerTitle}>{refreshInsight.title}</Text>
+          <Text style={styles.refreshBannerBody}>{refreshInsight.body}</Text>
         </View>
         <Pressable
           style={[styles.refreshBannerButton, uploadState === 'updated' && styles.refreshBannerButtonDone]}
@@ -351,7 +171,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
           >
             {weekDays.map((date) => {
               const active = isSameDate(date, focusedDate);
-              const entries = scheduleByDay[dayKeyForDate(date)] || [];
+              const entries = getEntriesForDate(date);
               return (
                 <Pressable
                   key={date.toISOString()}
@@ -386,7 +206,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
             <View style={styles.scheduleCard}>
               <View style={styles.scheduleHead}>
                 <Text style={styles.scheduleCardTitle}>{formatLongDate(focusedDate)}</Text>
-                <Text style={styles.scheduleCardHint}>Long press any class for the hover card.</Text>
+                <Text style={styles.scheduleCardHint}>{summaryState.explanation}</Text>
               </View>
               <View style={styles.scheduleList}>
                 {selectedEntries.map((entry, index) => (
@@ -443,7 +263,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
             <Text style={styles.sectionAction}>Tap a day</Text>
           </View>
           {weekDays.map((date) => {
-            const entries = scheduleByDay[dayKeyForDate(date)] || [];
+            const entries = getEntriesForDate(date);
             return (
               <Pressable
                 key={`week-${date.toISOString()}`}
@@ -629,183 +449,6 @@ function UploadSheet({
   );
 }
 
-function buildWeekDates(anchor: Date) {
-  const start = startOfWeek(anchor);
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    return date;
-  });
-}
-
-function buildMonthCells(anchor: Date) {
-  const year = anchor.getFullYear();
-  const month = anchor.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startIndex = (firstDay.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const totalCells = Math.ceil((startIndex + daysInMonth) / 7) * 7;
-
-  return Array.from({ length: totalCells }, (_, index) => {
-    const dayNumber = index - startIndex + 1;
-    if (dayNumber < 1 || dayNumber > daysInMonth) {
-      return { key: `blank-${index}`, date: null, tags: [] as CalendarTag[] };
-    }
-
-    const date = new Date(year, month, dayNumber);
-    const key = dateKey(date);
-    return {
-      key,
-      date,
-      tags: calendarTags[key] ?? [],
-    };
-  });
-}
-
-function buildMonthRows(anchor: Date) {
-  const cells = buildMonthCells(anchor);
-  const rows: ReturnType<typeof buildMonthCells>[] = [];
-
-  for (let index = 0; index < cells.length; index += 7) {
-    rows.push(cells.slice(index, index + 7));
-  }
-
-  return rows;
-}
-
-function resolveScheduleState(entries: ClassEntry[], focusedDate: Date, now: Date) {
-  if (!entries.length) {
-    return {
-      currentClass: null,
-      nextClass: null,
-      headline: 'No timetable items',
-    };
-  }
-
-  if (!isSameDate(focusedDate, now)) {
-    return {
-      currentClass: null,
-      nextClass: entries[0] ?? null,
-      headline: `First class at ${entries[0]?.start ?? '--:--'}`,
-    };
-  }
-
-  const minutesNow = now.getHours() * 60 + now.getMinutes();
-  const currentIndex = entries.findIndex((entry) => {
-    const start = toMinutes(entry.start);
-    const end = toMinutes(entry.end);
-    return minutesNow >= start && minutesNow < end;
-  });
-
-  if (currentIndex >= 0) {
-    const currentClass = entries[currentIndex];
-    const nextClass = entries[currentIndex + 1] ?? null;
-    const minutesLeft = Math.max(toMinutes(currentClass.end) - minutesNow, 0);
-
-    return {
-      currentClass,
-      nextClass,
-      headline: minutesLeft ? `Live now • ${minutesLeft} min left` : 'Live now',
-    };
-  }
-
-  const nextIndex = entries.findIndex((entry) => toMinutes(entry.start) > minutesNow);
-  if (nextIndex >= 0) {
-    const nextClass = entries[nextIndex];
-    const minutesUntil = Math.max(toMinutes(nextClass.start) - minutesNow, 0);
-
-    return {
-      currentClass: null,
-      nextClass,
-      headline: `Starts in ${minutesUntil} min`,
-    };
-  }
-
-  return {
-    currentClass: null,
-    nextClass: null,
-    headline: 'Day complete',
-  };
-}
-
-function formatMonthYear(date: Date) {
-  return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(date);
-}
-
-function formatLongDate(date: Date) {
-  return new Intl.DateTimeFormat('en-IN', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).format(date);
-}
-
-function formatWeekdayShort(date: Date) {
-  return new Intl.DateTimeFormat('en-IN', { weekday: 'short' }).format(date);
-}
-
-function formatMonthShort(date: Date) {
-  return new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(date);
-}
-
-function startOfWeek(date: Date) {
-  const result = new Date(date);
-  const day = result.getDay();
-  const offset = day === 0 ? -6 : 1 - day;
-  result.setDate(result.getDate() + offset);
-  result.setHours(0, 0, 0, 0);
-  return result;
-}
-
-function getRefreshSaturday(date: Date) {
-  const saturday = startOfWeek(date);
-  saturday.setDate(saturday.getDate() + 5);
-  saturday.setHours(0, 0, 0, 0);
-  return saturday;
-}
-
-function formatUploadSource(source: 'share' | 'mail' | 'photos') {
-  if (source === 'mail') return 'Outlook screenshot';
-  if (source === 'photos') return 'Photos';
-  return 'Share into Sentri';
-}
-
-function formatShortDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
-
-function dayKeyForDate(date: Date) {
-  return ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][date.getDay()];
-}
-
-function isSameDate(left: Date, right: Date) {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
-}
-
-function dateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
-    date.getDate()
-  ).padStart(2, '0')}`;
-}
-
-function toMinutes(time: string) {
-  const [hour, minute] = time.split(':').map(Number);
-  return hour * 60 + minute;
-}
-
 const tagToneStyles = StyleSheet.create({
   accent: { backgroundColor: '#D2E3FC' },
   blue: { backgroundColor: '#E8F0FE' },
@@ -955,6 +598,12 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.line,
     padding: 18,
     ...theme.shadow.soft,
+  },
+  summaryExplanation: {
+    marginTop: 14,
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    lineHeight: 19,
   },
   statusPills: {
     marginTop: 14,
