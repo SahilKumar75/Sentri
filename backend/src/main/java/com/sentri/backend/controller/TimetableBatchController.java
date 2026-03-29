@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -40,6 +42,16 @@ public class TimetableBatchController {
     @PostMapping
     public ResponseEntity<TimetableBatchDetailResponse> create(@RequestBody(required = false) CreateTimetableBatchRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(timetableBatchService.createPlaceholderBatch(request));
+    }
+
+    @PostMapping(value = "/uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<TimetableBatchDetailResponse> createUpload(
+            @RequestPart("file") MultipartFile file,
+            @RequestPart(name = "sourceHint", required = false) String sourceHint,
+            @RequestPart(name = "sourceNotes", required = false) String sourceNotes
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(timetableBatchService.createUploadBatch(file, sourceHint, sourceNotes));
     }
 
     @GetMapping
