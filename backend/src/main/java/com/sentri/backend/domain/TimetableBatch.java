@@ -52,6 +52,7 @@ public class TimetableBatch {
     private String sourceImageName;
     private String sourceImageMimeType;
     private String sourceImageChecksum;
+    private String sourceImageStoragePath;
     private String sourceHint;
 
     @Enumerated(EnumType.STRING)
@@ -165,6 +166,14 @@ public class TimetableBatch {
 
     public void setSourceImageChecksum(String sourceImageChecksum) {
         this.sourceImageChecksum = sourceImageChecksum;
+    }
+
+    public String getSourceImageStoragePath() {
+        return sourceImageStoragePath;
+    }
+
+    public void setSourceImageStoragePath(String sourceImageStoragePath) {
+        this.sourceImageStoragePath = sourceImageStoragePath;
     }
 
     public String getSourceHint() {

@@ -11,8 +11,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -104,5 +107,31 @@ class TimetableBatchServiceTest {
         assertThat(saved.entries().get(0).subjectName()).isEqualTo("DM & SM");
         TimetableBatch persisted = timetableBatchRepository.findByIdWithEntries(created.id()).orElseThrow();
         assertThat(persisted.getEntries()).hasSize(1);
+    }
+
+    @Test
+    void createsUploadBatchAndPersistsStoredScreenshotMetadata() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "week-13.png",
+                "image/png",
+                "fake-image".getBytes()
+        );
+
+        TimetableBatchDetailResponse created = timetableBatchService.createUploadBatch(
+                file,
+                "outlook-screenshot",
+                "Uploaded from Home"
+        );
+
+        assertThat(created.id()).isNotNull();
+        assertThat(created.status()).isEqualTo("PLACEHOLDER");
+        assertThat(created.sourceImageName()).isEqualTo("week-13.png");
+        assertThat(created.sourceImageMimeType()).isEqualTo("image/png");
+        assertThat(created.sourceImageChecksum()).isNotBlank();
+
+        TimetableBatch persisted = timetableBatchRepository.findByIdWithEntries(created.id()).orElseThrow();
+        assertThat(persisted.getSourceImageStoragePath()).isNotBlank();
+        assertThat(Files.exists(Path.of(persisted.getSourceImageStoragePath()))).isTrue();
     }
 }

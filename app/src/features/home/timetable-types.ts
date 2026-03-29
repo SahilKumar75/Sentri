@@ -20,6 +20,9 @@ export type CalendarTag = {
 export type UploadSource = 'share' | 'mail' | 'photos';
 
 export type UploadMeta = {
+  batchId: number;
   source: UploadSource;
   timestamp: string;
+  imageName?: string;
+  status?: string;
 };

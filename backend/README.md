@@ -48,6 +48,16 @@ Returns service status.
 
 Creates a placeholder timetable batch from screenshot metadata.
 
+`POST /timetable-batches/uploads`
+
+Accepts `multipart/form-data` with:
+
+- `file`: timetable screenshot image
+- `sourceHint`: optional source tag such as `share`, `photos`, or `outlook-screenshot`
+- `sourceNotes`: optional note about where the upload came from
+
+The backend stores the screenshot locally and creates a placeholder batch ready for OCR parsing.
+
 `GET /timetable-batches`
 
 Lists all timetable batches.

@@ -10,3 +10,8 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+
+sentri:
+  timetable:
+    upload:
+      storage-dir: ${java.io.tmpdir}/sentri-test-uploads

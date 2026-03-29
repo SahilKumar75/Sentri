@@ -17,6 +17,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Comparator;
 import java.util.List;
@@ -25,9 +26,14 @@ import java.util.List;
 public class TimetableBatchServiceImpl implements TimetableBatchService {
 
     private final TimetableBatchRepository timetableBatchRepository;
+    private final TimetableUploadStorageService timetableUploadStorageService;
 
-    public TimetableBatchServiceImpl(TimetableBatchRepository timetableBatchRepository) {
+    public TimetableBatchServiceImpl(
+            TimetableBatchRepository timetableBatchRepository,
+            TimetableUploadStorageService timetableUploadStorageService
+    ) {
         this.timetableBatchRepository = timetableBatchRepository;
+        this.timetableUploadStorageService = timetableUploadStorageService;
     }
 
     @Override
@@ -37,6 +43,23 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
         TimetableBatch batch = new TimetableBatch();
         batch.setStatus(TimetableBatchStatus.PLACEHOLDER);
         applyMetadata(batch, request == null ? null : request.metadata());
+        TimetableBatch saved = timetableBatchRepository.saveAndFlush(batch);
+        return toDetailResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = {"timetableBatchSummaries", "timetableBatchDetails"}, allEntries = true)
+    public TimetableBatchDetailResponse createUploadBatch(MultipartFile file, String sourceHint, String sourceNotes) {
+        StoredTimetableUpload storedUpload = timetableUploadStorageService.store(file);
+        TimetableBatch batch = new TimetableBatch();
+        batch.setStatus(TimetableBatchStatus.PLACEHOLDER);
+        batch.setSourceImageName(storedUpload.originalFilename());
+        batch.setSourceImageMimeType(storedUpload.mimeType());
+        batch.setSourceImageChecksum(storedUpload.checksum());
+        batch.setSourceImageStoragePath(storedUpload.storagePath());
+        batch.setSourceHint(sourceHint);
+        batch.setSourceNotes(sourceNotes);
         TimetableBatch saved = timetableBatchRepository.saveAndFlush(batch);
         return toDetailResponse(saved);
     }
