@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import { calendarTags } from '../features/home/timetable-fixtures';
@@ -18,6 +19,7 @@ import {
 } from '../features/home/timetable-intelligence';
 import type { CalendarTag, ClassEntry, UploadMeta, UploadSource, ViewMode } from '../features/home/timetable-types';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
+import { uploadTimetableScreenshot } from '../lib/timetable-api';
 import { usePersistedState } from '../lib/use-persisted-state';
 
 type HomeScreenProps = {
@@ -30,9 +32,10 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
   const [viewMode, setViewMode] = useState<ViewMode>('today');
   const [focusedDate, setFocusedDate] = useState(() => new Date());
   const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
-  const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'updated'>('idle');
+  const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'updated' | 'error'>('idle');
   const [uploadSheetOpen, setUploadSheetOpen] = useState(false);
   const [uploadSource, setUploadSource] = useState<UploadSource>('share');
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const { value: lastUploadMeta, setValue: setLastUploadMeta } = usePersistedState<UploadMeta | null>(
     PERSISTENT_KEYS.homeUploadMeta,
     null
@@ -51,13 +54,65 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
     : `${formatWeekdayShort(focusedDate)}, ${focusedDate.getDate()} ${formatMonthShort(focusedDate)}`;
 
   useEffect(() => {
-    if (uploadState !== 'updated') {
+    if (uploadState !== 'updated' && uploadState !== 'error') {
       return;
     }
 
     const timeout = setTimeout(() => setUploadState('idle'), 2200);
     return () => clearTimeout(timeout);
   }, [uploadState]);
+
+  async function handleUploadConfirm() {
+    setUploadState('uploading');
+    setUploadMessage(null);
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setUploadState('error');
+      setUploadMessage('Allow Photos access to upload the new timetable screenshot.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (result.canceled || !result.assets[0]) {
+      setUploadState('idle');
+      return;
+    }
+
+    const asset = result.assets[0];
+    const name = asset.fileName ?? `timetable-${Date.now()}.jpg`;
+    const mimeType = asset.mimeType ?? 'image/jpeg';
+    const sourceLabel = uploadSource === 'mail' ? 'outlook-screenshot' : uploadSource;
+    const uploadResult = await uploadTimetableScreenshot({
+      uri: asset.uri,
+      name,
+      mimeType,
+      sourceHint: sourceLabel,
+      sourceNotes: `Uploaded from ${uploadSource} on Home`,
+    });
+
+    if (!uploadResult.ok) {
+      setUploadState('error');
+      setUploadMessage(uploadResult.message);
+      return;
+    }
+
+    setLastUploadMeta({
+      batchId: uploadResult.batchId,
+      source: uploadSource,
+      timestamp: uploadResult.createdAt ?? new Date().toISOString(),
+      imageName: uploadResult.sourceImageName,
+      status: uploadResult.status,
+    });
+    setUploadSheetOpen(false);
+    setUploadState('updated');
+    setUploadMessage(uploadResult.sourceImageName ? `${uploadResult.sourceImageName} uploaded.` : 'Upload complete.');
+  }
 
   return (
     <ScrollView
@@ -72,11 +127,21 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
           <Text style={styles.topDate}>{formatLongDate(focusedDate)}</Text>
         </View>
         <Pressable
-          style={[styles.topUploadButton, uploadState === 'updated' && styles.topUploadButtonDone]}
+          style={[
+            styles.topUploadButton,
+            uploadState === 'updated' && styles.topUploadButtonDone,
+            uploadState === 'error' && styles.topUploadButtonError,
+          ]}
           onPress={() => setUploadSheetOpen(true)}
         >
           <Text style={styles.topUploadButtonText}>
-            {uploadState === 'uploading' ? 'Uploading' : uploadState === 'updated' ? 'Updated' : 'Upload'}
+            {uploadState === 'uploading'
+              ? 'Uploading'
+              : uploadState === 'updated'
+                ? 'Updated'
+                : uploadState === 'error'
+                  ? 'Retry'
+                  : 'Upload'}
           </Text>
         </Pressable>
       </View>
@@ -139,14 +204,32 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
           <Text style={styles.refreshBannerBody}>{refreshInsight.body}</Text>
         </View>
         <Pressable
-          style={[styles.refreshBannerButton, uploadState === 'updated' && styles.refreshBannerButtonDone]}
+          style={[
+            styles.refreshBannerButton,
+            uploadState === 'updated' && styles.refreshBannerButtonDone,
+            uploadState === 'error' && styles.refreshBannerButtonError,
+          ]}
           onPress={() => setUploadSheetOpen(true)}
         >
           <Text style={styles.refreshBannerButtonText}>
-            {uploadState === 'uploading' ? 'Uploading' : uploadState === 'updated' ? 'Refreshed' : 'Upload'}
+            {uploadState === 'uploading'
+              ? 'Uploading'
+              : uploadState === 'updated'
+                ? 'Refreshed'
+                : uploadState === 'error'
+                  ? 'Retry upload'
+                  : 'Upload'}
           </Text>
         </Pressable>
       </View>
+
+      {uploadMessage ? (
+        <View style={[styles.uploadNotice, uploadState === 'error' && styles.uploadNoticeError]}>
+          <Text style={[styles.uploadNoticeText, uploadState === 'error' && styles.uploadNoticeTextError]}>
+            {uploadMessage}
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.segmentedControl}>
         {(['today', 'week', 'month'] as ViewMode[]).map((mode) => (
@@ -380,13 +463,8 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
         uploadSource={uploadSource}
         onSelectSource={setUploadSource}
         onClose={() => setUploadSheetOpen(false)}
-        onConfirm={() => {
-          setUploadState('uploading');
-          const nextMeta = { source: uploadSource, timestamp: new Date().toISOString() };
-          setLastUploadMeta(nextMeta);
-          setUploadSheetOpen(false);
-          setTimeout(() => setUploadState('updated'), 260);
-        }}
+        uploadState={uploadState}
+        onConfirm={handleUploadConfirm}
       />
     </ScrollView>
   );
@@ -397,14 +475,18 @@ function UploadSheet({
   uploadSource,
   onSelectSource,
   onClose,
+  uploadState,
   onConfirm,
 }: {
   visible: boolean;
   uploadSource: 'share' | 'mail' | 'photos';
   onSelectSource: (source: 'share' | 'mail' | 'photos') => void;
   onClose: () => void;
-  onConfirm: () => void;
+  uploadState: 'idle' | 'uploading' | 'updated' | 'error';
+  onConfirm: () => void | Promise<void>;
 }) {
+  const uploading = uploadState === 'uploading';
+
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
@@ -413,7 +495,8 @@ function UploadSheet({
           <Text style={styles.modalKicker}>Weekly refresh</Text>
           <Text style={styles.modalTitle}>How are you adding the new timetable?</Text>
           <Text style={styles.modalBody}>
-            Pick the source you usually use. The screenshot parser can plug into this step next.
+            Pick the source you usually use, then choose the screenshot from Photos. The backend will create
+            a timetable upload batch from that image.
           </Text>
 
           <View style={styles.modalOptions}>
@@ -427,6 +510,7 @@ function UploadSheet({
                 <Pressable
                   key={value}
                   style={[styles.modalOption, active && styles.modalOptionActive]}
+                  disabled={uploading}
                   onPress={() => onSelectSource(value as 'share' | 'mail' | 'photos')}
                 >
                   <Text style={[styles.modalOptionText, active && styles.modalOptionTextActive]}>{label}</Text>
@@ -436,11 +520,11 @@ function UploadSheet({
           </View>
 
           <View style={styles.modalActions}>
-            <Pressable style={styles.modalActionGhost} onPress={onClose}>
+            <Pressable style={styles.modalActionGhost} onPress={onClose} disabled={uploading}>
               <Text style={styles.modalActionGhostText}>Cancel</Text>
             </Pressable>
-            <Pressable style={styles.modalActionFilled} onPress={onConfirm}>
-              <Text style={styles.modalActionFilledText}>Stage upload</Text>
+            <Pressable style={styles.modalActionFilled} onPress={() => void onConfirm()} disabled={uploading}>
+              {uploading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.modalActionFilledText}>Choose screenshot</Text>}
             </Pressable>
           </View>
         </View>
@@ -495,10 +579,31 @@ const styles = StyleSheet.create({
   topUploadButtonDone: {
     backgroundColor: theme.colors.accent,
   },
+  topUploadButtonError: {
+    backgroundColor: '#FCE8E6',
+  },
   topUploadButtonText: {
     color: theme.colors.accentStrong,
     fontSize: 13,
     fontWeight: '800',
+  },
+  uploadNotice: {
+    marginTop: 14,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  uploadNoticeError: {
+    backgroundColor: '#FCE8E6',
+  },
+  uploadNoticeText: {
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  uploadNoticeTextError: {
+    color: '#C5221F',
   },
   modalBackdrop: {
     flex: 1,
@@ -730,6 +835,9 @@ const styles = StyleSheet.create({
   },
   refreshBannerButtonDone: {
     backgroundColor: theme.colors.accent,
+  },
+  refreshBannerButtonError: {
+    backgroundColor: '#FCE8E6',
   },
   refreshBannerButtonText: {
     color: theme.colors.accentStrong,

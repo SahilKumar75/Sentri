@@ -125,14 +125,16 @@ export function getScheduleInsight(entries: ClassEntry[], focusedDate: Date, now
 
 export function getRefreshInsight(
   today: Date,
-  uploadState: 'idle' | 'uploading' | 'updated',
+  uploadState: 'idle' | 'uploading' | 'updated' | 'error',
   lastUploadMeta: UploadMeta | null
 ): RefreshInsight {
   if (uploadState === 'updated') {
     return {
       state: 'updated',
       title: 'Timetable updated',
-      body: 'Your latest timetable upload is staged and ready for parsing.',
+      body: lastUploadMeta?.imageName
+        ? `${lastUploadMeta.imageName} is uploaded and ready for parsing.`
+        : 'Your latest timetable upload is staged and ready for parsing.',
       urgency: 'low',
     };
   }
@@ -144,7 +146,7 @@ export function getRefreshInsight(
       title: refreshDue ? 'Week ready for a fresh upload' : 'Week ready',
       body: `Last staged from ${formatUploadSource(lastUploadMeta.source)} on ${formatShortDateTime(
         lastUploadMeta.timestamp
-      )}.`,
+      )}${lastUploadMeta.imageName ? ` • ${lastUploadMeta.imageName}` : ''}.`,
       urgency: refreshDue ? 'high' : 'low',
     };
   }
