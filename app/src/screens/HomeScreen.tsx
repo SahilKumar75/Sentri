@@ -58,9 +58,22 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
       return;
     }
 
-    const timeout = setTimeout(() => setUploadState('idle'), 2200);
+    const timeout = setTimeout(() => {
+      setUploadState('idle');
+      if (uploadState === 'error') {
+        setUploadMessage(null);
+      }
+    }, 2200);
     return () => clearTimeout(timeout);
   }, [uploadState]);
+
+  function openUploadSheet() {
+    if (uploadState === 'error') {
+      setUploadState('idle');
+      setUploadMessage(null);
+    }
+    setUploadSheetOpen(true);
+  }
 
   async function handleUploadConfirm() {
     setUploadState('uploading');
@@ -132,7 +145,8 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
             uploadState === 'updated' && styles.topUploadButtonDone,
             uploadState === 'error' && styles.topUploadButtonError,
           ]}
-          onPress={() => setUploadSheetOpen(true)}
+          onPress={openUploadSheet}
+          disabled={uploadState === 'uploading'}
         >
           <Text style={styles.topUploadButtonText}>
             {uploadState === 'uploading'
@@ -209,7 +223,8 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
             uploadState === 'updated' && styles.refreshBannerButtonDone,
             uploadState === 'error' && styles.refreshBannerButtonError,
           ]}
-          onPress={() => setUploadSheetOpen(true)}
+          onPress={openUploadSheet}
+          disabled={uploadState === 'uploading'}
         >
           <Text style={styles.refreshBannerButtonText}>
             {uploadState === 'uploading'
@@ -498,6 +513,14 @@ function UploadSheet({
             Pick the source you usually use, then choose the screenshot from Photos. The backend will create
             a timetable upload batch from that image.
           </Text>
+          <Text style={styles.modalHint}>
+            Selected source:{' '}
+            {uploadSource === 'mail'
+              ? 'Outlook screenshot'
+              : uploadSource === 'photos'
+                ? 'Photos'
+                : 'Share into Sentri'}
+          </Text>
 
           <View style={styles.modalOptions}>
             {[
@@ -639,6 +662,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textSoft,
     fontSize: 14,
     lineHeight: 20,
+  },
+  modalHint: {
+    marginTop: 12,
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '600',
   },
   modalOptions: {
     marginTop: 16,
