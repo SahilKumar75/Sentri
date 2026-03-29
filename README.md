@@ -71,4 +71,5 @@ python3 -m unittest discover -s tests
 - The OCR worker now emits a payload shape that the Spring Boot backend can consume.
 - The frontend is currently a polished shell for the main tabs and shared design system.
 - The home flow now reflects the AIT reality that a fresh timetable arrives every Saturday for the next week.
-- Timetable screenshot upload and full backend-worker wiring is the next backend integration step.
+- The Home upload action now opens the native image picker and creates a real timetable upload batch through Spring Boot.
+- Full parser wiring still needs the backend worker step that turns the stored screenshot into parsed timetable entries.
