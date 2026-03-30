@@ -46,6 +46,8 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
   const [stagedCapture, setStagedCapture] = useState<CaptureOption | null>(null);
   const deferredQuery = useDeferredValue(query);
+  const normalizedQuery = query.trim();
+  const searching = normalizedQuery.length > 0 && deferredQuery.trim() !== normalizedQuery;
 
   const rankedMatches = useMemo(() => rankMyspaceItems(items, deferredQuery, 'All'), [deferredQuery, items]);
   const filteredItems = rankedMatches.map((match) => match.item);
@@ -56,7 +58,7 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
   const pinnedItems = filteredItems.filter((item) => item.pinned);
   const otherItems = filteredItems.filter((item) => !item.pinned);
   const columns = splitIntoColumns(otherItems);
-  const queryActive = query.trim().length > 0;
+  const queryActive = normalizedQuery.length > 0;
   const emptySearch = queryActive && filteredItems.length === 0;
 
   return (
@@ -105,6 +107,20 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
             <MetaPill label="Subjects" />
           </View>
         </View>
+
+        {searching ? (
+          <View style={styles.searchStateCard}>
+            <Ionicons name="time-outline" size={16} color={theme.colors.accentStrong} />
+            <Text style={styles.searchStateText}>Searching OCR, titles, dates, and subject memory…</Text>
+          </View>
+        ) : queryActive ? (
+          <View style={styles.searchStateCard}>
+            <Ionicons name="sparkles-outline" size={16} color={theme.colors.accentStrong} />
+            <Text style={styles.searchStateText}>
+              {filteredItems.length} result{filteredItems.length === 1 ? '' : 's'} for "{normalizedQuery}"
+            </Text>
+          </View>
+        ) : null}
 
         {stagedCapture ? (
           <View style={styles.capturePreviewCard}>
@@ -155,8 +171,12 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
                 </ScrollView>
               ) : (
                 <EmptySection
-                  title="No pinned items yet"
-                  body="Pin your most useful notes, screenshots, and links here so they stay one tap away."
+                  title={queryActive ? 'No pinned match yet' : 'No pinned items yet'}
+                  body={
+                    queryActive
+                      ? 'This query matched other saved items, but nothing pinned for now.'
+                      : 'Pin your most useful notes, screenshots, and links here so they stay one tap away.'
+                  }
                 />
               )}
             </View>
@@ -194,10 +214,12 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
                 </View>
               ) : (
                 <EmptySection
-                  title={queryActive ? 'Nothing in Others right now' : 'Start saving to build your space'}
+                  title={queryActive ? 'No other results for this search' : 'Start saving to build your space'}
                   body={
                     queryActive
-                      ? 'Results might already be in Pinned, or the item may only match through OCR and tags.'
+                      ? pinnedItems.length
+                        ? 'Pinned still has matches. Try another keyword, OCR phrase, upload date, or source.'
+                        : 'Try the subject name, a board keyword, a date label, or an OCR phrase from the image.'
                       : 'Use Add to drop in a screenshot, link, note, file, or board photo and Sentri will organize it.'
                   }
                   actionLabel="Add"
@@ -574,6 +596,25 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.line,
     padding: 16,
     ...theme.shadow.soft,
+  },
+  searchStateCard: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 18,
+    backgroundColor: theme.colors.accentSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 115, 232, 0.12)',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  searchStateText: {
+    flex: 1,
+    color: theme.colors.accentStrong,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   searchShell: {
     flexDirection: 'row',
