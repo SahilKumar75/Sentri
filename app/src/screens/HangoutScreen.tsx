@@ -58,6 +58,9 @@ type PersistedHangoutState = {
   activeRoom: HangoutRoom | null;
 };
 
+type StatusTone = 'neutral' | 'info' | 'success' | 'error';
+type LoadingAction = 'idle' | 'refreshing' | 'creating' | 'joining' | 'opening' | 'sharing';
+
 const friends: Friend[] = [
   { name: 'Ananya', status: 'online', note: 'Ready for revision' },
   { name: 'Isha', status: 'online', note: 'Can join in 2 min' },
@@ -90,7 +93,8 @@ export default function HangoutScreen({
   const [roomType, setRoomType] = useState('Study');
   const [joinInput, setJoinInput] = useState('');
   const [statusMessage, setStatusMessage] = useState('Create a room or paste a room link to join one.');
-  const [loading, setLoading] = useState(false);
+  const [statusTone, setStatusTone] = useState<StatusTone>('neutral');
+  const [loadingAction, setLoadingAction] = useState<LoadingAction>('idle');
 
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [meetingPanel, setMeetingPanel] = useState<MeetingPanel>('none');
@@ -206,11 +210,20 @@ export default function HangoutScreen({
   }, [activeRoom, hydrated, joinInput, roomName, roomType, setPersistedState]);
 
   async function refreshRooms() {
+    setLoadingAction('refreshing');
     const result = await listRooms();
+    setLoadingAction('idle');
     if (result.ok) {
       setRooms(result.rooms);
+      setStatusTone('info');
+      setStatusMessage(
+        result.rooms.length
+          ? `${result.rooms.length} live room${result.rooms.length === 1 ? '' : 's'} ready to browse.`
+          : 'No live rooms yet. Create the first one or join from a Sentri link.'
+      );
       return;
     }
+    setStatusTone('error');
     setStatusMessage(result.message);
   }
 
@@ -233,18 +246,20 @@ export default function HangoutScreen({
 
   async function handleCreateRoom() {
     if (!sessionToken) {
+      setStatusTone('error');
       setStatusMessage('Login first so Sentri can create a room under your account.');
       return;
     }
 
-    setLoading(true);
+    setLoadingAction('creating');
     const result = await createRoom(sessionToken, {
       roomName: roomName.trim() || 'Sentri Room',
       roomType,
     });
-    setLoading(false);
+    setLoadingAction('idle');
 
     if (!result.ok) {
+      setStatusTone('error');
       setStatusMessage(result.message);
       return;
     }
@@ -252,6 +267,7 @@ export default function HangoutScreen({
     setActiveRoom(result.room);
     setJoinInput(result.room.joinLink);
     seedMeetingRoom(result.room);
+    setStatusTone('success');
     setStatusMessage(`Room ${result.room.roomCode} is live and ready to share.`);
     await refreshRooms();
   }
@@ -259,6 +275,7 @@ export default function HangoutScreen({
   async function handleJoinByCode(rawValue?: string, fromIncomingLink = false) {
     const code = extractRoomCode(rawValue ?? joinInput);
     if (!code) {
+      setStatusTone('error');
       setStatusMessage('Paste a Sentri room link or room code first.');
       if (fromIncomingLink) {
         onConsumeIncomingRoomCode();
@@ -266,11 +283,12 @@ export default function HangoutScreen({
       return;
     }
 
-    setLoading(true);
+    setLoadingAction('joining');
     const result = await joinRoom(code, userName);
-    setLoading(false);
+    setLoadingAction('idle');
 
     if (!result.ok) {
+      setStatusTone('error');
       setStatusMessage(result.message);
       if (fromIncomingLink) {
         onConsumeIncomingRoomCode();
@@ -281,6 +299,7 @@ export default function HangoutScreen({
     setActiveRoom(result.room);
     setJoinInput(result.room.roomCode);
     seedMeetingRoom(result.room);
+    setStatusTone('success');
     setStatusMessage(`Joined ${result.room.roomName}.`);
     await refreshRooms();
     if (fromIncomingLink) {
@@ -289,11 +308,12 @@ export default function HangoutScreen({
   }
 
   async function handleOpenRoom(roomCode: string) {
-    setLoading(true);
+    setLoadingAction('opening');
     const result = await getRoom(roomCode);
-    setLoading(false);
+    setLoadingAction('idle');
 
     if (!result.ok) {
+      setStatusTone('error');
       setStatusMessage(result.message);
       return;
     }
@@ -301,11 +321,13 @@ export default function HangoutScreen({
     setActiveRoom(result.room);
     setJoinInput(result.room.roomCode);
     seedMeetingRoom(result.room);
+    setStatusTone('info');
     setStatusMessage(`${result.room.roomName} is ready.`);
   }
 
   async function handleShareRoom(friendName?: string) {
     if (!activeRoom) {
+      setStatusTone('error');
       setStatusMessage('Create or join a room before sharing it.');
       return;
     }
@@ -314,15 +336,19 @@ export default function HangoutScreen({
       ? `${activeRoomShareText}\nInviting ${friendName} from Sentri.`
       : activeRoomShareText;
 
+    setLoadingAction('sharing');
     await Share.share({
       title: activeRoom.roomName,
       message,
     });
+    setLoadingAction('idle');
+    setStatusTone('success');
     setStatusMessage(friendName ? `Share sheet opened for ${friendName}.` : 'Share sheet opened.');
   }
 
   function handleEnterMeeting() {
     if (!activeRoom) {
+      setStatusTone('error');
       setStatusMessage('Open a room first.');
       return;
     }
@@ -330,6 +356,7 @@ export default function HangoutScreen({
       seedMeetingRoom(activeRoom);
     }
     setMeetingOpen(true);
+    setStatusTone('info');
     setStatusMessage(`Inside ${activeRoom.roomName}.`);
   }
 
@@ -339,6 +366,7 @@ export default function HangoutScreen({
     setShareScreenOn(false);
     setRecordingOn(false);
     setFocusedParticipantId(meetingParticipants[1]?.id ?? meetingParticipants[0]?.id ?? null);
+    setStatusTone('info');
     setStatusMessage(activeRoom ? `Left ${activeRoom.roomName}. Room is still active.` : 'Left the meeting.');
   }
 
@@ -497,11 +525,13 @@ export default function HangoutScreen({
           </View>
           <View style={styles.actionRow}>
             <Pressable
-              style={[styles.actionButton, styles.actionButtonFilled, loading && styles.disabledButton]}
+              style={[styles.actionButton, styles.actionButtonFilled, loadingAction !== 'idle' && styles.disabledButton]}
               onPress={() => void handleCreateRoom()}
-              disabled={loading}
+              disabled={loadingAction !== 'idle'}
             >
-              <Text style={styles.actionFilledText}>{loading ? 'Please wait' : 'Create room'}</Text>
+              <Text style={styles.actionFilledText}>
+                {loadingAction === 'creating' ? 'Creating room' : 'Create room'}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -518,15 +548,43 @@ export default function HangoutScreen({
             autoCorrect={false}
           />
           <Pressable
-            style={[styles.actionButton, styles.actionButtonGhost, loading && styles.disabledButton]}
+            style={[styles.actionButton, styles.actionButtonGhost, loadingAction !== 'idle' && styles.disabledButton]}
             onPress={() => void handleJoinByCode()}
-            disabled={loading}
+            disabled={loadingAction !== 'idle'}
           >
-            <Text style={styles.actionGhostText}>{loading ? 'Please wait' : 'Join room'}</Text>
+            <Text style={styles.actionGhostText}>
+              {loadingAction === 'joining' ? 'Joining room' : 'Join room'}
+            </Text>
           </Pressable>
         </View>
 
-        <View style={styles.statusBanner}>
+        <View
+          style={[
+            styles.statusBanner,
+            statusTone === 'success' && styles.statusBannerSuccess,
+            statusTone === 'error' && styles.statusBannerError,
+            statusTone === 'info' && styles.statusBannerInfo,
+          ]}
+        >
+          <Ionicons
+            name={
+              statusTone === 'success'
+                ? 'checkmark-circle'
+                : statusTone === 'error'
+                  ? 'alert-circle'
+                  : statusTone === 'info'
+                    ? 'information-circle'
+                    : 'radio-button-on'
+            }
+            size={16}
+            color={
+              statusTone === 'error'
+                ? '#B3261E'
+                : statusTone === 'success'
+                  ? theme.colors.accentStrong
+                  : theme.colors.text
+            }
+          />
           <Text style={styles.statusBannerText}>{statusMessage}</Text>
         </View>
 
@@ -585,9 +643,19 @@ export default function HangoutScreen({
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Live rooms</Text>
             <Pressable onPress={() => void refreshRooms()}>
-              <Text style={styles.sectionMeta}>Refresh</Text>
+              <Text style={styles.sectionMeta}>
+                {loadingAction === 'refreshing' ? 'Refreshing…' : 'Refresh'}
+              </Text>
             </Pressable>
           </View>
+          {loadingAction === 'refreshing' && rooms.length === 0 ? (
+            <View style={styles.emptyRooms}>
+              <Text style={styles.emptyRoomsTitle}>Refreshing room list</Text>
+              <Text style={styles.emptyRoomsBody}>
+                Sentri is checking for live study rooms and shared hangouts right now.
+              </Text>
+            </View>
+          ) : null}
           {rooms.map((room) => (
             <Pressable key={room.roomCode} style={styles.roomCard} onPress={() => void handleOpenRoom(room.roomCode)}>
               <View style={styles.roomBadge}>
@@ -1344,13 +1412,29 @@ const styles = StyleSheet.create({
     marginTop: 14,
     borderRadius: 18,
     backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  statusBannerSuccess: {
+    backgroundColor: theme.colors.accentSoft,
+  },
+  statusBannerError: {
+    backgroundColor: '#FDEDED',
+    borderColor: '#F5C2C0',
+  },
+  statusBannerInfo: {
+    backgroundColor: '#EEF3FD',
   },
   statusBannerText: {
     color: theme.colors.text,
     fontSize: 13,
     fontWeight: '700',
+    flex: 1,
   },
   linkCard: {
     marginTop: 16,
