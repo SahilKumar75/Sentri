@@ -6,10 +6,13 @@ import { CapsuleTabBar, DrawerSheet } from './src/components/sentri-ui';
 import { theme, type TabKey } from './src/design/tokens';
 import {
   clearStoredSessionToken,
+  clearStoredSessionUser,
   getStoredActiveTab,
   getStoredSessionToken,
+  getStoredSessionUser,
   storeActiveTab,
   storeSessionToken,
+  storeSessionUser,
 } from './src/lib/auth-storage';
 import * as authApi from './src/lib/api';
 import { useMountedTabs } from './src/lib/use-mounted-tabs';
@@ -98,14 +101,25 @@ export default function App() {
       return;
     }
 
+    const storedUser = await getStoredSessionUser();
+    if (storedUser) {
+      setSessionToken(storedToken);
+      setAuthenticatedUser(storedUser);
+      setAuthStatusMessage('Restoring your last session.');
+      setAuthInitializing(false);
+    }
+
     const result = await authApi.restoreSession(storedToken);
     if (result.ok && result.user) {
       setSessionToken(storedToken);
       setAuthenticatedUser(result.user);
+      await storeSessionUser(result.user);
       setAuthStatusMessage(result.message);
     } else {
       await clearStoredSessionToken();
+      await clearStoredSessionUser();
       setSessionToken(null);
+      setAuthenticatedUser(null);
       setAuthMode('login');
       setAuthStatusMessage(result.message);
     }
@@ -147,6 +161,7 @@ export default function App() {
 
     if (result.sessionToken && result.user) {
       await storeSessionToken(result.sessionToken);
+      await storeSessionUser(result.user);
       setSessionToken(result.sessionToken);
       setAuthenticatedUser(result.user);
       setPendingSignup(null);
@@ -168,6 +183,7 @@ export default function App() {
 
     if (result.ok && result.sessionToken && result.user) {
       await storeSessionToken(result.sessionToken);
+      await storeSessionUser(result.user);
       setSessionToken(result.sessionToken);
       setAuthenticatedUser(result.user);
       setPendingSignup(null);
@@ -183,6 +199,7 @@ export default function App() {
 
     if (result.ok && result.sessionToken && result.user) {
       await storeSessionToken(result.sessionToken);
+      await storeSessionUser(result.user);
       setSessionToken(result.sessionToken);
       setAuthenticatedUser(result.user);
       setPendingSignup(null);
@@ -197,6 +214,7 @@ export default function App() {
     }
 
     await clearStoredSessionToken();
+    await clearStoredSessionUser();
     setSessionToken(null);
     setAuthenticatedUser(null);
     setPendingSignup(null);
