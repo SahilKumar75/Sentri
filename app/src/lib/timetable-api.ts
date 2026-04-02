@@ -13,6 +13,22 @@ export type TimetableUploadResult =
       message: string;
     };
 
+export type TimetableBatchStatusResult =
+  | {
+      ok: true;
+      batchId: number;
+      sourceImageName?: string;
+      status: string;
+      createdAt?: string;
+      updatedAt?: string;
+      extractionConfidence?: number;
+      entryCount: number;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
 export async function uploadTimetableScreenshot(payload: {
   uri: string;
   name: string;
@@ -53,6 +69,37 @@ export async function uploadTimetableScreenshot(payload: {
       sourceImageName: data.sourceImageName,
       status: data.status,
       createdAt: data.createdAt,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: getNetworkMessage(error),
+    };
+  }
+}
+
+export async function getTimetableBatchStatus(batchId: number): Promise<TimetableBatchStatusResult> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/timetable-batches/${batchId}`);
+    const rawText = await response.text();
+    const data = rawText ? JSON.parse(rawText) : {};
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        message: extractErrorMessage(data, 'Could not load the latest parser status.'),
+      };
+    }
+
+    return {
+      ok: true,
+      batchId: data.id,
+      sourceImageName: data.sourceImageName,
+      status: data.status,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+      extractionConfidence: data.extractionConfidence ?? undefined,
+      entryCount: Array.isArray(data.entries) ? data.entries.length : 0,
     };
   } catch (error) {
     return {

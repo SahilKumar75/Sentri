@@ -8,6 +8,7 @@ import {
   buildMonthRows,
   buildWeekDates,
   dayKeyForDate,
+  formatParserBadge,
   formatLongDate,
   formatMonthShort,
   formatMonthYear,
@@ -19,7 +20,7 @@ import {
 } from '../features/home/timetable-intelligence';
 import type { CalendarTag, ClassEntry, UploadMeta, UploadSource, ViewMode } from '../features/home/timetable-types';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
-import { uploadTimetableScreenshot } from '../lib/timetable-api';
+import { getTimetableBatchStatus, uploadTimetableScreenshot } from '../lib/timetable-api';
 import { usePersistedState } from '../lib/use-persisted-state';
 
 type HomeScreenProps = {
@@ -66,6 +67,47 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
     }, 2200);
     return () => clearTimeout(timeout);
   }, [uploadState]);
+
+  useEffect(() => {
+    if (!lastUploadMeta?.batchId) {
+      return;
+    }
+
+    let active = true;
+
+    void (async () => {
+      const statusResult = await getTimetableBatchStatus(lastUploadMeta.batchId);
+      if (!active || !statusResult.ok) {
+        return;
+      }
+
+      const nextMeta: UploadMeta = {
+        ...lastUploadMeta,
+        timestamp: statusResult.updatedAt ?? statusResult.createdAt ?? lastUploadMeta.timestamp,
+        imageName: statusResult.sourceImageName ?? lastUploadMeta.imageName,
+        status: statusResult.status,
+        updatedAt: statusResult.updatedAt,
+        extractionConfidence: statusResult.extractionConfidence,
+        entryCount: statusResult.entryCount,
+      };
+
+      const changed =
+        nextMeta.timestamp !== lastUploadMeta.timestamp ||
+        nextMeta.imageName !== lastUploadMeta.imageName ||
+        nextMeta.status !== lastUploadMeta.status ||
+        nextMeta.updatedAt !== lastUploadMeta.updatedAt ||
+        nextMeta.extractionConfidence !== lastUploadMeta.extractionConfidence ||
+        nextMeta.entryCount !== lastUploadMeta.entryCount;
+
+      if (changed) {
+        setLastUploadMeta(nextMeta);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [lastUploadMeta, setLastUploadMeta]);
 
   function openUploadSheet() {
     if (uploadState === 'error') {
@@ -121,6 +163,8 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
       timestamp: uploadResult.createdAt ?? new Date().toISOString(),
       imageName: uploadResult.sourceImageName,
       status: uploadResult.status,
+      updatedAt: uploadResult.createdAt,
+      entryCount: 0,
     });
     setUploadSheetOpen(false);
     setUploadState('updated');
@@ -214,7 +258,14 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
 
       <View style={styles.refreshBanner}>
         <View style={styles.refreshBannerCopy}>
-          <Text style={styles.refreshBannerTitle}>{refreshInsight.title}</Text>
+          <View style={styles.refreshBannerTitleRow}>
+            <Text style={styles.refreshBannerTitle}>{refreshInsight.title}</Text>
+            {lastUploadMeta?.status ? (
+              <View style={styles.parserBadge}>
+                <Text style={styles.parserBadgeText}>{formatParserBadge(lastUploadMeta.status)}</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.refreshBannerBody}>{refreshInsight.body}</Text>
         </View>
         <Pressable
@@ -846,6 +897,12 @@ const styles = StyleSheet.create({
     gap: 4,
     flex: 1,
   },
+  refreshBannerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   refreshBannerTitle: {
     color: theme.colors.text,
     fontSize: 15,
@@ -855,6 +912,21 @@ const styles = StyleSheet.create({
     color: theme.colors.textSoft,
     fontSize: 13,
     lineHeight: 18,
+  },
+  parserBadge: {
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  parserBadgeText: {
+    color: theme.colors.accentStrong,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   refreshBannerButton: {
     borderRadius: theme.radius.pill,
