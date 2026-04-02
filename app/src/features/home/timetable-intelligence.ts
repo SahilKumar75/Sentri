@@ -141,10 +141,11 @@ export function getRefreshInsight(
 
   const refreshDue = today >= getRefreshSaturday(today);
   if (lastUploadMeta) {
+    const parserStatus = formatParserStatus(lastUploadMeta);
     return {
       state: refreshDue ? 'due' : 'fresh',
-      title: refreshDue ? 'Week ready for a fresh upload' : 'Week ready',
-      body: `Last staged from ${formatUploadSource(lastUploadMeta.source)} on ${formatShortDateTime(
+      title: parserStatus.title,
+      body: `${parserStatus.body} Last staged from ${formatUploadSource(lastUploadMeta.source)} on ${formatShortDateTime(
         lastUploadMeta.timestamp
       )}${lastUploadMeta.imageName ? ` • ${lastUploadMeta.imageName}` : ''}.`,
       urgency: refreshDue ? 'high' : 'low',
@@ -183,6 +184,44 @@ export function formatUploadSource(source: UploadSource) {
   if (source === 'mail') return 'Outlook screenshot';
   if (source === 'photos') return 'Photos';
   return 'Share into Sentri';
+}
+
+export function formatParserBadge(status?: string) {
+  if (status === 'PARSED') return 'Parsed';
+  if (status === 'VERIFIED') return 'Verified';
+  if (status === 'PLACEHOLDER') return 'Awaiting parser';
+  return 'No parser status';
+}
+
+function formatParserStatus(lastUploadMeta: UploadMeta) {
+  if (lastUploadMeta.status === 'VERIFIED') {
+    return {
+      title: 'Timetable verified',
+      body:
+        lastUploadMeta.entryCount && lastUploadMeta.entryCount > 0
+          ? `${lastUploadMeta.entryCount} timetable items verified for this upload.`
+          : 'The latest timetable upload has been verified and is ready to use.',
+    };
+  }
+
+  if (lastUploadMeta.status === 'PARSED') {
+    const confidence =
+      typeof lastUploadMeta.extractionConfidence === 'number'
+        ? ` Parser confidence ${Math.round(lastUploadMeta.extractionConfidence * 100)}%.`
+        : '';
+    return {
+      title: 'Parser finished',
+      body:
+        lastUploadMeta.entryCount && lastUploadMeta.entryCount > 0
+          ? `${lastUploadMeta.entryCount} timetable items were parsed.${confidence}`
+          : `The latest timetable upload has been parsed.${confidence}`,
+    };
+  }
+
+  return {
+    title: 'Parser pending',
+    body: 'The latest screenshot is uploaded and waiting for OCR and timetable extraction.',
+  };
 }
 
 export function formatShortDateTime(value: string) {

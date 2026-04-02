@@ -25,4 +25,7 @@ export type UploadMeta = {
   timestamp: string;
   imageName?: string;
   status?: string;
+  updatedAt?: string;
+  extractionConfidence?: number;
+  entryCount?: number;
 };
