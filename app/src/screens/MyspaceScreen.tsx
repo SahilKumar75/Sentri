@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -15,6 +15,7 @@ import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import { buildCapturePreview } from '../features/myspace/capture-builder';
 import type { CaptureOption, SavedItem } from '../features/myspace/models';
+import { buildSearchSuggestions, normalizeSearchQuery, pushRecentSearch } from '../features/myspace/search-history';
 import { explainMatch, rankMyspaceItems, type RetrievalMatch } from '../features/myspace/retrieval-engine';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
 import { usePersistedState } from '../lib/use-persisted-state';
@@ -41,6 +42,10 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
     PERSISTENT_KEYS.myspaceItems,
     savedItems
   );
+  const { value: recentSearches, setValue: setRecentSearches } = usePersistedState<string[]>(
+    PERSISTENT_KEYS.myspaceRecentSearches,
+    []
+  );
   const [query, setQuery] = useState('');
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
@@ -60,6 +65,20 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
   const columns = splitIntoColumns(otherItems);
   const queryActive = normalizedQuery.length > 0;
   const emptySearch = queryActive && filteredItems.length === 0;
+  const suggestions = useMemo(() => buildSearchSuggestions(recentSearches, items), [items, recentSearches]);
+
+  useEffect(() => {
+    const normalized = normalizeSearchQuery(query);
+    if (!normalized) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setRecentSearches((current) => pushRecentSearch(current, normalized));
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [query, setRecentSearches]);
 
   return (
     <SafeAreaView style={styles.screen}>
