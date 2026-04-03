@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
+import { buildCapturePreview } from '../features/myspace/capture-builder';
 import type { CaptureOption, SavedItem } from '../features/myspace/models';
 import { explainMatch, rankMyspaceItems, type RetrievalMatch } from '../features/myspace/retrieval-engine';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
@@ -506,39 +507,6 @@ function splitIntoColumns(items: SavedItem[]) {
   });
 
   return [left, right];
-}
-
-function buildCapturePreview(option: CaptureOption): SavedItem {
-  const subjectMap: Record<string, string> = {
-    image: 'Notes',
-    link: 'Research',
-    note: 'Personal',
-    file: 'Placement',
-    screenshot: 'Class',
-  };
-
-  const accentMap: Record<string, SavedItem['accent']> = {
-    image: 'sand',
-    link: 'sky',
-    note: 'mint',
-    file: 'rose',
-    screenshot: 'ink',
-  };
-
-  return {
-    id: `draft-${option.id}`,
-    title: `${option.label} capture preview`,
-    body: `This ${option.label.toLowerCase()} will be indexed by OCR text, source, date, and subject.`,
-    kind: option.id as SavedItem['kind'],
-    subject: subjectMap[option.id] ?? 'Personal',
-    tags: [option.id, 'capture', 'indexed'],
-    source: option.hint,
-    dateLabel: 'Now',
-    accent: accentMap[option.id] ?? 'sand',
-    pinned: false,
-    featured: true,
-    ocrText: `${option.label} capture preview for search and retrieval.`,
-  };
 }
 
 function symbolToIcon(symbol: string): keyof typeof Ionicons.glyphMap {
