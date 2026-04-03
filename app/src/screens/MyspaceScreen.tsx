@@ -168,6 +168,20 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
             <Text style={styles.capturePreviewMeta}>
               Sentri will index this by OCR text, source, date, and subject so you can find it later.
             </Text>
+            {captureDraft ? (
+              <View style={styles.capturePreviewChips}>
+                <MetaChip label={captureDraft.subject || 'Subject'} />
+                <MetaChip label={captureDraft.source || 'Source'} />
+                {(captureDraft.tags || '')
+                  .split(',')
+                  .map((tag) => tag.trim())
+                  .filter(Boolean)
+                  .slice(0, 3)
+                  .map((tag) => (
+                    <MetaChip key={tag} label={tag} />
+                  ))}
+              </View>
+            ) : null}
             <View style={styles.capturePreviewActions}>
               <Pressable style={styles.previewActionGhost} onPress={() => setStagedCapture(null)}>
                 <Text style={styles.previewActionGhostText}>Clear</Text>
@@ -853,6 +867,12 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: 13,
     lineHeight: 20,
+  },
+  capturePreviewChips: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   capturePreviewActions: {
     marginTop: 14,
