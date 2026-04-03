@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
-import { buildCapturePreview } from '../features/myspace/capture-builder';
+import { buildCapturedItem, buildCapturePreview, createEmptyCaptureDraft, type CaptureDraft } from '../features/myspace/capture-builder';
 import type { CaptureOption, SavedItem } from '../features/myspace/models';
 import { buildSearchSuggestions, normalizeSearchQuery, pushRecentSearch } from '../features/myspace/search-history';
 import { explainMatch, rankMyspaceItems, type RetrievalMatch } from '../features/myspace/retrieval-engine';
@@ -48,8 +48,10 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
   );
   const [query, setQuery] = useState('');
   const [addSheetOpen, setAddSheetOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
   const [stagedCapture, setStagedCapture] = useState<CaptureOption | null>(null);
+  const [captureDraft, setCaptureDraft] = useState<CaptureDraft | null>(null);
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = query.trim();
   const searching = normalizedQuery.length > 0 && deferredQuery.trim() !== normalizedQuery;
@@ -173,10 +175,13 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
               <Pressable
                 style={styles.previewActionFilled}
                 onPress={() => {
-                  const createdItem = buildCapturePreview(stagedCapture);
+                  const createdItem = captureDraft
+                    ? buildCapturedItem(stagedCapture, captureDraft)
+                    : buildCapturePreview(stagedCapture);
                   setItems((current) => [createdItem, ...current]);
                   setSelectedItem(createdItem);
                   setStagedCapture(null);
+                  setCaptureDraft(null);
                 }}
               >
                 <Text style={styles.previewActionFilledText}>Save to Myspace</Text>
@@ -291,6 +296,26 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
         onSelectOption={(option) => {
           setAddSheetOpen(false);
           setStagedCapture(option);
+          setCaptureDraft(createEmptyCaptureDraft(option));
+          setComposerOpen(true);
+        }}
+      />
+
+      <CaptureComposerSheet
+        open={composerOpen}
+        option={stagedCapture}
+        draft={captureDraft}
+        onClose={() => setComposerOpen(false)}
+        onChangeDraft={(nextDraft) => setCaptureDraft(nextDraft)}
+        onContinue={() => {
+          setComposerOpen(false);
+          if (!stagedCapture) {
+            return;
+          }
+          if (!captureDraft) {
+            setCaptureDraft(createEmptyCaptureDraft(stagedCapture));
+          }
+          setStagedCapture(stagedCapture);
         }}
       />
 
@@ -406,6 +431,66 @@ function AddSheet({
             <Pressable onPress={onClose} style={styles.sheetClose}>
               <Text style={styles.sheetCloseText}>Close</Text>
             </Pressable>
+          </View>
+        </SafeAreaView>
+      </View>
+    </Modal>
+  );
+}
+
+function CaptureComposerSheet({
+  open,
+  option,
+  draft,
+  onClose,
+  onChangeDraft,
+  onContinue,
+}: {
+  open: boolean;
+  option: CaptureOption | null;
+  draft: CaptureDraft | null;
+  onClose: () => void;
+  onChangeDraft: (draft: CaptureDraft) => void;
+  onContinue: () => void;
+}) {
+  if (!option || !draft) {
+    return null;
+  }
+
+  return (
+    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={styles.modalScrim} onPress={onClose} />
+        <SafeAreaView style={styles.sheetSafeArea}>
+          <View style={styles.detailSheet}>
+            <Text style={styles.sheetKicker}>{option.label}</Text>
+            <Text style={styles.sheetTitle}>Compose this capture</Text>
+            <Text style={styles.sheetBody}>
+              Give it a title and a short memory note first. You can review the indexed preview next.
+            </Text>
+            <TextInput
+              value={draft.title}
+              onChangeText={(value) => onChangeDraft({ ...draft, title: value })}
+              placeholder="Title"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.composerField}
+            />
+            <TextInput
+              value={draft.body}
+              onChangeText={(value) => onChangeDraft({ ...draft, body: value })}
+              placeholder="What should future-you remember?"
+              placeholderTextColor={theme.colors.textMuted}
+              style={[styles.composerField, styles.composerFieldLarge]}
+              multiline
+            />
+            <View style={styles.detailActions}>
+              <Pressable style={styles.detailAction} onPress={onClose}>
+                <Text style={styles.detailActionText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={[styles.detailAction, styles.detailActionFilled]} onPress={onContinue}>
+                <Text style={[styles.detailActionText, styles.detailActionTextFilled]}>Continue</Text>
+              </Pressable>
+            </View>
           </View>
         </SafeAreaView>
       </View>
@@ -770,6 +855,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800',
+  },
+  composerField: {
+    marginTop: 12,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    color: theme.colors.text,
+    fontSize: 14,
+  },
+  composerFieldLarge: {
+    minHeight: 110,
+    textAlignVertical: 'top',
   },
   section: {
     marginTop: 18,
