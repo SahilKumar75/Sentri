@@ -63,6 +63,7 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
     [rankedMatches]
   );
   const pinnedItems = filteredItems.filter((item) => item.pinned);
+  const recentTodayItems = filteredItems.filter((item) => ['Now', 'Today'].includes(item.dateLabel) && !item.pinned);
   const otherItems = filteredItems.filter((item) => !item.pinned);
   const columns = splitIntoColumns(otherItems);
   const queryActive = normalizedQuery.length > 0;
@@ -229,6 +230,20 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
                 />
               )}
             </View>
+
+            {recentTodayItems.length ? (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>New today</Text>
+                  <Text style={styles.sectionMeta}>{recentTodayItems.length}</Text>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pinnedRow}>
+                  {recentTodayItems.map((item) => (
+                    <PinnedCard key={`today-${item.id}`} item={item} onPress={() => setSelectedItem(item)} />
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
