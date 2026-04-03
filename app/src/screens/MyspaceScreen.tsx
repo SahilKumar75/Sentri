@@ -483,6 +483,35 @@ function CaptureComposerSheet({
               style={[styles.composerField, styles.composerFieldLarge]}
               multiline
             />
+            <TextInput
+              value={draft.subject}
+              onChangeText={(value) => onChangeDraft({ ...draft, subject: value })}
+              placeholder="Subject or bucket"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.composerField}
+            />
+            <TextInput
+              value={draft.source}
+              onChangeText={(value) => onChangeDraft({ ...draft, source: value })}
+              placeholder="Source"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.composerField}
+            />
+            <TextInput
+              value={draft.tags}
+              onChangeText={(value) => onChangeDraft({ ...draft, tags: value })}
+              placeholder="Tags, comma separated"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.composerField}
+            />
+            <TextInput
+              value={draft.ocrText}
+              onChangeText={(value) => onChangeDraft({ ...draft, ocrText: value })}
+              placeholder="OCR text or remembered phrase"
+              placeholderTextColor={theme.colors.textMuted}
+              style={[styles.composerField, styles.composerFieldLarge]}
+              multiline
+            />
             <View style={styles.detailActions}>
               <Pressable style={styles.detailAction} onPress={onClose}>
                 <Text style={styles.detailActionText}>Cancel</Text>
