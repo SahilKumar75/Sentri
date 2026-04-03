@@ -354,6 +354,12 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
             return;
           }
 
+          if (action === 'Delete') {
+            setItems((current) => current.filter((entry) => entry.id !== item.id));
+            setSelectedItem(null);
+            return;
+          }
+
           await Share.share({
             title: item.title,
             message: `${item.title}\n\n${item.body}\n\nSource: ${item.source}\nSaved: ${item.dateLabel}`,
@@ -567,7 +573,7 @@ function DetailSheet({
   query: string;
   match: RetrievalMatch | null;
   onClose: () => void;
-  onAction: (action: 'Pin' | 'Share', item: SavedItem) => void | Promise<void>;
+  onAction: (action: 'Pin' | 'Share' | 'Delete', item: SavedItem) => void | Promise<void>;
 }) {
   if (!item) {
     return null;
@@ -594,6 +600,9 @@ function DetailSheet({
             <View style={styles.detailActions}>
               <Pressable style={styles.detailAction} onPress={() => void onAction('Pin', item)}>
                 <Text style={styles.detailActionText}>{item.pinned ? 'Unpin' : 'Pin'}</Text>
+              </Pressable>
+              <Pressable style={styles.detailAction} onPress={() => void onAction('Delete', item)}>
+                <Text style={styles.detailActionText}>Delete</Text>
               </Pressable>
               <Pressable
                 style={[styles.detailAction, styles.detailActionFilled]}
