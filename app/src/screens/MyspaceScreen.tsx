@@ -141,6 +141,17 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
           </View>
         ) : null}
 
+        {!queryActive && suggestions.length ? (
+          <View style={styles.suggestionRow}>
+            {suggestions.map((suggestion) => (
+              <Pressable key={suggestion} style={styles.suggestionChip} onPress={() => setQuery(suggestion)}>
+                <Ionicons name="sparkles-outline" size={13} color={theme.colors.accentStrong} />
+                <Text style={styles.suggestionChipText}>{suggestion}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         {stagedCapture ? (
           <View style={styles.capturePreviewCard}>
             <View style={styles.capturePreviewHeader}>
@@ -601,6 +612,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 18,
+  },
+  suggestionRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  suggestionChipText: {
+    color: theme.colors.text,
+    fontSize: 12,
+    fontWeight: '700',
   },
   searchShell: {
     flexDirection: 'row',
