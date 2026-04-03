@@ -1,26 +1,4 @@
-export type SavedItemKind = 'image' | 'link' | 'note' | 'file' | 'screenshot';
-
-export type SavedItem = {
-  id: string;
-  title: string;
-  body: string;
-  kind: SavedItemKind;
-  subject: string;
-  tags: string[];
-  source: string;
-  dateLabel: string;
-  accent: 'sand' | 'sky' | 'mint' | 'rose' | 'ink';
-  pinned?: boolean;
-  featured?: boolean;
-  ocrText?: string;
-};
-
-export type CaptureOption = {
-  id: string;
-  label: string;
-  hint: string;
-  symbol: string;
-};
+import type { CaptureOption, SavedItem } from '../../features/myspace/models';
 
 export const subjectChips = [
   'All',

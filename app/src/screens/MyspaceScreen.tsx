@@ -13,14 +13,13 @@ import {
 } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
+import type { CaptureOption, SavedItem } from '../features/myspace/models';
 import { explainMatch, rankMyspaceItems, type RetrievalMatch } from '../features/myspace/retrieval-engine';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
 import { usePersistedState } from '../lib/use-persisted-state';
 import {
   captureOptions,
   savedItems,
-  type CaptureOption,
-  type SavedItem,
 } from './myspace/data';
 
 type MyspaceScreenProps = {

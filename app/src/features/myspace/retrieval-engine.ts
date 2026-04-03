@@ -1,4 +1,4 @@
-import type { SavedItem } from '../../screens/myspace/data';
+import type { SavedItem } from './models';
 
 export type RetrievalReason =
   | 'title'
