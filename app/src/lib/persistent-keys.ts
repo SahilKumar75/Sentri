@@ -4,6 +4,7 @@ export const PERSISTENT_KEYS = {
   activeTab: 'sentri.activeTab',
   homeUploadMeta: 'sentri.homeUploadMeta',
   myspaceItems: 'sentri.myspace.items',
+  myspaceRecentSearches: 'sentri.myspace.recentSearches',
   calorieState: 'sentri.calorie.state',
   hangoutState: 'sentri.hangout.state',
 } as const;

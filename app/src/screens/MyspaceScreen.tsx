@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -13,14 +13,15 @@ import {
 } from 'react-native';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
+import { buildCapturedItem, buildCapturePreview, createEmptyCaptureDraft, type CaptureDraft } from '../features/myspace/capture-builder';
+import type { CaptureOption, SavedItem } from '../features/myspace/models';
+import { buildSearchSuggestions, normalizeSearchQuery, pushRecentSearch } from '../features/myspace/search-history';
 import { explainMatch, rankMyspaceItems, type RetrievalMatch } from '../features/myspace/retrieval-engine';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
 import { usePersistedState } from '../lib/use-persisted-state';
 import {
   captureOptions,
   savedItems,
-  type CaptureOption,
-  type SavedItem,
 } from './myspace/data';
 
 type MyspaceScreenProps = {
@@ -41,10 +42,16 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
     PERSISTENT_KEYS.myspaceItems,
     savedItems
   );
+  const { value: recentSearches, setValue: setRecentSearches } = usePersistedState<string[]>(
+    PERSISTENT_KEYS.myspaceRecentSearches,
+    []
+  );
   const [query, setQuery] = useState('');
   const [addSheetOpen, setAddSheetOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
   const [stagedCapture, setStagedCapture] = useState<CaptureOption | null>(null);
+  const [captureDraft, setCaptureDraft] = useState<CaptureDraft | null>(null);
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = query.trim();
   const searching = normalizedQuery.length > 0 && deferredQuery.trim() !== normalizedQuery;
@@ -56,10 +63,25 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
     [rankedMatches]
   );
   const pinnedItems = filteredItems.filter((item) => item.pinned);
+  const recentTodayItems = filteredItems.filter((item) => ['Now', 'Today'].includes(item.dateLabel) && !item.pinned);
   const otherItems = filteredItems.filter((item) => !item.pinned);
   const columns = splitIntoColumns(otherItems);
   const queryActive = normalizedQuery.length > 0;
   const emptySearch = queryActive && filteredItems.length === 0;
+  const suggestions = useMemo(() => buildSearchSuggestions(recentSearches, items), [items, recentSearches]);
+
+  useEffect(() => {
+    const normalized = normalizeSearchQuery(query);
+    if (!normalized) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setRecentSearches((current) => pushRecentSearch(current, normalized));
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [query, setRecentSearches]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -122,6 +144,17 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
           </View>
         ) : null}
 
+        {!queryActive && suggestions.length ? (
+          <View style={styles.suggestionRow}>
+            {suggestions.map((suggestion) => (
+              <Pressable key={suggestion} style={styles.suggestionChip} onPress={() => setQuery(suggestion)}>
+                <Ionicons name="sparkles-outline" size={13} color={theme.colors.accentStrong} />
+                <Text style={styles.suggestionChipText}>{suggestion}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         {stagedCapture ? (
           <View style={styles.capturePreviewCard}>
             <View style={styles.capturePreviewHeader}>
@@ -136,6 +169,20 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
             <Text style={styles.capturePreviewMeta}>
               Sentri will index this by OCR text, source, date, and subject so you can find it later.
             </Text>
+            {captureDraft ? (
+              <View style={styles.capturePreviewChips}>
+                <MetaChip label={captureDraft.subject || 'Subject'} />
+                <MetaChip label={captureDraft.source || 'Source'} />
+                {(captureDraft.tags || '')
+                  .split(',')
+                  .map((tag) => tag.trim())
+                  .filter(Boolean)
+                  .slice(0, 3)
+                  .map((tag) => (
+                    <MetaChip key={tag} label={tag} />
+                  ))}
+              </View>
+            ) : null}
             <View style={styles.capturePreviewActions}>
               <Pressable style={styles.previewActionGhost} onPress={() => setStagedCapture(null)}>
                 <Text style={styles.previewActionGhostText}>Clear</Text>
@@ -143,10 +190,13 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
               <Pressable
                 style={styles.previewActionFilled}
                 onPress={() => {
-                  const createdItem = buildCapturePreview(stagedCapture);
+                  const createdItem = captureDraft
+                    ? buildCapturedItem(stagedCapture, captureDraft)
+                    : buildCapturePreview(stagedCapture);
                   setItems((current) => [createdItem, ...current]);
                   setSelectedItem(createdItem);
                   setStagedCapture(null);
+                  setCaptureDraft(null);
                 }}
               >
                 <Text style={styles.previewActionFilledText}>Save to Myspace</Text>
@@ -180,6 +230,20 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
                 />
               )}
             </View>
+
+            {recentTodayItems.length ? (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>New today</Text>
+                  <Text style={styles.sectionMeta}>{recentTodayItems.length}</Text>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pinnedRow}>
+                  {recentTodayItems.map((item) => (
+                    <PinnedCard key={`today-${item.id}`} item={item} onPress={() => setSelectedItem(item)} />
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -261,6 +325,26 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
         onSelectOption={(option) => {
           setAddSheetOpen(false);
           setStagedCapture(option);
+          setCaptureDraft(createEmptyCaptureDraft(option));
+          setComposerOpen(true);
+        }}
+      />
+
+      <CaptureComposerSheet
+        open={composerOpen}
+        option={stagedCapture}
+        draft={captureDraft}
+        onClose={() => setComposerOpen(false)}
+        onChangeDraft={(nextDraft) => setCaptureDraft(nextDraft)}
+        onContinue={() => {
+          setComposerOpen(false);
+          if (!stagedCapture) {
+            return;
+          }
+          if (!captureDraft) {
+            setCaptureDraft(createEmptyCaptureDraft(stagedCapture));
+          }
+          setStagedCapture(stagedCapture);
         }}
       />
 
@@ -282,6 +366,12 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
               )
             );
             setSelectedItem((current) => (current ? { ...current, pinned: !current.pinned } : current));
+            return;
+          }
+
+          if (action === 'Delete') {
+            setItems((current) => current.filter((entry) => entry.id !== item.id));
+            setSelectedItem(null);
             return;
           }
 
@@ -383,6 +473,95 @@ function AddSheet({
   );
 }
 
+function CaptureComposerSheet({
+  open,
+  option,
+  draft,
+  onClose,
+  onChangeDraft,
+  onContinue,
+}: {
+  open: boolean;
+  option: CaptureOption | null;
+  draft: CaptureDraft | null;
+  onClose: () => void;
+  onChangeDraft: (draft: CaptureDraft) => void;
+  onContinue: () => void;
+}) {
+  if (!option || !draft) {
+    return null;
+  }
+
+  return (
+    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={styles.modalScrim} onPress={onClose} />
+        <SafeAreaView style={styles.sheetSafeArea}>
+          <View style={styles.detailSheet}>
+            <Text style={styles.sheetKicker}>{option.label}</Text>
+            <Text style={styles.sheetTitle}>Compose this capture</Text>
+            <Text style={styles.sheetBody}>
+              Give it a title and a short memory note first. You can review the indexed preview next.
+            </Text>
+            <TextInput
+              value={draft.title}
+              onChangeText={(value) => onChangeDraft({ ...draft, title: value })}
+              placeholder="Title"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.composerField}
+            />
+            <TextInput
+              value={draft.body}
+              onChangeText={(value) => onChangeDraft({ ...draft, body: value })}
+              placeholder="What should future-you remember?"
+              placeholderTextColor={theme.colors.textMuted}
+              style={[styles.composerField, styles.composerFieldLarge]}
+              multiline
+            />
+            <TextInput
+              value={draft.subject}
+              onChangeText={(value) => onChangeDraft({ ...draft, subject: value })}
+              placeholder="Subject or bucket"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.composerField}
+            />
+            <TextInput
+              value={draft.source}
+              onChangeText={(value) => onChangeDraft({ ...draft, source: value })}
+              placeholder="Source"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.composerField}
+            />
+            <TextInput
+              value={draft.tags}
+              onChangeText={(value) => onChangeDraft({ ...draft, tags: value })}
+              placeholder="Tags, comma separated"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.composerField}
+            />
+            <TextInput
+              value={draft.ocrText}
+              onChangeText={(value) => onChangeDraft({ ...draft, ocrText: value })}
+              placeholder="OCR text or remembered phrase"
+              placeholderTextColor={theme.colors.textMuted}
+              style={[styles.composerField, styles.composerFieldLarge]}
+              multiline
+            />
+            <View style={styles.detailActions}>
+              <Pressable style={styles.detailAction} onPress={onClose}>
+                <Text style={styles.detailActionText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={[styles.detailAction, styles.detailActionFilled]} onPress={onContinue}>
+                <Text style={[styles.detailActionText, styles.detailActionTextFilled]}>Continue</Text>
+              </Pressable>
+            </View>
+          </View>
+        </SafeAreaView>
+      </View>
+    </Modal>
+  );
+}
+
 function CaptureRow({ option, onPress }: { option: CaptureOption; onPress: () => void }) {
   return (
     <Pressable style={styles.captureRow} onPress={onPress}>
@@ -409,7 +588,7 @@ function DetailSheet({
   query: string;
   match: RetrievalMatch | null;
   onClose: () => void;
-  onAction: (action: 'Pin' | 'Share', item: SavedItem) => void | Promise<void>;
+  onAction: (action: 'Pin' | 'Share' | 'Delete', item: SavedItem) => void | Promise<void>;
 }) {
   if (!item) {
     return null;
@@ -436,6 +615,9 @@ function DetailSheet({
             <View style={styles.detailActions}>
               <Pressable style={styles.detailAction} onPress={() => void onAction('Pin', item)}>
                 <Text style={styles.detailActionText}>{item.pinned ? 'Unpin' : 'Pin'}</Text>
+              </Pressable>
+              <Pressable style={styles.detailAction} onPress={() => void onAction('Delete', item)}>
+                <Text style={styles.detailActionText}>Delete</Text>
               </Pressable>
               <Pressable
                 style={[styles.detailAction, styles.detailActionFilled]}
@@ -507,39 +689,6 @@ function splitIntoColumns(items: SavedItem[]) {
   });
 
   return [left, right];
-}
-
-function buildCapturePreview(option: CaptureOption): SavedItem {
-  const subjectMap: Record<string, string> = {
-    image: 'Notes',
-    link: 'Research',
-    note: 'Personal',
-    file: 'Placement',
-    screenshot: 'Class',
-  };
-
-  const accentMap: Record<string, SavedItem['accent']> = {
-    image: 'sand',
-    link: 'sky',
-    note: 'mint',
-    file: 'rose',
-    screenshot: 'ink',
-  };
-
-  return {
-    id: `draft-${option.id}`,
-    title: `${option.label} capture preview`,
-    body: `This ${option.label.toLowerCase()} will be indexed by OCR text, source, date, and subject.`,
-    kind: option.id as SavedItem['kind'],
-    subject: subjectMap[option.id] ?? 'Personal',
-    tags: [option.id, 'capture', 'indexed'],
-    source: option.hint,
-    dateLabel: 'Now',
-    accent: accentMap[option.id] ?? 'sand',
-    pinned: false,
-    featured: true,
-    ocrText: `${option.label} capture preview for search and retrieval.`,
-  };
 }
 
 function symbolToIcon(symbol: string): keyof typeof Ionicons.glyphMap {
@@ -615,6 +764,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 18,
+  },
+  suggestionRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  suggestionChipText: {
+    color: theme.colors.text,
+    fontSize: 12,
+    fontWeight: '700',
   },
   searchShell: {
     flexDirection: 'row',
@@ -721,6 +892,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
   },
+  capturePreviewChips: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   capturePreviewActions: {
     marginTop: 14,
     flexDirection: 'row',
@@ -751,6 +928,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800',
+  },
+  composerField: {
+    marginTop: 12,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    color: theme.colors.text,
+    fontSize: 14,
+  },
+  composerFieldLarge: {
+    minHeight: 110,
+    textAlignVertical: 'top',
   },
   section: {
     marginTop: 18,
