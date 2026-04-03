@@ -1,3 +1,5 @@
+import type { SavedItem } from '../../features/myspace/models';
+
 export { captureOptions, savedItems } from '../../features/myspace/seed-data';
 
 export function searchSavedItems(
