@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AvatarButton } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
@@ -133,6 +134,32 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
     ).length;
     return Math.round((filled / 6) * 100);
   }, [setup]);
+  const requiredSetupFields = useMemo(
+    () => [setup.age, setup.height, setup.weight, setup.goalWeight, setup.journeyMonths, setup.idealBodyType],
+    [setup.age, setup.goalWeight, setup.height, setup.idealBodyType, setup.journeyMonths, setup.weight]
+  );
+  const canBuildPlan = requiredSetupFields.every((value) => value.trim().length > 0);
+  const dayBalance = useMemo(() => {
+    if (remaining > 180) {
+      return {
+        title: 'Room left in today plan',
+        body: `You still have ${remaining} kcal to work with today. Add dinner or a shake if that fits the goal.`,
+        tone: 'info' as const,
+      };
+    }
+    if (remaining >= -120) {
+      return {
+        title: 'Right around target',
+        body: 'You are close to the calorie target today. Focus on protein quality and hydration now.',
+        tone: 'success' as const,
+      };
+    }
+    return {
+      title: 'Above today target',
+      body: `You are ${Math.abs(remaining)} kcal above target right now. Logging a walk or trimming the next meal can rebalance it.`,
+      tone: 'error' as const,
+    };
+  }, [remaining]);
 
   useEffect(() => {
     if (!hydrated) {
@@ -335,8 +362,12 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
           </View>
 
           <Pressable
-            style={styles.primaryButton}
+            style={[styles.primaryButton, !canBuildPlan && styles.primaryButtonDisabled]}
             onPress={() => {
+              if (!canBuildPlan) {
+                setStatusMessage('Fill age, height, weight, goal weight, timeline, and ideal body type first.');
+                return;
+              }
               setSetupComplete(true);
               setStatusMessage(
                 `Plan ready. Your target is ${dailyTarget} kcal with ${macroTargets.protein}g protein and ${setup.cheatFrequency.toLowerCase()} cheat rhythm.`
@@ -345,6 +376,11 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
           >
             <Text style={styles.primaryButtonText}>Build my plan</Text>
           </Pressable>
+          {!canBuildPlan ? (
+            <Text style={styles.setupHelperText}>
+              Complete the core fields first so Sentri can calculate a realistic daily target.
+            </Text>
+          ) : null}
         </>
       ) : (
         <>
@@ -361,8 +397,16 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
             </View>
           </View>
 
-          <View style={styles.statusCard}>
-            <Text style={styles.statusText}>{statusMessage}</Text>
+          <View
+            style={[
+              styles.statusCard,
+              dayBalance.tone === 'success' && styles.statusCardSuccess,
+              dayBalance.tone === 'error' && styles.statusCardError,
+            ]}
+          >
+            <Text style={styles.statusLabel}>{dayBalance.title}</Text>
+            <Text style={styles.statusText}>{dayBalance.body}</Text>
+            <Text style={styles.statusCaption}>{statusMessage}</Text>
           </View>
 
           <View style={styles.metricGrid}>
@@ -473,7 +517,18 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
                     {meal.time} • {meal.note}
                   </Text>
                 </View>
-                <Text style={styles.listValueDark}>{meal.kcal}</Text>
+                <View style={styles.listRight}>
+                  <Text style={styles.listValueDark}>{meal.kcal}</Text>
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() => {
+                      setMeals((current) => current.filter((entry) => !(entry.label === meal.label && entry.time === meal.time)));
+                      setStatusMessage(`Removed ${meal.label} from today.`);
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={theme.colors.darkTextSoft} />
+                  </Pressable>
+                </View>
               </View>
             ))}
           </View>
@@ -543,7 +598,18 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }: CalorieScre
                   <Text style={styles.listTitleDark}>{entry.label}</Text>
                   <Text style={styles.listMetaDark}>{entry.meta}</Text>
                 </View>
-                <Text style={styles.listValueDark}>{entry.kcal}</Text>
+                <View style={styles.listRight}>
+                  <Text style={styles.listValueDark}>{entry.kcal}</Text>
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() => {
+                      setBurns((current) => current.filter((item) => !(item.label === entry.label && item.meta === entry.meta)));
+                      setStatusMessage(`Removed ${entry.label} burn log.`);
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={theme.colors.darkTextSoft} />
+                  </Pressable>
+                </View>
               </View>
             ))}
           </View>
@@ -954,10 +1020,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
   },
+  primaryButtonDisabled: {
+    opacity: 0.45,
+  },
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',
+  },
+  setupHelperText: {
+    marginTop: 10,
+    color: theme.colors.darkTextSoft,
+    fontSize: 13,
+    lineHeight: 19,
   },
   summaryHero: {
     marginTop: 18,
@@ -1025,10 +1100,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+  statusCardSuccess: {
+    borderColor: '#244C37',
+    backgroundColor: '#13251B',
+  },
+  statusCardError: {
+    borderColor: '#5F2120',
+    backgroundColor: '#261615',
+  },
+  statusLabel: {
+    color: theme.colors.darkText,
+    fontSize: 15,
+    fontWeight: '800',
+  },
   statusText: {
-    color: theme.colors.darkTextSoft,
+    marginTop: 6,
+    color: theme.colors.darkText,
     fontSize: 13,
     fontWeight: '700',
+    lineHeight: 19,
+  },
+  statusCaption: {
+    marginTop: 8,
+    color: theme.colors.darkTextSoft,
+    fontSize: 12,
+    lineHeight: 18,
   },
   metricGrid: {
     marginTop: 14,
@@ -1223,6 +1319,18 @@ const styles = StyleSheet.create({
     color: theme.colors.fitnessBlue,
     fontSize: 20,
     fontWeight: '800',
+  },
+  listRight: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  removeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: theme.colors.darkSurfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cheatTextDark: {
     marginTop: 10,
