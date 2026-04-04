@@ -9,6 +9,8 @@ import {
   buildWeekDates,
   dayKeyForDate,
   formatParserBadge,
+  formatShortDateTime,
+  formatUploadHistoryTitle,
   formatLongDate,
   formatMonthShort,
   formatMonthYear,
@@ -18,9 +20,9 @@ import {
   getScheduleInsight,
   isSameDate,
 } from '../features/home/timetable-intelligence';
-import type { CalendarTag, ClassEntry, UploadMeta, UploadSource, ViewMode } from '../features/home/timetable-types';
+import type { CalendarTag, ClassEntry, TimetableUploadHistoryItem, UploadMeta, UploadSource, ViewMode } from '../features/home/timetable-types';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
-import { getTimetableBatchStatus, uploadTimetableScreenshot } from '../lib/timetable-api';
+import { getTimetableBatchStatus, listTimetableUploadHistory, uploadTimetableScreenshot } from '../lib/timetable-api';
 import { usePersistedState } from '../lib/use-persisted-state';
 
 type HomeScreenProps = {
@@ -37,6 +39,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
   const [uploadSheetOpen, setUploadSheetOpen] = useState(false);
   const [uploadSource, setUploadSource] = useState<UploadSource>('share');
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [recentUploads, setRecentUploads] = useState<TimetableUploadHistoryItem[]>([]);
   const { value: lastUploadMeta, setValue: setLastUploadMeta } = usePersistedState<UploadMeta | null>(
     PERSISTENT_KEYS.homeUploadMeta,
     null
@@ -67,6 +70,22 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
     }, 2200);
     return () => clearTimeout(timeout);
   }, [uploadState]);
+
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      const historyResult = await listTimetableUploadHistory();
+      if (!active || !historyResult.ok) {
+        return;
+      }
+      setRecentUploads(historyResult.uploads);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!lastUploadMeta?.batchId) {
@@ -102,6 +121,19 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
       if (changed) {
         setLastUploadMeta(nextMeta);
       }
+
+      setRecentUploads((current) => {
+        const nextItem: TimetableUploadHistoryItem = {
+          batchId: statusResult.batchId,
+          imageName: statusResult.sourceImageName ?? lastUploadMeta.imageName,
+          status: statusResult.status,
+          createdAt: statusResult.createdAt,
+          updatedAt: statusResult.updatedAt,
+          entryCount: statusResult.entryCount,
+        };
+        const others = current.filter((entry) => entry.batchId !== nextItem.batchId);
+        return [nextItem, ...others].slice(0, 4);
+      });
     })();
 
     return () => {
@@ -166,6 +198,17 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
       updatedAt: uploadResult.createdAt,
       entryCount: 0,
     });
+    setRecentUploads((current) => [
+      {
+        batchId: uploadResult.batchId,
+        imageName: uploadResult.sourceImageName,
+        status: uploadResult.status,
+        createdAt: uploadResult.createdAt,
+        updatedAt: uploadResult.createdAt,
+        entryCount: 0,
+      },
+      ...current.filter((entry) => entry.batchId !== uploadResult.batchId),
+    ].slice(0, 4));
     setUploadSheetOpen(false);
     setUploadState('updated');
     setUploadMessage(uploadResult.sourceImageName ? `${uploadResult.sourceImageName} uploaded.` : 'Upload complete.');
@@ -294,6 +337,29 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
           <Text style={[styles.uploadNoticeText, uploadState === 'error' && styles.uploadNoticeTextError]}>
             {uploadMessage}
           </Text>
+        </View>
+      ) : null}
+
+      {recentUploads.length ? (
+        <View style={styles.uploadHistoryCard}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent uploads</Text>
+            <Text style={styles.sectionAction}>{recentUploads.length} tracked</Text>
+          </View>
+          {recentUploads.map((upload, index) => (
+            <View key={upload.batchId} style={[styles.historyRow, index !== 0 && styles.historyRowBorder]}>
+              <View style={styles.historyCopy}>
+                <Text style={styles.historyTitle}>{upload.imageName ?? `Upload batch ${upload.batchId}`}</Text>
+                <Text style={styles.historyMeta}>
+                  {formatUploadHistoryTitle(upload.status, upload.entryCount)} •{' '}
+                  {formatShortDateTime(upload.updatedAt ?? upload.createdAt ?? '')}
+                </Text>
+              </View>
+              <View style={styles.historyBadge}>
+                <Text style={styles.historyBadgeText}>{formatParserBadge(upload.status)}</Text>
+              </View>
+            </View>
+          ))}
         </View>
       ) : null}
 
@@ -927,6 +993,54 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+  uploadHistoryCard: {
+    marginTop: 14,
+    borderRadius: 24,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    padding: 16,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  historyRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.line,
+  },
+  historyCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  historyTitle: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  historyMeta: {
+    color: theme.colors.textSoft,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  historyBadge: {
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  historyBadgeText: {
+    color: theme.colors.accentStrong,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   refreshBannerButton: {
     borderRadius: theme.radius.pill,

@@ -193,6 +193,16 @@ export function formatParserBadge(status?: string) {
   return 'No parser status';
 }
 
+export function formatUploadHistoryTitle(status: string, entryCount: number) {
+  if (status === 'VERIFIED') {
+    return entryCount > 0 ? `${entryCount} verified items` : 'Verified upload';
+  }
+  if (status === 'PARSED') {
+    return entryCount > 0 ? `${entryCount} parsed items` : 'Parsed upload';
+  }
+  return 'Awaiting parser';
+}
+
 function formatParserStatus(lastUploadMeta: UploadMeta) {
   if (lastUploadMeta.status === 'VERIFIED') {
     return {

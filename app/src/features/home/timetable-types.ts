@@ -29,3 +29,12 @@ export type UploadMeta = {
   extractionConfidence?: number;
   entryCount?: number;
 };
+
+export type TimetableUploadHistoryItem = {
+  batchId: number;
+  imageName?: string;
+  status: string;
+  createdAt?: string;
+  updatedAt?: string;
+  entryCount: number;
+};
