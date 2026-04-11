@@ -75,3 +75,11 @@ This can later evolve into a hybrid retrieval layer:
 - vector search on OCR and note embeddings
 - personalized resurfacing
 - temporal ranking based on class schedule proximity
+
+## Implementation Reference
+
+The current mobile-first indexing and retrieval pipeline is documented in:
+
+- [docs/myspace-indexing-pipeline.md](/Users/sahilkumarsingh/Desktop/SENTRI/docs/myspace-indexing-pipeline.md)
+
+That document maps the actual implementation in the Expo app to the future backend sync path.
