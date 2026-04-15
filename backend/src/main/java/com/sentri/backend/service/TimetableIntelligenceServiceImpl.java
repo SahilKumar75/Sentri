@@ -56,7 +56,13 @@ public class TimetableIntelligenceServiceImpl implements TimetableIntelligenceSe
             );
         }
 
-        TimetableEntry holiday = entries.size() == 1 && Boolean.TRUE.equals(entries.get(0).getHolidayEntry()) ? entries.get(0) : null;
+        List<TimetableEntry> classEntries = entries.stream()
+            .filter(entry -> !Boolean.TRUE.equals(entry.getBreakEntry()) && !Boolean.TRUE.equals(entry.getHolidayEntry()))
+            .toList();
+
+        TimetableEntry holiday = classEntries.isEmpty()
+            ? entries.stream().filter(entry -> Boolean.TRUE.equals(entry.getHolidayEntry())).findFirst().orElse(null)
+            : null;
         if (holiday != null) {
             return new TimetableInsightResponse(
                     batch.getId(),
@@ -70,10 +76,23 @@ public class TimetableIntelligenceServiceImpl implements TimetableIntelligenceSe
             );
         }
 
-        int currentIndex = findCurrentIndex(entries, focusTime);
+        if (classEntries.isEmpty()) {
+            return new TimetableInsightResponse(
+                batch.getId(),
+                "empty",
+                "Nothing planned",
+                "No class sessions are available for this day.",
+                "upload_timetable",
+                resolveRefreshState(batch, focusDate),
+                null,
+                null
+            );
+        }
+
+        int currentIndex = findCurrentIndex(classEntries, focusTime);
         if (currentIndex >= 0) {
-            TimetableEntry current = entries.get(currentIndex);
-            TimetableEntry next = currentIndex + 1 < entries.size() ? entries.get(currentIndex + 1) : null;
+            TimetableEntry current = classEntries.get(currentIndex);
+            TimetableEntry next = currentIndex + 1 < classEntries.size() ? classEntries.get(currentIndex + 1) : null;
             long minutesLeft = current.getEndTime() == null ? 0 : Math.max(java.time.Duration.between(focusTime, current.getEndTime()).toMinutes(), 0);
 
             return new TimetableInsightResponse(
@@ -88,9 +107,9 @@ public class TimetableIntelligenceServiceImpl implements TimetableIntelligenceSe
             );
         }
 
-        int nextIndex = findNextIndex(entries, focusTime);
+        int nextIndex = findNextIndex(classEntries, focusTime);
         if (nextIndex >= 0) {
-            TimetableEntry next = entries.get(nextIndex);
+            TimetableEntry next = classEntries.get(nextIndex);
             long minutesUntil = next.getStartTime() == null ? 0 : Math.max(java.time.Duration.between(focusTime, next.getStartTime()).toMinutes(), 0);
 
             return new TimetableInsightResponse(
