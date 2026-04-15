@@ -19,19 +19,7 @@ class SentriWorker:
         ocr_result = self.ocr_service.extract_from_payload(payload)
         raw_text = payload.get("ocr_text") or ocr_result.text or ""
 
-        cells_payload = payload.get("cells") or []
-        cells = [
-            OCRCell(
-                row=int(cell["row"]),
-                col=int(cell["col"]),
-                text=str(cell.get("text", "")),
-                row_span=int(cell.get("row_span", 1)),
-                col_span=int(cell.get("col_span", 1)),
-                confidence=cell.get("confidence"),
-            )
-            for cell in cells_payload
-            if isinstance(cell, dict)
-        ]
+        cells, payload_warnings = self._parse_cells(payload.get("cells"))
 
         result = parse_timetable(raw_text=raw_text, cells=cells, source=source)
         result.source["ocr"] = ocr_result.to_dict()
@@ -42,8 +30,15 @@ class SentriWorker:
                     for warning in ocr_result.warnings
                 ]
             )
+        if payload_warnings:
+            result.issues.extend(
+                [
+                    ParseIssue(code="payload_warning", message=warning)
+                    for warning in payload_warnings
+                ]
+            )
 
-        extraction_confidence = payload.get("extraction_confidence")
+        extraction_confidence = self._coerce_float(payload.get("extraction_confidence"))
         if extraction_confidence is None:
             confidences = [
                 float(cell.confidence)
@@ -51,9 +46,64 @@ class SentriWorker:
                 if cell.confidence is not None
             ]
             extraction_confidence = round(sum(confidences) / len(confidences), 4) if confidences else None
+        extraction_confidence = self._clamp_confidence(extraction_confidence)
 
         return result.to_backend_import_dict(
-            extraction_confidence=float(extraction_confidence)
-            if extraction_confidence is not None
-            else None
+            extraction_confidence=extraction_confidence
         )
+
+    def _parse_cells(self, cells_payload: Any) -> tuple[list[OCRCell], list[str]]:
+        if cells_payload is None:
+            return [], []
+        if not isinstance(cells_payload, list):
+            return [], ["Ignored cells payload because it is not a list."]
+
+        cells: list[OCRCell] = []
+        warnings: list[str] = []
+        for index, cell in enumerate(cells_payload):
+            if not isinstance(cell, dict):
+                warnings.append(f"Ignored non-object cell at index {index}.")
+                continue
+
+            row = self._coerce_int(cell.get("row"))
+            col = self._coerce_int(cell.get("col"))
+            if row is None or col is None:
+                warnings.append(f"Ignored cell at index {index} because row/col is missing or invalid.")
+                continue
+
+            row_span = self._coerce_int(cell.get("row_span"), default=1)
+            col_span = self._coerce_int(cell.get("col_span"), default=1)
+            confidence = self._coerce_float(cell.get("confidence"))
+            confidence = self._clamp_confidence(confidence)
+            cells.append(
+                OCRCell(
+                    row=row,
+                    col=col,
+                    text=str(cell.get("text", "")),
+                    row_span=max(row_span, 1),
+                    col_span=max(col_span, 1),
+                    confidence=confidence,
+                )
+            )
+        return cells, warnings
+
+    def _coerce_int(self, value: Any, default: int | None = None) -> int | None:
+        if value is None:
+            return default
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _coerce_float(self, value: Any) -> float | None:
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _clamp_confidence(self, value: float | None) -> float | None:
+        if value is None:
+            return None
+        return max(0.0, min(1.0, value))
