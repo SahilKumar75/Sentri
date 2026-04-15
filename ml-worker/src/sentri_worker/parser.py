@@ -28,6 +28,16 @@ DAY_ALIASES = {
     "SUNDAY": "SUN",
 }
 
+DAY_ORDER = {
+    "MON": 1,
+    "TUE": 2,
+    "WED": 3,
+    "THU": 4,
+    "FRI": 5,
+    "SAT": 6,
+    "SUN": 7,
+}
+
 DAY_PATTERN = re.compile(r"\b(MON(?:DAY)?|TUE(?:S|SDAY)?|WED(?:NESDAY)?|THU(?:RS(?:DAY)?)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?)\b", re.IGNORECASE)
 TIME_PATTERN = re.compile(r"(?P<start>\d{1,2}(?:[:.]\d{2})?)\s*(?:-|–|to)\s*(?P<end>\d{1,2}(?:[:.]\d{2})?)", re.IGNORECASE)
 CLASS_PATTERN = re.compile(r"\b(?:Class|CLASS)\s*[:\-]\s*(?P<class>[A-Z0-9 &/-]+)", re.IGNORECASE)
@@ -308,6 +318,44 @@ def _span_times(time_map: dict[int, tuple[str | None, str | None]], start_col: i
     return columns[0][0], columns[-1][1]
 
 
+def _entry_sort_key(entry: TimetableEntry) -> tuple[int, int, int, int, int, str]:
+    start_minutes = _time_label_to_minutes(entry.start_time)
+    end_minutes = _time_label_to_minutes(entry.end_time)
+    return (
+        DAY_ORDER.get(entry.day_of_week, 99),
+        start_minutes if start_minutes is not None else 10_000,
+        end_minutes if end_minutes is not None else 10_001,
+        entry.source_row if entry.source_row is not None else 10_000,
+        entry.source_col if entry.source_col is not None else 10_000,
+        normalize_whitespace(entry.subject_text).upper(),
+    )
+
+
+def _deduplicate_entries(entries: Sequence[TimetableEntry], issues: list[ParseIssue]) -> list[TimetableEntry]:
+    deduplicated: list[TimetableEntry] = []
+    seen: set[tuple[str, str | None, str | None, str, str]] = set()
+
+    for entry in entries:
+        dedupe_key = (
+            entry.day_of_week,
+            entry.start_time,
+            entry.end_time,
+            normalize_whitespace(entry.subject_text).upper(),
+            entry.entry_type,
+        )
+        if dedupe_key in seen:
+            issues.append(
+                ParseIssue(
+                    code="duplicate_entry_removed",
+                    message=f"Removed duplicate entry for {entry.day_of_week} {entry.start_time or 'unknown'} {entry.subject_text}",
+                )
+            )
+            continue
+        seen.add(dedupe_key)
+        deduplicated.append(entry)
+    return deduplicated
+
+
 def parse_cells(cells: Sequence[OCRCell], raw_text: str = "", source: dict[str, object] | None = None) -> ParseResult:
     source = dict(source or {})
     issues: list[ParseIssue] = []
@@ -337,7 +385,7 @@ def parse_cells(cells: Sequence[OCRCell], raw_text: str = "", source: dict[str, 
         batch.image_path = str(source["image_path"])
 
     entries: list[TimetableEntry] = []
-    for cell in cells:
+    for cell in sorted(cells, key=lambda current: (current.row, current.col, current.row_span, current.col_span)):
         if cell.row == header_row or cell.col == day_col:
             continue
         raw_cell_text = cell.text.strip()
@@ -372,6 +420,8 @@ def parse_cells(cells: Sequence[OCRCell], raw_text: str = "", source: dict[str, 
                 col_span=cell.col_span,
             )
         )
+
+    entries = sorted(_deduplicate_entries(entries, issues), key=_entry_sort_key)
 
     if not entries and raw_text:
         issues.append(ParseIssue(code="no_entries_from_cells", message="No schedule entries were produced from the supplied cells."))
@@ -449,6 +499,8 @@ def parse_text_schedule(raw_text: str, source: dict[str, object] | None = None) 
                 raw_text=line,
             )
         )
+
+    entries = sorted(_deduplicate_entries(entries, issues), key=_entry_sort_key)
 
     if not entries:
         issues.append(ParseIssue(code="no_entries_from_text", message="Could not infer timetable entries from OCR text."))
