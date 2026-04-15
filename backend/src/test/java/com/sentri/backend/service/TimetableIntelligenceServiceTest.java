@@ -62,6 +62,90 @@ class TimetableIntelligenceServiceTest {
         assertThat(insight.nextClass().title()).isEqualTo("DBMS");
     }
 
+    @Test
+    void skipsBreakEntriesWhenResolvingUpcomingClass() {
+        TimetableBatchDetailResponse created = timetableBatchService.createPlaceholderBatch(null);
+        TimetableBatchDetailResponse batch = timetableBatchService.saveParsedTimetable(created.id(), new ParsedTimetableImportRequest(
+                null,
+                "MON entries",
+                0.9,
+                List.of(
+                        new TimetableEntryRequest(
+                                "MON",
+                                LocalTime.of(8, 45),
+                                LocalTime.of(9, 0),
+                                "Morning Break",
+                                null,
+                                null,
+                                "BREAK",
+                                null,
+                                "BREAK row",
+                                1,
+                                true,
+                                false
+                        ),
+                        new TimetableEntryRequest(
+                                "MON",
+                                LocalTime.of(9, 0),
+                                LocalTime.of(9, 45),
+                                "DBMS",
+                                "Prof. Deshmukh",
+                                "LH 19",
+                                "LECTURE",
+                                null,
+                                "DBMS row",
+                                2,
+                                false,
+                                false
+                        )
+                )
+        ));
+
+        TimetableInsightResponse insight = timetableIntelligenceService.buildInsight(
+                batch.id(),
+                OffsetDateTime.of(2026, 3, 23, 8, 50, 0, 0, ZoneOffset.ofHoursMinutes(5, 30))
+        );
+
+        assertThat(insight.status()).isEqualTo("upcoming");
+        assertThat(insight.nextClass()).isNotNull();
+        assertThat(insight.nextClass().title()).isEqualTo("DBMS");
+    }
+
+    @Test
+    void returnsHolidayWhenOnlyHolidayEntryExists() {
+        TimetableBatchDetailResponse created = timetableBatchService.createPlaceholderBatch(null);
+        TimetableBatchDetailResponse batch = timetableBatchService.saveParsedTimetable(created.id(), new ParsedTimetableImportRequest(
+                null,
+                "MON holiday",
+                0.8,
+                List.of(
+                        new TimetableEntryRequest(
+                                "MON",
+                                null,
+                                null,
+                                "Festival Holiday",
+                                null,
+                                null,
+                                "HOLIDAY",
+                                "No classes",
+                                "HOLIDAY row",
+                                1,
+                                false,
+                                true
+                        )
+                )
+        ));
+
+        TimetableInsightResponse insight = timetableIntelligenceService.buildInsight(
+                batch.id(),
+                OffsetDateTime.of(2026, 3, 23, 10, 0, 0, 0, ZoneOffset.ofHoursMinutes(5, 30))
+        );
+
+        assertThat(insight.status()).isEqualTo("holiday");
+        assertThat(insight.headline()).isEqualTo("Festival Holiday");
+        assertThat(insight.nextClass()).isNull();
+    }
+
     private TimetableBatchDetailResponse createParsedBatch() {
         TimetableBatchDetailResponse created = timetableBatchService.createPlaceholderBatch(
                 new CreateTimetableBatchRequest(
