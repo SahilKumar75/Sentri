@@ -6,6 +6,7 @@ import com.sentri.backend.dto.request.TimetableBatchMetadataRequest;
 import com.sentri.backend.dto.request.TimetableEntryRequest;
 import com.sentri.backend.domain.TimetableBatch;
 import com.sentri.backend.dto.response.TimetableBatchDetailResponse;
+import com.sentri.backend.exception.BadRequestException;
 import com.sentri.backend.repository.TimetableBatchRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -107,6 +109,73 @@ class TimetableBatchServiceTest {
         assertThat(saved.entries().get(0).subjectName()).isEqualTo("DM & SM");
         TimetableBatch persisted = timetableBatchRepository.findByIdWithEntries(created.id()).orElseThrow();
         assertThat(persisted.getEntries()).hasSize(1);
+    }
+
+    @Test
+    void normalizesParsedEntryFieldsAndClampsExtractionConfidence() {
+        TimetableBatchDetailResponse created = timetableBatchService.createPlaceholderBatch(null);
+
+        TimetableBatchDetailResponse saved = timetableBatchService.saveParsedTimetable(
+                created.id(),
+                new ParsedTimetableImportRequest(
+                        null,
+                        "MON 8.45-9.45",
+                        1.8,
+                        List.of(
+                                new TimetableEntryRequest(
+                                        "monday",
+                                        LocalTime.of(8, 45),
+                                        LocalTime.of(9, 45),
+                                        "  DBMS  ",
+                                        "  MA ",
+                                        " LH 20 ",
+                                        " lecture ",
+                                        "  intro class ",
+                                        " raw ",
+                                        1,
+                                        false,
+                                        false
+                                )
+                        )
+                )
+        );
+
+        assertThat(saved.extractionConfidence()).isEqualTo(1.0);
+        assertThat(saved.entries()).hasSize(1);
+        assertThat(saved.entries().get(0).dayOfWeek()).isEqualTo("MON");
+        assertThat(saved.entries().get(0).entryType()).isEqualTo("LECTURE");
+        assertThat(saved.entries().get(0).subjectName()).isEqualTo("DBMS");
+    }
+
+    @Test
+    void rejectsParsedEntryWithInvalidTimeRange() {
+        TimetableBatchDetailResponse created = timetableBatchService.createPlaceholderBatch(null);
+
+        assertThatThrownBy(() -> timetableBatchService.saveParsedTimetable(
+                created.id(),
+                new ParsedTimetableImportRequest(
+                        null,
+                        "invalid range",
+                        0.7,
+                        List.of(
+                                new TimetableEntryRequest(
+                                        "MON",
+                                        LocalTime.of(10, 0),
+                                        LocalTime.of(9, 30),
+                                        "DBMS",
+                                        null,
+                                        null,
+                                        "LECTURE",
+                                        null,
+                                        null,
+                                        1,
+                                        false,
+                                        false
+                                )
+                        )
+                )
+        )).isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("endTime must be after startTime");
     }
 
     @Test
