@@ -25,3 +25,4 @@ sentri:
   timetable:
     upload:
       storage-dir: ${SENTRI_TIMETABLE_UPLOAD_DIR:./data/timetable-uploads}
+      max-file-size-bytes: ${SENTRI_TIMETABLE_UPLOAD_MAX_FILE_SIZE_BYTES:5242880}
