@@ -94,6 +94,28 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(result.entries[0].start_time, "08:45")
         self.assertEqual(result.entries[1].day_of_week, "TUE")
 
+    def test_parse_cells_is_deterministic_and_deduplicated(self) -> None:
+        cells = [
+            OCRCell(row=0, col=0, text="TIME/DAY"),
+            OCRCell(row=0, col=1, text="8.45-9.45"),
+            OCRCell(row=0, col=2, text="9.45-10.45"),
+            OCRCell(row=1, col=0, text="MON"),
+            OCRCell(row=1, col=2, text="PM\n(MA)"),
+            OCRCell(row=1, col=1, text="DBMS\n(VI)"),
+            OCRCell(row=1, col=1, text="DBMS\n(VI)"),
+        ]
+
+        result = parse_timetable(
+            raw_text="Class: SE IT-B\nAcademic Year - 2025-26 - SEM II",
+            cells=cells,
+        )
+
+        self.assertEqual(len(result.entries), 2)
+        self.assertEqual(result.entries[0].subject_text, "DBMS")
+        self.assertEqual(result.entries[0].start_time, "08:45")
+        self.assertEqual(result.entries[1].subject_text, "PM")
+        self.assertTrue(any(issue.code == "duplicate_entry_removed" for issue in result.issues))
+
 
 if __name__ == "__main__":
     unittest.main()
