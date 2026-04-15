@@ -203,4 +203,33 @@ class TimetableBatchServiceTest {
         assertThat(persisted.getSourceImageStoragePath()).isNotBlank();
         assertThat(Files.exists(Path.of(persisted.getSourceImageStoragePath()))).isTrue();
     }
+
+        @Test
+        void rejectsUploadBatchForUnsupportedFileType() {
+                MockMultipartFile file = new MockMultipartFile(
+                                "file",
+                                "week-13.txt",
+                                "text/plain",
+                                "not-an-image".getBytes()
+                );
+
+                assertThatThrownBy(() -> timetableBatchService.createUploadBatch(file, "test", null))
+                                .isInstanceOf(BadRequestException.class)
+                                .hasMessageContaining("Only PNG/JPG/WEBP screenshot files are supported");
+        }
+
+        @Test
+        void rejectsUploadBatchWhenFileIsTooLarge() {
+                byte[] oversized = new byte[2048];
+                MockMultipartFile file = new MockMultipartFile(
+                                "file",
+                                "week-13.png",
+                                "image/png",
+                                oversized
+                );
+
+                assertThatThrownBy(() -> timetableBatchService.createUploadBatch(file, "test", null))
+                                .isInstanceOf(BadRequestException.class)
+                                .hasMessageContaining("Uploaded screenshot exceeds size limit");
+        }
 }
