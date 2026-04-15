@@ -6,13 +6,14 @@ Sentri should be developed using a review-first workflow even when only one deve
 
 ### Required Git Flow
 
-1. Never push directly to `main`.
-2. Create a feature branch for every change.
-3. Keep commits small and logical.
-4. Push the branch to GitHub.
-5. Open a pull request.
-6. Review the full diff before merging.
-7. Merge only after the review notes are addressed.
+1. Open an issue for each non-trivial change.
+2. Never push directly to `main`.
+3. Create a feature branch for every change.
+4. Keep commits small and logical.
+5. Push the branch to GitHub.
+6. Open a pull request linked to the issue (for example: `Closes #123`).
+7. Review the full diff before merging.
+8. Merge only after the review notes are addressed.
 
 ### Branch Naming
 
@@ -42,6 +43,12 @@ Before merging a PR, check:
 - mobile build still compiles
 - no dead demo-only code path was introduced silently
 - performance-sensitive reads and renders are considered
+
+### Issue + PR Hygiene
+
+- Every non-trivial change should have an issue for context and acceptance criteria.
+- Every pull request should link an issue and include a clear test plan.
+- Pull requests should include focused review notes when the change has risk.
 
 ### Sentri Standards
 

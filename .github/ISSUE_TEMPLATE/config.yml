@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Sentri architecture docs
+    url: https://github.com/SahilKumar75/sentri/tree/main/docs
+    about: Review architecture and AI logic docs before opening a broad design issue.
