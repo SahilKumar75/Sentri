@@ -35,6 +35,45 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result["rawOcrText"], payload["ocr_text"])
         self.assertEqual(result["metadata"]["sourceImageName"], "se_it_b_sem2.png")
 
+    def test_process_skips_invalid_cells_and_clamps_confidence(self) -> None:
+        payload = {
+            "source_name": "bad-cells.png",
+            "ocr_text": "Class: SE IT-B",
+            "extraction_confidence": "1.7",
+            "cells": [
+                {"row": 0, "col": 0, "text": "TIME/DAY"},
+                {"row": 0, "col": 1, "text": "8.45-9.45"},
+                {"row": 1, "col": 0, "text": "MON"},
+                {"row": 1, "col": 1, "text": "DBMS", "confidence": "0.8"},
+                {"row": "x", "col": 2, "text": "invalid-row"},
+                "not-a-dict",
+            ],
+        }
+
+        result = SentriWorker().process(payload)
+
+        self.assertEqual(result["extractionConfidence"], 1.0)
+        self.assertEqual(len(result["entries"]), 1)
+        self.assertIn("issue:payload_warning", result["metadata"]["sourceNotes"])
+
+    def test_process_uses_cell_confidence_average_when_payload_confidence_invalid(self) -> None:
+        payload = {
+            "source_name": "avg-confidence.png",
+            "ocr_text": "Class: SE IT-B",
+            "extraction_confidence": "not-a-number",
+            "cells": [
+                {"row": 0, "col": 0, "text": "TIME/DAY"},
+                {"row": 0, "col": 1, "text": "8.45-9.45"},
+                {"row": 1, "col": 0, "text": "MON"},
+                {"row": 1, "col": 1, "text": "DBMS", "confidence": 0.5},
+                {"row": 1, "col": 2, "text": "PM", "confidence": 0.9},
+            ],
+        }
+
+        result = SentriWorker().process(payload)
+
+        self.assertEqual(result["extractionConfidence"], 0.7)
+
 
 if __name__ == "__main__":
     unittest.main()
