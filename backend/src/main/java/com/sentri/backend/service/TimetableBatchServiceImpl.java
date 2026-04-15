@@ -21,9 +21,18 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class TimetableBatchServiceImpl implements TimetableBatchService {
+
+    private static final Set<String> SUPPORTED_ENTRY_TYPES = Set.of(
+            "LECTURE",
+            "LAB",
+            "TUTORIAL",
+            "BREAK",
+            "HOLIDAY"
+    );
 
     private final TimetableBatchRepository timetableBatchRepository;
     private final TimetableUploadStorageService timetableUploadStorageService;
@@ -99,7 +108,7 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
 
         applyMetadata(batch, request.metadata());
         batch.setRawOcrText(request.rawOcrText());
-        batch.setExtractionConfidence(request.extractionConfidence());
+        batch.setExtractionConfidence(normalizeExtractionConfidence(request.extractionConfidence()));
         batch.setStatus(TimetableBatchStatus.PARSED);
         batch.replaceEntries(toEntities(request.entries()));
 
@@ -157,20 +166,84 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
     }
 
     private TimetableEntry toEntity(TimetableEntryRequest request, int fallbackSortOrder) {
+        if (request == null) {
+            throw new BadRequestException("Parsed timetable entry at position " + fallbackSortOrder + " is null");
+        }
+        String normalizedDay = normalizeDayOfWeek(request.dayOfWeek());
+        if (normalizedDay.isBlank()) {
+            throw new BadRequestException("dayOfWeek is required for parsed entry at position " + fallbackSortOrder);
+        }
+        if (request.startTime() != null && request.endTime() != null && !request.endTime().isAfter(request.startTime())) {
+            throw new BadRequestException("endTime must be after startTime for parsed entry at position " + fallbackSortOrder);
+        }
+
+        String normalizedType = normalizeEntryType(request.entryType());
+        String normalizedSubject = normalizeSubjectName(request.subjectName(), normalizedType);
+
         TimetableEntry entry = new TimetableEntry();
-        entry.setDayOfWeek(request.dayOfWeek());
+        entry.setDayOfWeek(normalizedDay);
         entry.setStartTime(request.startTime());
         entry.setEndTime(request.endTime());
-        entry.setSubjectName(request.subjectName());
-        entry.setFacultyCode(request.facultyCode());
-        entry.setLocationLabel(request.locationLabel());
-        entry.setEntryType(request.entryType());
-        entry.setNoteText(request.noteText());
-        entry.setRawCellText(request.rawCellText());
+        entry.setSubjectName(normalizedSubject);
+        entry.setFacultyCode(normalizeNullable(request.facultyCode()));
+        entry.setLocationLabel(normalizeNullable(request.locationLabel()));
+        entry.setEntryType(normalizedType);
+        entry.setNoteText(normalizeNullable(request.noteText()));
+        entry.setRawCellText(normalizeNullable(request.rawCellText()));
         entry.setSortOrder(request.sortOrder() == null ? fallbackSortOrder : request.sortOrder());
-        entry.setBreakEntry(Boolean.TRUE.equals(request.breakEntry()));
-        entry.setHolidayEntry(Boolean.TRUE.equals(request.holidayEntry()));
+        entry.setBreakEntry("BREAK".equals(normalizedType) || Boolean.TRUE.equals(request.breakEntry()));
+        entry.setHolidayEntry("HOLIDAY".equals(normalizedType) || Boolean.TRUE.equals(request.holidayEntry()));
         return entry;
+    }
+
+    private Double normalizeExtractionConfidence(Double extractionConfidence) {
+        if (extractionConfidence == null) {
+            return null;
+        }
+        return Math.max(0.0d, Math.min(1.0d, extractionConfidence));
+    }
+
+    private String normalizeDayOfWeek(String dayOfWeek) {
+        String normalized = normalizeNullable(dayOfWeek);
+        if (normalized == null) {
+            return "";
+        }
+        String upper = normalized.toUpperCase();
+        return upper.length() <= 3 ? upper : upper.substring(0, 3);
+    }
+
+    private String normalizeEntryType(String entryType) {
+        String normalized = normalizeNullable(entryType);
+        if (normalized == null) {
+            return "LECTURE";
+        }
+        String upper = normalized.toUpperCase();
+        if (!SUPPORTED_ENTRY_TYPES.contains(upper)) {
+            throw new BadRequestException("Unsupported entryType: " + entryType);
+        }
+        return upper;
+    }
+
+    private String normalizeSubjectName(String subjectName, String entryType) {
+        String normalized = normalizeNullable(subjectName);
+        if (normalized != null) {
+            return normalized;
+        }
+        if ("BREAK".equals(entryType)) {
+            return "Break";
+        }
+        if ("HOLIDAY".equals(entryType)) {
+            return "Holiday";
+        }
+        throw new BadRequestException("subjectName is required for non-break timetable entries");
+    }
+
+    private String normalizeNullable(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private TimetableBatchSummaryResponse toSummaryResponse(TimetableBatch batch) {
