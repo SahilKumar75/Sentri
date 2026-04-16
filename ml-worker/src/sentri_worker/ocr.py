@@ -36,9 +36,18 @@ class OCRService:
         if not image_path:
             return OCRResult(warnings=["No image_path or ocr_text was supplied."])
 
-        return self.extract_from_image(Path(image_path))
+        ocr_options = payload.get("ocr_options") if isinstance(payload.get("ocr_options"), dict) else {}
+        language = ocr_options.get("language") if isinstance(ocr_options.get("language"), str) else "eng"
+        psm_candidates = self._coerce_psm_candidates(ocr_options.get("psm_candidates"))
 
-    def extract_from_image(self, image_path: Path) -> OCRResult:
+        return self.extract_from_image(Path(image_path), language=language, psm_candidates=psm_candidates)
+
+    def extract_from_image(
+        self,
+        image_path: Path,
+        language: str = "eng",
+        psm_candidates: tuple[int, ...] = (6, 11, 4),
+    ) -> OCRResult:
         warnings: list[str] = []
         try:
             from PIL import Image  # type: ignore
@@ -73,8 +82,8 @@ class OCRService:
             best_quality = -1.0
             best_engine = "tesseract"
             for variant_name, variant_image in prepared_images:
-                for psm in (6, 11, 4):
-                    config = f"--oem 1 --psm {psm}"
+                for psm in psm_candidates:
+                    config = f"--oem 1 --psm {psm} -l {language}"
                     text = pytesseract.image_to_string(variant_image, config=config)
                     normalized = self._normalize_ocr_text(text)
                     quality = self._score_ocr_text(normalized)
@@ -108,6 +117,21 @@ class OCRService:
             ("autocontrast", autocontrast),
             ("binary", binary),
         ]
+
+    def _coerce_psm_candidates(self, value: Any) -> tuple[int, ...]:
+        if not isinstance(value, list):
+            return (6, 11, 4)
+
+        candidates: list[int] = []
+        for item in value:
+            try:
+                parsed = int(item)
+            except (TypeError, ValueError):
+                continue
+            if 3 <= parsed <= 13 and parsed not in candidates:
+                candidates.append(parsed)
+
+        return tuple(candidates) if candidates else (6, 11, 4)
 
     def _normalize_ocr_text(self, text: str) -> str:
         text = text.replace("\r\n", "\n").replace("\r", "\n")
