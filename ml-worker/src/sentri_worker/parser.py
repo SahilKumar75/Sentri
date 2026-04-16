@@ -320,13 +320,18 @@ def parse_cell_text(text: str) -> tuple[str, str | None, str | None, list[str]]:
 def normalize_subject_text(value: str) -> str:
     cleaned = normalize_whitespace(value)
     cleaned = re.sub(r"^[^A-Za-z0-9]+", "", cleaned)
-    upper_cleaned = cleaned.upper()
+    original_upper = cleaned.upper()
+    upper_cleaned = original_upper
     upper_cleaned = upper_cleaned.replace("D8MS", "DBMS")
     upper_cleaned = upper_cleaned.replace("DBM5", "DBMS")
     upper_cleaned = upper_cleaned.replace("PR0JECT", "PROJECT")
     upper_cleaned = upper_cleaned.replace("TUT0RIAL", "TUTORIAL")
     normalized = SUBJECT_ALIASES.get(upper_cleaned)
-    return normalized if normalized is not None else cleaned
+    if normalized is not None:
+        return normalized
+    if upper_cleaned != original_upper:
+        return upper_cleaned
+    return cleaned
 
 
 def _cleanup_notes(

@@ -10,7 +10,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from sentri_worker.models import OCRCell
-from sentri_worker.parser import parse_timetable, parse_text_schedule
+from sentri_worker.parser import parse_cell_text, parse_timetable, parse_text_schedule
 
 
 class ParserTests(unittest.TestCase):
@@ -115,6 +115,34 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(result.entries[0].start_time, "08:45")
         self.assertEqual(result.entries[1].subject_text, "PM")
         self.assertTrue(any(issue.code == "duplicate_entry_removed" for issue in result.issues))
+
+    def test_parse_text_schedule_handles_ocr_noisy_day_and_time(self) -> None:
+        raw_text = "\n".join(
+            [
+                "M0N",
+                "8:4S-9:4S D8MS",
+                "TUE5",
+                "10.OO-11.OO PM",
+            ]
+        )
+
+        result = parse_text_schedule(raw_text)
+
+        self.assertEqual(len(result.entries), 2)
+        self.assertEqual(result.entries[0].day_of_week, "MON")
+        self.assertEqual(result.entries[0].start_time, "08:45")
+        self.assertEqual(result.entries[1].day_of_week, "TUE")
+        self.assertEqual(result.entries[1].start_time, "10:00")
+
+    def test_parse_cell_text_extracts_faculty_location_and_deduped_notes(self) -> None:
+        subject, faculty_code, location, notes = parse_cell_text(
+            "DBM5\nFaculty: MA\nLH 20\nRevision\nRevision"
+        )
+
+        self.assertEqual(subject, "DBMS")
+        self.assertEqual(faculty_code, "MA")
+        self.assertEqual(location, "LH 20")
+        self.assertEqual(notes, ["Revision"])
 
 
 if __name__ == "__main__":
