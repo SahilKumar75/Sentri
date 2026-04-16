@@ -68,6 +68,10 @@ SEMESTER_PATTERN = re.compile(r"\bSEM(?:ESTER)?\s*([IVX]+|\d+)\b", re.IGNORECASE
 WEF_PATTERN = re.compile(r"\b(?:WEF|Week Effective From)\s*[:\-]\s*(?P<date>.+)$", re.IGNORECASE)
 PARENTHESES_CODE_PATTERN = re.compile(r"^\(([A-Z0-9]{1,6})\)$")
 FACULTY_CODE_PATTERN = re.compile(r"^(?:FACULTY|TEACHER|PROF)\s*[:\-]\s*([A-Z0-9]{2,8})$", re.IGNORECASE)
+LOCATION_PATTERN = re.compile(
+    r"\b(LAB(?:-[IVX\d]+)?|LIBRARY\s+[A-Z\d]+|TUT\s+ROOM|ROOM\s+[A-Z0-9-]+|CLASSROOM|LH\s*\d+|NGC|CGL|CR\s*[-:]?\s*\d+)\b",
+    re.IGNORECASE,
+)
 
 SUBJECT_ALIASES = {
     "DBM5": "DBMS",
@@ -302,15 +306,15 @@ def parse_cell_text(text: str) -> tuple[str, str | None, str | None, list[str]]:
                 faculty_code = uppercase
                 continue
 
-        if not location and re.search(r"\b(Lab-[IVX]+|Lab-\d+|Library [A-Z]|Tut Room|Room [A-Z0-9]+|NGC|CGL|Classroom)\b", normalized_line, re.IGNORECASE):
+        if not location and LOCATION_PATTERN.search(normalized_line):
             location = normalized_line
             continue
         notes.append(normalized_line)
     if location is None:
-        location_guess = next((line for line in lines if re.search(r"\b(Lab|Library|Room|Tut|NGC|CGL)\b", line, re.IGNORECASE)), None)
+        location_guess = next((normalize_subject_text(line) for line in lines if LOCATION_PATTERN.search(line)), None)
         if location_guess and location_guess != subject:
             location = location_guess
-    return subject, faculty_code, location, notes
+    return subject, faculty_code, location, _cleanup_notes(notes, subject, faculty_code, location)
 
 
 def normalize_subject_text(value: str) -> str:
@@ -323,6 +327,36 @@ def normalize_subject_text(value: str) -> str:
     upper_cleaned = upper_cleaned.replace("TUT0RIAL", "TUTORIAL")
     normalized = SUBJECT_ALIASES.get(upper_cleaned)
     return normalized if normalized is not None else cleaned
+
+
+def _cleanup_notes(
+    notes: Sequence[str],
+    subject: str,
+    faculty_code: str | None,
+    location: str | None,
+) -> list[str]:
+    cleaned_notes: list[str] = []
+    seen: set[str] = set()
+    subject_upper = normalize_whitespace(subject).upper()
+    faculty_upper = faculty_code.upper() if faculty_code else None
+    location_upper = normalize_whitespace(location).upper() if location else None
+
+    for note in notes:
+        normalized = normalize_whitespace(note)
+        if not normalized:
+            continue
+        upper = normalized.upper()
+        if upper == subject_upper:
+            continue
+        if faculty_upper and upper == faculty_upper:
+            continue
+        if location_upper and upper == location_upper:
+            continue
+        if upper in seen:
+            continue
+        seen.add(upper)
+        cleaned_notes.append(normalized)
+    return cleaned_notes
 
 
 def _find_header_row(cells: Sequence[OCRCell]) -> int | None:
