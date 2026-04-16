@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from .evaluate import evaluate_fixture_file
 from .pipeline import SentriWorker
 
 
@@ -14,11 +15,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--image", help="Timetable screenshot path")
     parser.add_argument("--text", help="Raw OCR text input")
     parser.add_argument("--output", help="Write JSON result to file instead of stdout")
+    parser.add_argument("--evaluate-fixture", help="Run parser evaluation from a fixture JSON file")
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
+
+    if args.evaluate_fixture:
+        evaluation = evaluate_fixture_file(args.evaluate_fixture)
+        serialized = json.dumps(evaluation, indent=2, ensure_ascii=True)
+        if args.output:
+            Path(args.output).write_text(serialized + "\n", encoding="utf-8")
+        else:
+            sys.stdout.write(serialized + "\n")
+        return 0
+
     payload: dict[str, object] = {}
 
     if args.input:

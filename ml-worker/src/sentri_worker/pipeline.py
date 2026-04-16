@@ -5,6 +5,7 @@ from typing import Any
 from .models import OCRCell, ParseIssue
 from .ocr import OCRService
 from .parser import parse_timetable
+from .tuning import load_tuning_profile
 
 
 class SentriWorker:
@@ -20,8 +21,14 @@ class SentriWorker:
         raw_text = payload.get("ocr_text") or ocr_result.text or ""
 
         cells, payload_warnings = self._parse_cells(payload.get("cells"))
+        tuning_profile = load_tuning_profile(payload)
 
-        result = parse_timetable(raw_text=raw_text, cells=cells, source=source)
+        result = parse_timetable(
+            raw_text=raw_text,
+            cells=cells,
+            source=source,
+            tuning_profile=tuning_profile,
+        )
         result.source["ocr"] = ocr_result.to_dict()
         if ocr_result.warnings:
             result.issues.extend(
