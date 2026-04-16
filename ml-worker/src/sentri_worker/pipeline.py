@@ -46,6 +46,8 @@ class SentriWorker:
                 if cell.confidence is not None
             ]
             extraction_confidence = round(sum(confidences) / len(confidences), 4) if confidences else None
+        if extraction_confidence is None and ocr_result.quality is not None:
+            extraction_confidence = ocr_result.quality
         extraction_confidence = self._clamp_confidence(extraction_confidence)
 
         return result.to_backend_import_dict(
