@@ -1,0 +1,28 @@
+{
+  "payload": {
+    "source_name": "eval-fixture.png",
+    "ocr_text": "Class: SE IT-B\nAcademic Year - 2025-26 - SEM II\nVenue: LH 20",
+    "cells": [
+      {"row": 0, "col": 0, "text": "TIME/DAY"},
+      {"row": 0, "col": 1, "text": "8.45-9.45"},
+      {"row": 0, "col": 2, "text": "9.45-10.45"},
+      {"row": 1, "col": 0, "text": "MON"},
+      {"row": 1, "col": 1, "text": "D8MS\n(VI)"},
+      {"row": 1, "col": 2, "text": "PR0JECT MGMT\n(MA)"}
+    ]
+  },
+  "expected_entries": [
+    {
+      "dayOfWeek": "MON",
+      "startTime": "08:45:00",
+      "endTime": "09:45:00",
+      "subjectName": "DBMS"
+    },
+    {
+      "dayOfWeek": "MON",
+      "startTime": "09:45:00",
+      "endTime": "10:45:00",
+      "subjectName": "PROJECT MANAGEMENT"
+    }
+  ]
+}
