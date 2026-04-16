@@ -28,6 +28,27 @@ DAY_ALIASES = {
     "SUNDAY": "SUN",
 }
 
+OCR_DAY_CHAR_SUBSTITUTIONS = str.maketrans(
+    {
+        "0": "O",
+        "1": "I",
+        "5": "S",
+        "8": "B",
+    }
+)
+
+OCR_TIME_CHAR_SUBSTITUTIONS = str.maketrans(
+    {
+        "O": "0",
+        "o": "0",
+        "I": "1",
+        "l": "1",
+        "S": "5",
+        "s": "5",
+        "B": "8",
+    }
+)
+
 DAY_ORDER = {
     "MON": 1,
     "TUE": 2,
@@ -39,7 +60,7 @@ DAY_ORDER = {
 }
 
 DAY_PATTERN = re.compile(r"\b(MON(?:DAY)?|TUE(?:S|SDAY)?|WED(?:NESDAY)?|THU(?:RS(?:DAY)?)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?)\b", re.IGNORECASE)
-TIME_PATTERN = re.compile(r"(?P<start>\d{1,2}(?:[:.]\d{2})?)\s*(?:-|–|to)\s*(?P<end>\d{1,2}(?:[:.]\d{2})?)", re.IGNORECASE)
+TIME_PATTERN = re.compile(r"(?P<start>\d{1,2}(?:[:.]\d{2})?)\s*(?:-|–|—|~|to)\s*(?P<end>\d{1,2}(?:[:.]\d{2})?)", re.IGNORECASE)
 CLASS_PATTERN = re.compile(r"\b(?:Class|CLASS)\s*[:\-]\s*(?P<class>[A-Z0-9 &/-]+)", re.IGNORECASE)
 VENUE_PATTERN = re.compile(r"\bVenue\s*[:\-]\s*(?P<venue>.+)$", re.IGNORECASE)
 ACADEMIC_PATTERN = re.compile(r"\bAcademic Year\b.*?(?P<year>\d{4}\s*[-/]\s*\d{2,4})", re.IGNORECASE)
@@ -53,12 +74,22 @@ def normalize_whitespace(value: str) -> str:
 
 
 def normalize_day(value: str) -> str | None:
-    token = re.sub(r"[^A-Z]", "", value.upper())
-    return DAY_ALIASES.get(token)
+    token = re.sub(r"[^A-Z]", "", value.upper().translate(OCR_DAY_CHAR_SUBSTITUTIONS))
+    if not token:
+        return None
+    if token in DAY_ALIASES:
+        return DAY_ALIASES[token]
+
+    if len(token) >= 3:
+        for alias, normalized in DAY_ALIASES.items():
+            if alias.startswith(token) or token.startswith(alias):
+                return normalized
+    return None
 
 
 def normalize_time_label(value: str) -> str | None:
     value = value.strip().replace(".", ":")
+    value = value.translate(OCR_TIME_CHAR_SUBSTITUTIONS)
     value = value.replace(" ", "")
     if not value:
         return None
@@ -115,7 +146,9 @@ def _make_monotonic_range(
 
 
 def normalize_time_range(value: str) -> tuple[str | None, str | None] | None:
-    match = TIME_PATTERN.search(value.replace(".", ":"))
+    normalized = value.replace(".", ":").translate(OCR_TIME_CHAR_SUBSTITUTIONS)
+    normalized = normalized.replace(" TO ", " to ")
+    match = TIME_PATTERN.search(normalized)
     if not match:
         return None
     start = normalize_time_label(match.group("start"))
