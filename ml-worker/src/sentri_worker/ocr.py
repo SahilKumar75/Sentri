@@ -42,6 +42,7 @@ class OCRService:
         warnings: list[str] = []
         try:
             from PIL import Image  # type: ignore
+            from PIL import ImageFilter, ImageOps  # type: ignore
         except Exception:
             return OCRResult(
                 warnings=[
@@ -65,17 +66,48 @@ class OCRService:
             return OCRResult(warnings=warnings)
 
         try:
-            text = pytesseract.image_to_string(Image.open(image_path))
-            normalized_text = self._normalize_ocr_text(text)
+            with Image.open(image_path) as source_image:
+                prepared_images = self._prepare_image_variants(source_image, ImageOps=ImageOps, ImageFilter=ImageFilter)
+
+            best_text = ""
+            best_quality = -1.0
+            best_engine = "tesseract"
+            for variant_name, variant_image in prepared_images:
+                for psm in (6, 11, 4):
+                    config = f"--oem 1 --psm {psm}"
+                    text = pytesseract.image_to_string(variant_image, config=config)
+                    normalized = self._normalize_ocr_text(text)
+                    quality = self._score_ocr_text(normalized)
+                    if quality > best_quality:
+                        best_text = normalized
+                        best_quality = quality
+                        best_engine = f"tesseract:{variant_name}:psm{psm}"
+
+            if best_quality < 0:
+                warnings.append("No OCR candidate produced usable text.")
+                return OCRResult(warnings=warnings)
+
             return OCRResult(
-                text=normalized_text,
-                engine="tesseract",
-                quality=self._score_ocr_text(normalized_text),
+                text=best_text,
+                engine=best_engine,
+                quality=best_quality,
                 warnings=warnings,
             )
         except Exception as exc:
             warnings.append(f"OCR failed: {exc}")
             return OCRResult(warnings=warnings)
+
+    def _prepare_image_variants(self, source_image: Any, ImageOps: Any, ImageFilter: Any) -> list[tuple[str, Any]]:
+        grayscale = ImageOps.grayscale(source_image)
+        autocontrast = ImageOps.autocontrast(grayscale)
+        denoised = autocontrast.filter(ImageFilter.MedianFilter(size=3))
+        binary = denoised.point(lambda px: 255 if px > 150 else 0)
+
+        return [
+            ("grayscale", grayscale),
+            ("autocontrast", autocontrast),
+            ("binary", binary),
+        ]
 
     def _normalize_ocr_text(self, text: str) -> str:
         text = text.replace("\r\n", "\n").replace("\r", "\n")
