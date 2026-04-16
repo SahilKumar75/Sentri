@@ -67,6 +67,14 @@ ACADEMIC_PATTERN = re.compile(r"\bAcademic Year\b.*?(?P<year>\d{4}\s*[-/]\s*\d{2
 SEMESTER_PATTERN = re.compile(r"\bSEM(?:ESTER)?\s*([IVX]+|\d+)\b", re.IGNORECASE)
 WEF_PATTERN = re.compile(r"\b(?:WEF|Week Effective From)\s*[:\-]\s*(?P<date>.+)$", re.IGNORECASE)
 PARENTHESES_CODE_PATTERN = re.compile(r"^\(([A-Z0-9]{1,6})\)$")
+FACULTY_CODE_PATTERN = re.compile(r"^(?:FACULTY|TEACHER|PROF)\s*[:\-]\s*([A-Z0-9]{2,8})$", re.IGNORECASE)
+
+SUBJECT_ALIASES = {
+    "DBM5": "DBMS",
+    "D8MS": "DBMS",
+    "PR0JECT MANAGEMENT": "PROJECT MANAGEMENT",
+    "TUT0RIAL": "TUTORIAL",
+}
 
 
 def normalize_whitespace(value: str) -> str:
@@ -268,29 +276,53 @@ def parse_cell_text(text: str) -> tuple[str, str | None, str | None, list[str]]:
     lines = split_lines(text)
     if not lines:
         return "", None, None, []
-    subject = lines[0]
+    subject = normalize_subject_text(lines[0])
     faculty_code = None
     location = None
     notes: list[str] = []
     for line in lines[1:]:
+        normalized_line = normalize_subject_text(line)
         if not faculty_code:
-            code_match = PARENTHESES_CODE_PATTERN.match(line)
+            code_match = PARENTHESES_CODE_PATTERN.match(normalized_line)
             if code_match:
                 faculty_code = code_match.group(1)
                 continue
-            short_code_match = re.fullmatch(r"\(([A-Z0-9]{2,6})\)", line)
+            short_code_match = re.fullmatch(r"\(([A-Z0-9]{2,6})\)", normalized_line)
             if short_code_match:
                 faculty_code = short_code_match.group(1)
                 continue
-        if not location and re.search(r"\b(Lab-[IVX]+|Lab-\d+|Library [A-Z]|Tut Room|Room [A-Z0-9]+|NGC|CGL|Classroom)\b", line, re.IGNORECASE):
-            location = line
+
+            long_code_match = FACULTY_CODE_PATTERN.match(normalized_line)
+            if long_code_match:
+                faculty_code = long_code_match.group(1)
+                continue
+
+            uppercase = re.sub(r"[^A-Z0-9]", "", normalized_line.upper())
+            if 2 <= len(uppercase) <= 6 and uppercase.isalnum() and " " not in normalized_line:
+                faculty_code = uppercase
+                continue
+
+        if not location and re.search(r"\b(Lab-[IVX]+|Lab-\d+|Library [A-Z]|Tut Room|Room [A-Z0-9]+|NGC|CGL|Classroom)\b", normalized_line, re.IGNORECASE):
+            location = normalized_line
             continue
-        notes.append(line)
+        notes.append(normalized_line)
     if location is None:
         location_guess = next((line for line in lines if re.search(r"\b(Lab|Library|Room|Tut|NGC|CGL)\b", line, re.IGNORECASE)), None)
         if location_guess and location_guess != subject:
             location = location_guess
     return subject, faculty_code, location, notes
+
+
+def normalize_subject_text(value: str) -> str:
+    cleaned = normalize_whitespace(value)
+    cleaned = re.sub(r"^[^A-Za-z0-9]+", "", cleaned)
+    upper_cleaned = cleaned.upper()
+    upper_cleaned = upper_cleaned.replace("D8MS", "DBMS")
+    upper_cleaned = upper_cleaned.replace("DBM5", "DBMS")
+    upper_cleaned = upper_cleaned.replace("PR0JECT", "PROJECT")
+    upper_cleaned = upper_cleaned.replace("TUT0RIAL", "TUTORIAL")
+    normalized = SUBJECT_ALIASES.get(upper_cleaned)
+    return normalized if normalized is not None else cleaned
 
 
 def _find_header_row(cells: Sequence[OCRCell]) -> int | None:
