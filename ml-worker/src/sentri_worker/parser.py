@@ -28,6 +28,27 @@ DAY_ALIASES = {
     "SUNDAY": "SUN",
 }
 
+OCR_DAY_CHAR_SUBSTITUTIONS = str.maketrans(
+    {
+        "0": "O",
+        "1": "I",
+        "5": "S",
+        "8": "B",
+    }
+)
+
+OCR_TIME_CHAR_SUBSTITUTIONS = str.maketrans(
+    {
+        "O": "0",
+        "o": "0",
+        "I": "1",
+        "l": "1",
+        "S": "5",
+        "s": "5",
+        "B": "8",
+    }
+)
+
 DAY_ORDER = {
     "MON": 1,
     "TUE": 2,
@@ -39,13 +60,25 @@ DAY_ORDER = {
 }
 
 DAY_PATTERN = re.compile(r"\b(MON(?:DAY)?|TUE(?:S|SDAY)?|WED(?:NESDAY)?|THU(?:RS(?:DAY)?)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?)\b", re.IGNORECASE)
-TIME_PATTERN = re.compile(r"(?P<start>\d{1,2}(?:[:.]\d{2})?)\s*(?:-|–|to)\s*(?P<end>\d{1,2}(?:[:.]\d{2})?)", re.IGNORECASE)
+TIME_PATTERN = re.compile(r"(?P<start>\d{1,2}(?:[:.]\d{2})?)\s*(?:-|–|—|~|to)\s*(?P<end>\d{1,2}(?:[:.]\d{2})?)", re.IGNORECASE)
 CLASS_PATTERN = re.compile(r"\b(?:Class|CLASS)\s*[:\-]\s*(?P<class>[A-Z0-9 &/-]+)", re.IGNORECASE)
 VENUE_PATTERN = re.compile(r"\bVenue\s*[:\-]\s*(?P<venue>.+)$", re.IGNORECASE)
 ACADEMIC_PATTERN = re.compile(r"\bAcademic Year\b.*?(?P<year>\d{4}\s*[-/]\s*\d{2,4})", re.IGNORECASE)
 SEMESTER_PATTERN = re.compile(r"\bSEM(?:ESTER)?\s*([IVX]+|\d+)\b", re.IGNORECASE)
 WEF_PATTERN = re.compile(r"\b(?:WEF|Week Effective From)\s*[:\-]\s*(?P<date>.+)$", re.IGNORECASE)
 PARENTHESES_CODE_PATTERN = re.compile(r"^\(([A-Z0-9]{1,6})\)$")
+FACULTY_CODE_PATTERN = re.compile(r"^(?:FACULTY|TEACHER|PROF)\s*[:\-]\s*([A-Z0-9]{2,8})$", re.IGNORECASE)
+LOCATION_PATTERN = re.compile(
+    r"\b(LAB(?:-[IVX\d]+)?|LIBRARY\s+[A-Z\d]+|TUT\s+ROOM|ROOM\s+[A-Z0-9-]+|CLASSROOM|LH\s*\d+|NGC|CGL|CR\s*[-:]?\s*\d+)\b",
+    re.IGNORECASE,
+)
+
+SUBJECT_ALIASES = {
+    "DBM5": "DBMS",
+    "D8MS": "DBMS",
+    "PR0JECT MANAGEMENT": "PROJECT MANAGEMENT",
+    "TUT0RIAL": "TUTORIAL",
+}
 
 
 def normalize_whitespace(value: str) -> str:
@@ -53,12 +86,22 @@ def normalize_whitespace(value: str) -> str:
 
 
 def normalize_day(value: str) -> str | None:
-    token = re.sub(r"[^A-Z]", "", value.upper())
-    return DAY_ALIASES.get(token)
+    token = re.sub(r"[^A-Z]", "", value.upper().translate(OCR_DAY_CHAR_SUBSTITUTIONS))
+    if not token:
+        return None
+    if token in DAY_ALIASES:
+        return DAY_ALIASES[token]
+
+    if len(token) >= 3:
+        for alias, normalized in DAY_ALIASES.items():
+            if alias.startswith(token) or token.startswith(alias):
+                return normalized
+    return None
 
 
 def normalize_time_label(value: str) -> str | None:
     value = value.strip().replace(".", ":")
+    value = value.translate(OCR_TIME_CHAR_SUBSTITUTIONS)
     value = value.replace(" ", "")
     if not value:
         return None
@@ -115,7 +158,9 @@ def _make_monotonic_range(
 
 
 def normalize_time_range(value: str) -> tuple[str | None, str | None] | None:
-    match = TIME_PATTERN.search(value.replace(".", ":"))
+    normalized = value.replace(".", ":").translate(OCR_TIME_CHAR_SUBSTITUTIONS)
+    normalized = normalized.replace(" TO ", " to ")
+    match = TIME_PATTERN.search(normalized)
     if not match:
         return None
     start = normalize_time_label(match.group("start"))
@@ -235,29 +280,88 @@ def parse_cell_text(text: str) -> tuple[str, str | None, str | None, list[str]]:
     lines = split_lines(text)
     if not lines:
         return "", None, None, []
-    subject = lines[0]
+    subject = normalize_subject_text(lines[0])
     faculty_code = None
     location = None
     notes: list[str] = []
     for line in lines[1:]:
+        normalized_line = normalize_subject_text(line)
         if not faculty_code:
-            code_match = PARENTHESES_CODE_PATTERN.match(line)
+            code_match = PARENTHESES_CODE_PATTERN.match(normalized_line)
             if code_match:
                 faculty_code = code_match.group(1)
                 continue
-            short_code_match = re.fullmatch(r"\(([A-Z0-9]{2,6})\)", line)
+            short_code_match = re.fullmatch(r"\(([A-Z0-9]{2,6})\)", normalized_line)
             if short_code_match:
                 faculty_code = short_code_match.group(1)
                 continue
-        if not location and re.search(r"\b(Lab-[IVX]+|Lab-\d+|Library [A-Z]|Tut Room|Room [A-Z0-9]+|NGC|CGL|Classroom)\b", line, re.IGNORECASE):
-            location = line
+
+            long_code_match = FACULTY_CODE_PATTERN.match(normalized_line)
+            if long_code_match:
+                faculty_code = long_code_match.group(1)
+                continue
+
+            uppercase = re.sub(r"[^A-Z0-9]", "", normalized_line.upper())
+            if 2 <= len(uppercase) <= 6 and uppercase.isalnum() and " " not in normalized_line:
+                faculty_code = uppercase
+                continue
+
+        if not location and LOCATION_PATTERN.search(normalized_line):
+            location = normalized_line
             continue
-        notes.append(line)
+        notes.append(normalized_line)
     if location is None:
-        location_guess = next((line for line in lines if re.search(r"\b(Lab|Library|Room|Tut|NGC|CGL)\b", line, re.IGNORECASE)), None)
+        location_guess = next((normalize_subject_text(line) for line in lines if LOCATION_PATTERN.search(line)), None)
         if location_guess and location_guess != subject:
             location = location_guess
-    return subject, faculty_code, location, notes
+    return subject, faculty_code, location, _cleanup_notes(notes, subject, faculty_code, location)
+
+
+def normalize_subject_text(value: str) -> str:
+    cleaned = normalize_whitespace(value)
+    cleaned = re.sub(r"^[^A-Za-z0-9]+", "", cleaned)
+    original_upper = cleaned.upper()
+    upper_cleaned = original_upper
+    upper_cleaned = upper_cleaned.replace("D8MS", "DBMS")
+    upper_cleaned = upper_cleaned.replace("DBM5", "DBMS")
+    upper_cleaned = upper_cleaned.replace("PR0JECT", "PROJECT")
+    upper_cleaned = upper_cleaned.replace("TUT0RIAL", "TUTORIAL")
+    normalized = SUBJECT_ALIASES.get(upper_cleaned)
+    if normalized is not None:
+        return normalized
+    if upper_cleaned != original_upper:
+        return upper_cleaned
+    return cleaned
+
+
+def _cleanup_notes(
+    notes: Sequence[str],
+    subject: str,
+    faculty_code: str | None,
+    location: str | None,
+) -> list[str]:
+    cleaned_notes: list[str] = []
+    seen: set[str] = set()
+    subject_upper = normalize_whitespace(subject).upper()
+    faculty_upper = faculty_code.upper() if faculty_code else None
+    location_upper = normalize_whitespace(location).upper() if location else None
+
+    for note in notes:
+        normalized = normalize_whitespace(note)
+        if not normalized:
+            continue
+        upper = normalized.upper()
+        if upper == subject_upper:
+            continue
+        if faculty_upper and upper == faculty_upper:
+            continue
+        if location_upper and upper == location_upper:
+            continue
+        if upper in seen:
+            continue
+        seen.add(upper)
+        cleaned_notes.append(normalized)
+    return cleaned_notes
 
 
 def _find_header_row(cells: Sequence[OCRCell]) -> int | None:
