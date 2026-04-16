@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Sequence
 
 from .models import OCRCell, ParseIssue, ParseResult, TimetableBatch, TimetableEntry
+from .tuning import TuningProfile
 
 DAY_ALIASES = {
     "MON": "MON",
@@ -276,16 +277,19 @@ def classify_entry(text: str) -> str:
     return "lecture"
 
 
-def parse_cell_text(text: str) -> tuple[str, str | None, str | None, list[str]]:
+def parse_cell_text(
+    text: str,
+    tuning_profile: TuningProfile | None = None,
+) -> tuple[str, str | None, str | None, list[str]]:
     lines = split_lines(text)
     if not lines:
         return "", None, None, []
-    subject = normalize_subject_text(lines[0])
+    subject = normalize_subject_text(lines[0], tuning_profile=tuning_profile)
     faculty_code = None
     location = None
     notes: list[str] = []
     for line in lines[1:]:
-        normalized_line = normalize_subject_text(line)
+        normalized_line = normalize_subject_text(line, tuning_profile=tuning_profile)
         if not faculty_code:
             code_match = PARENTHESES_CODE_PATTERN.match(normalized_line)
             if code_match:
@@ -311,13 +315,13 @@ def parse_cell_text(text: str) -> tuple[str, str | None, str | None, list[str]]:
             continue
         notes.append(normalized_line)
     if location is None:
-        location_guess = next((normalize_subject_text(line) for line in lines if LOCATION_PATTERN.search(line)), None)
+        location_guess = next((normalize_subject_text(line, tuning_profile=tuning_profile) for line in lines if LOCATION_PATTERN.search(line)), None)
         if location_guess and location_guess != subject:
             location = location_guess
     return subject, faculty_code, location, _cleanup_notes(notes, subject, faculty_code, location)
 
 
-def normalize_subject_text(value: str) -> str:
+def normalize_subject_text(value: str, tuning_profile: TuningProfile | None = None) -> str:
     cleaned = normalize_whitespace(value)
     cleaned = re.sub(r"^[^A-Za-z0-9]+", "", cleaned)
     original_upper = cleaned.upper()
@@ -328,10 +332,15 @@ def normalize_subject_text(value: str) -> str:
     upper_cleaned = upper_cleaned.replace("TUT0RIAL", "TUTORIAL")
     normalized = SUBJECT_ALIASES.get(upper_cleaned)
     if normalized is not None:
-        return normalized
-    if upper_cleaned != original_upper:
-        return upper_cleaned
-    return cleaned
+        resolved = normalized
+    elif upper_cleaned != original_upper:
+        resolved = upper_cleaned
+    else:
+        resolved = cleaned
+
+    if tuning_profile is not None:
+        return tuning_profile.normalize_subject(resolved)
+    return resolved
 
 
 def _cleanup_notes(
@@ -460,7 +469,12 @@ def _deduplicate_entries(entries: Sequence[TimetableEntry], issues: list[ParseIs
     return deduplicated
 
 
-def parse_cells(cells: Sequence[OCRCell], raw_text: str = "", source: dict[str, object] | None = None) -> ParseResult:
+def parse_cells(
+    cells: Sequence[OCRCell],
+    raw_text: str = "",
+    source: dict[str, object] | None = None,
+    tuning_profile: TuningProfile | None = None,
+) -> ParseResult:
     source = dict(source or {})
     issues: list[ParseIssue] = []
     if not cells:
@@ -505,7 +519,7 @@ def parse_cells(cells: Sequence[OCRCell], raw_text: str = "", source: dict[str, 
         if entry_type == "blank":
             continue
 
-        subject_text, faculty_code, location_label, notes = parse_cell_text(raw_cell_text)
+        subject_text, faculty_code, location_label, notes = parse_cell_text(raw_cell_text, tuning_profile=tuning_profile)
         start_time, end_time = _span_times(time_map, cell.col, cell.col_span)
         entries.append(
             TimetableEntry(
@@ -532,7 +546,11 @@ def parse_cells(cells: Sequence[OCRCell], raw_text: str = "", source: dict[str, 
     return ParseResult(source=source, batch=batch, entries=entries, issues=issues, raw_text=raw_text, cells_count=len(cells))
 
 
-def parse_text_schedule(raw_text: str, source: dict[str, object] | None = None) -> ParseResult:
+def parse_text_schedule(
+    raw_text: str,
+    source: dict[str, object] | None = None,
+    tuning_profile: TuningProfile | None = None,
+) -> ParseResult:
     lines = split_lines(raw_text)
     source = dict(source or {})
     batch = extract_batch_metadata(lines)
@@ -564,7 +582,7 @@ def parse_text_schedule(raw_text: str, source: dict[str, object] | None = None) 
             remainder = normalize_whitespace(line)
             remainder = re.sub(TIME_PATTERN, "", remainder).strip()
             if remainder and current_day:
-                subject_text, faculty_code, location_label, notes = parse_cell_text(remainder)
+                subject_text, faculty_code, location_label, notes = parse_cell_text(remainder, tuning_profile=tuning_profile)
                 entry_type = classify_entry(remainder)
                 if entry_type != "blank":
                     entries.append(
@@ -586,7 +604,7 @@ def parse_text_schedule(raw_text: str, source: dict[str, object] | None = None) 
             continue
         if not pending_time:
             pending_time = (None, None)
-        subject_text, faculty_code, location_label, notes = parse_cell_text(line)
+        subject_text, faculty_code, location_label, notes = parse_cell_text(line, tuning_profile=tuning_profile)
         entry_type = classify_entry(line)
         if entry_type == "blank":
             continue
@@ -612,7 +630,12 @@ def parse_text_schedule(raw_text: str, source: dict[str, object] | None = None) 
     return ParseResult(source=source, batch=batch, entries=entries, issues=issues, raw_text=raw_text, cells_count=0)
 
 
-def parse_timetable(raw_text: str = "", cells: Sequence[OCRCell] | None = None, source: dict[str, object] | None = None) -> ParseResult:
+def parse_timetable(
+    raw_text: str = "",
+    cells: Sequence[OCRCell] | None = None,
+    source: dict[str, object] | None = None,
+    tuning_profile: TuningProfile | None = None,
+) -> ParseResult:
     if cells:
-        return parse_cells(cells=cells, raw_text=raw_text, source=source)
-    return parse_text_schedule(raw_text=raw_text, source=source)
+        return parse_cells(cells=cells, raw_text=raw_text, source=source, tuning_profile=tuning_profile)
+    return parse_text_schedule(raw_text=raw_text, source=source, tuning_profile=tuning_profile)
