@@ -17,6 +17,14 @@ DEFAULT_SUBJECT_VOCABULARY = (
     "CALCULUS",
 )
 
+DEFAULT_SUBJECT_NOISE_TOKENS = (
+    "LECTURE",
+    "THEORY",
+    "SUBJECT",
+    "COURSE",
+    "PAPER",
+)
+
 DEFAULT_SUBJECT_ALIASES = {
     "DBM5": "DBMS",
     "D8MS": "DBMS",
@@ -49,12 +57,17 @@ class TuningProfile:
     subject_aliases: dict[str, str] | None = None
     faculty_aliases: dict[str, str] | None = None
     location_aliases: dict[str, str] | None = None
+    subject_noise_tokens: tuple[str, ...] = DEFAULT_SUBJECT_NOISE_TOKENS
     min_match_score: float = 0.83
 
     def normalize_subject(self, value: str) -> str:
         cleaned = " ".join(value.strip().split())
         if not cleaned:
             return cleaned
+
+        cleaned = self._strip_subject_noise(cleaned)
+        if not cleaned:
+            return ""
 
         aliases = self.subject_aliases or DEFAULT_SUBJECT_ALIASES
         upper_cleaned = cleaned.upper()
@@ -71,6 +84,11 @@ class TuningProfile:
             cutoff=max(0.0, min(1.0, self.min_match_score)),
         )
         return closest[0] if closest else cleaned
+
+    def _strip_subject_noise(self, value: str) -> str:
+        noise_tokens = {token.upper() for token in self.subject_noise_tokens}
+        words = [word for word in value.split() if word.upper() not in noise_tokens]
+        return " ".join(words)
 
     def normalize_faculty_code(self, value: str | None) -> str | None:
         if value is None:
@@ -115,6 +133,7 @@ def load_tuning_profile(payload: dict[str, Any] | None) -> TuningProfile:
     aliases = tuning_payload.get("subject_aliases")
     faculty_aliases = tuning_payload.get("faculty_aliases")
     location_aliases = tuning_payload.get("location_aliases")
+    subject_noise_tokens = tuning_payload.get("subject_noise_tokens")
     min_match_score = tuning_payload.get("min_match_score")
 
     resolved_vocab = DEFAULT_SUBJECT_VOCABULARY
@@ -147,6 +166,12 @@ def load_tuning_profile(payload: dict[str, Any] | None) -> TuningProfile:
             if key_text and value_text:
                 resolved_location_aliases[key_text] = value_text
 
+    resolved_subject_noise_tokens = DEFAULT_SUBJECT_NOISE_TOKENS
+    if isinstance(subject_noise_tokens, list):
+        normalized_noise_tokens = [str(token).strip().upper() for token in subject_noise_tokens if str(token).strip()]
+        if normalized_noise_tokens:
+            resolved_subject_noise_tokens = tuple(dict.fromkeys(normalized_noise_tokens))
+
     resolved_score = 0.83
     try:
         if min_match_score is not None:
@@ -159,5 +184,6 @@ def load_tuning_profile(payload: dict[str, Any] | None) -> TuningProfile:
         subject_aliases=resolved_aliases,
         faculty_aliases=resolved_faculty_aliases,
         location_aliases=resolved_location_aliases,
+        subject_noise_tokens=resolved_subject_noise_tokens,
         min_match_score=max(0.0, min(1.0, resolved_score)),
     )
