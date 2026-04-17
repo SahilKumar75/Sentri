@@ -22,12 +22,17 @@ class SentriWorker:
 
         cells, payload_warnings = self._parse_cells(payload.get("cells"))
         tuning_profile = load_tuning_profile(payload)
+        parsing_options = payload.get("parsing_options") if isinstance(payload.get("parsing_options"), dict) else {}
+        fallback_to_text_schedule = parsing_options.get("fallback_to_text_schedule")
+        if not isinstance(fallback_to_text_schedule, bool):
+            fallback_to_text_schedule = True
 
         result = parse_timetable(
             raw_text=raw_text,
             cells=cells,
             source=source,
             tuning_profile=tuning_profile,
+            fallback_to_text_schedule=fallback_to_text_schedule,
         )
         result.source["ocr"] = ocr_result.to_dict()
         if ocr_result.warnings:
@@ -52,9 +57,12 @@ class SentriWorker:
                 for cell in cells
                 if cell.confidence is not None
             ]
-            extraction_confidence = round(sum(confidences) / len(confidences), 4) if confidences else None
-        if extraction_confidence is None and ocr_result.quality is not None:
-            extraction_confidence = ocr_result.quality
+            cell_confidence = round(sum(confidences) / len(confidences), 4) if confidences else None
+            extraction_confidence = self._blend_confidence(
+                cell_confidence,
+                ocr_result.quality,
+                payload.get("confidence_weights"),
+            )
         extraction_confidence = self._clamp_confidence(extraction_confidence)
 
         return result.to_backend_import_dict(
@@ -116,3 +124,34 @@ class SentriWorker:
         if value is None:
             return None
         return max(0.0, min(1.0, value))
+
+    def _blend_confidence(
+        self,
+        cell_confidence: float | None,
+        ocr_confidence: float | None,
+        weights_payload: Any,
+    ) -> float | None:
+        if cell_confidence is None and ocr_confidence is None:
+            return None
+        if cell_confidence is None:
+            return ocr_confidence
+        if ocr_confidence is None:
+            return cell_confidence
+
+        # Keep historical behavior (prefer cell confidence) unless explicit weights are provided.
+        if not isinstance(weights_payload, dict):
+            return cell_confidence
+
+        default_cell_weight = 0.7
+        default_ocr_weight = 0.3
+        cell_weight = self._coerce_float(weights_payload.get("cell_weight"))
+        ocr_weight = self._coerce_float(weights_payload.get("ocr_weight"))
+        if cell_weight is not None and ocr_weight is not None and (cell_weight + ocr_weight) > 0:
+            total = cell_weight + ocr_weight
+            cell_weight = cell_weight / total
+            ocr_weight = ocr_weight / total
+        else:
+            cell_weight = default_cell_weight
+            ocr_weight = default_ocr_weight
+
+        return round((cell_weight * cell_confidence) + (ocr_weight * ocr_confidence), 4)
