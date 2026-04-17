@@ -651,7 +651,27 @@ def parse_timetable(
     cells: Sequence[OCRCell] | None = None,
     source: dict[str, object] | None = None,
     tuning_profile: TuningProfile | None = None,
+    fallback_to_text_schedule: bool = True,
 ) -> ParseResult:
     if cells:
-        return parse_cells(cells=cells, raw_text=raw_text, source=source, tuning_profile=tuning_profile)
+        cell_result = parse_cells(cells=cells, raw_text=raw_text, source=source, tuning_profile=tuning_profile)
+        if fallback_to_text_schedule and not cell_result.entries and raw_text.strip():
+            text_result = parse_text_schedule(raw_text=raw_text, source=source, tuning_profile=tuning_profile)
+            if text_result.entries:
+                return ParseResult(
+                    source=cell_result.source,
+                    batch=text_result.batch,
+                    entries=text_result.entries,
+                    issues=cell_result.issues
+                    + [
+                        ParseIssue(
+                            code="fallback_to_text_schedule",
+                            message="Used text-based parsing because cell parsing produced no entries.",
+                        )
+                    ]
+                    + text_result.issues,
+                    raw_text=raw_text,
+                    cells_count=cell_result.cells_count,
+                )
+        return cell_result
     return parse_text_schedule(raw_text=raw_text, source=source, tuning_profile=tuning_profile)
