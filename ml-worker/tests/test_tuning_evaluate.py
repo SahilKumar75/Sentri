@@ -22,6 +22,13 @@ class TuningAndEvaluateTests(unittest.TestCase):
                     "subject_aliases": {
                         "math5": "maths"
                     },
+                    "faculty_aliases": {
+                        "m 4": "ma"
+                    },
+                    "location_aliases": {
+                        "labiii": "lab-iii"
+                    },
+                    "subject_noise_tokens": ["lecture"],
                     "subject_vocabulary": ["MATHS", "DBMS"],
                     "min_match_score": 0.8,
                 }
@@ -29,7 +36,10 @@ class TuningAndEvaluateTests(unittest.TestCase):
         )
 
         self.assertEqual(profile.normalize_subject("math5"), "MATHS")
+        self.assertEqual(profile.normalize_subject("DBMS Lecture"), "DBMS")
         self.assertEqual(profile.normalize_subject("dbm5"), "DBMS")
+        self.assertEqual(profile.normalize_faculty_code("m 4"), "MA")
+        self.assertEqual(profile.normalize_location_label("labiii"), "LAB-III")
 
     def test_worker_applies_payload_tuning_to_subjects(self) -> None:
         worker = SentriWorker()

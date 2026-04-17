@@ -70,7 +70,7 @@ WEF_PATTERN = re.compile(r"\b(?:WEF|Week Effective From)\s*[:\-]\s*(?P<date>.+)$
 PARENTHESES_CODE_PATTERN = re.compile(r"^\(([A-Z0-9]{1,6})\)$")
 FACULTY_CODE_PATTERN = re.compile(r"^(?:FACULTY|TEACHER|PROF)\s*[:\-]\s*([A-Z0-9]{2,8})$", re.IGNORECASE)
 LOCATION_PATTERN = re.compile(
-    r"\b(LAB(?:-[IVX\d]+)?|LIBRARY\s+[A-Z\d]+|TUT\s+ROOM|ROOM\s+[A-Z0-9-]+|CLASSROOM|LH\s*\d+|NGC|CGL|CR\s*[-:]?\s*\d+)\b",
+    r"\b(LAB(?:-?[IVX\d]+)?|LIBRARY\s+[A-Z\d]+|TUT\s+ROOM|ROOM\s+[A-Z0-9-]+|CLASSROOM|LH\s*\d+|NGC|CGL|CR\s*[-:]?\s*\d+)\b",
     re.IGNORECASE,
 )
 
@@ -305,8 +305,19 @@ def parse_cell_text(
                 faculty_code = long_code_match.group(1)
                 continue
 
+            if tuning_profile is not None:
+                tuned_code = tuning_profile.normalize_faculty_code(normalized_line)
+                if tuned_code and re.fullmatch(r"[A-Z0-9]{2,4}", tuned_code):
+                    faculty_code = tuned_code
+                    continue
+
             uppercase = re.sub(r"[^A-Z0-9]", "", normalized_line.upper())
-            if 2 <= len(uppercase) <= 6 and uppercase.isalnum() and " " not in normalized_line:
+            if (
+                2 <= len(uppercase) <= 4
+                and uppercase.isalnum()
+                and " " not in normalized_line
+                and not LOCATION_PATTERN.search(normalized_line)
+            ):
                 faculty_code = uppercase
                 continue
 
@@ -318,6 +329,11 @@ def parse_cell_text(
         location_guess = next((normalize_subject_text(line, tuning_profile=tuning_profile) for line in lines if LOCATION_PATTERN.search(line)), None)
         if location_guess and location_guess != subject:
             location = location_guess
+
+    if tuning_profile is not None:
+        faculty_code = tuning_profile.normalize_faculty_code(faculty_code)
+        location = tuning_profile.normalize_location_label(location)
+
     return subject, faculty_code, location, _cleanup_notes(notes, subject, faculty_code, location)
 
 
