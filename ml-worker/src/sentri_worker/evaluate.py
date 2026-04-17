@@ -18,6 +18,7 @@ class EvaluationResult:
     f1: float
     slot_accuracy: float
     subject_accuracy: float
+    per_day: dict[str, dict[str, Any]]
     false_negatives: list[dict[str, Any]]
     false_positives: list[dict[str, Any]]
 
@@ -31,6 +32,7 @@ class EvaluationResult:
             "f1": self.f1,
             "slot_accuracy": self.slot_accuracy,
             "subject_accuracy": self.subject_accuracy,
+            "per_day": self.per_day,
             "false_negatives": self.false_negatives,
             "false_positives": self.false_positives,
         }
@@ -78,6 +80,7 @@ def evaluate_fixture(fixture_payload: dict[str, Any], worker: SentriWorker | Non
     slot_accuracy = round(len(slot_matches) / len(expected_slots), 4) if expected_slots else 0.0
     subject_matches = sum(1 for slot in slot_matches if expected_slots[slot] == predicted_slots[slot])
     subject_accuracy = round(subject_matches / len(slot_matches), 4) if slot_matches else 0.0
+    per_day = _build_per_day_metrics(expected_normalized, predicted_normalized)
 
     return EvaluationResult(
         matched=matched,
@@ -88,6 +91,7 @@ def evaluate_fixture(fixture_payload: dict[str, Any], worker: SentriWorker | Non
         f1=f1,
         slot_accuracy=slot_accuracy,
         subject_accuracy=subject_accuracy,
+        per_day=per_day,
         false_negatives=[expected_lookup[key] for key in sorted(false_negative_set)],
         false_positives=[predicted_lookup[key] for key in sorted(false_positive_set)],
     )
@@ -118,3 +122,38 @@ def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "_key": key,
         "_slot_key": slot_key,
     }
+
+
+def _build_per_day_metrics(
+    expected_entries: list[dict[str, Any]],
+    predicted_entries: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    expected_by_day: dict[str, set[str]] = {}
+    predicted_by_day: dict[str, set[str]] = {}
+
+    for entry in expected_entries:
+        expected_by_day.setdefault(entry["dayOfWeek"], set()).add(entry["_key"])
+    for entry in predicted_entries:
+        predicted_by_day.setdefault(entry["dayOfWeek"], set()).add(entry["_key"])
+
+    days = sorted(set(expected_by_day.keys()) | set(predicted_by_day.keys()))
+    metrics: dict[str, dict[str, Any]] = {}
+    for day in days:
+        expected_set = expected_by_day.get(day, set())
+        predicted_set = predicted_by_day.get(day, set())
+        matched = expected_set & predicted_set
+        expected_count = len(expected_set)
+        predicted_count = len(predicted_set)
+        precision = round(len(matched) / predicted_count, 4) if predicted_count else 0.0
+        recall = round(len(matched) / expected_count, 4) if expected_count else 0.0
+        f1 = round((2 * precision * recall) / (precision + recall), 4) if (precision + recall) > 0 else 0.0
+
+        metrics[day] = {
+            "matched": len(matched),
+            "expected": expected_count,
+            "predicted": predicted_count,
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+        }
+    return metrics
