@@ -318,6 +318,11 @@ def parse_cell_text(
         location_guess = next((normalize_subject_text(line, tuning_profile=tuning_profile) for line in lines if LOCATION_PATTERN.search(line)), None)
         if location_guess and location_guess != subject:
             location = location_guess
+
+    if tuning_profile is not None:
+        faculty_code = tuning_profile.normalize_faculty_code(faculty_code)
+        location = tuning_profile.normalize_location_label(location)
+
     return subject, faculty_code, location, _cleanup_notes(notes, subject, faculty_code, location)
 
 
