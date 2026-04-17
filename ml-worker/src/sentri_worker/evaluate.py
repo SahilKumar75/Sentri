@@ -15,6 +15,9 @@ class EvaluationResult:
     predicted: int
     precision: float
     recall: float
+    f1: float
+    slot_accuracy: float
+    subject_accuracy: float
     false_negatives: list[dict[str, Any]]
     false_positives: list[dict[str, Any]]
 
@@ -25,6 +28,9 @@ class EvaluationResult:
             "predicted": self.predicted,
             "precision": self.precision,
             "recall": self.recall,
+            "f1": self.f1,
+            "slot_accuracy": self.slot_accuracy,
+            "subject_accuracy": self.subject_accuracy,
             "false_negatives": self.false_negatives,
             "false_positives": self.false_positives,
         }
@@ -64,6 +70,14 @@ def evaluate_fixture(fixture_payload: dict[str, Any], worker: SentriWorker | Non
 
     precision = round(matched / predicted_count, 4) if predicted_count else 0.0
     recall = round(matched / expected_count, 4) if expected_count else 0.0
+    f1 = round((2 * precision * recall) / (precision + recall), 4) if (precision + recall) > 0 else 0.0
+
+    expected_slots = {entry["_slot_key"]: entry["subjectName"] for entry in expected_normalized}
+    predicted_slots = {entry["_slot_key"]: entry["subjectName"] for entry in predicted_normalized}
+    slot_matches = set(expected_slots.keys()) & set(predicted_slots.keys())
+    slot_accuracy = round(len(slot_matches) / len(expected_slots), 4) if expected_slots else 0.0
+    subject_matches = sum(1 for slot in slot_matches if expected_slots[slot] == predicted_slots[slot])
+    subject_accuracy = round(subject_matches / len(slot_matches), 4) if slot_matches else 0.0
 
     return EvaluationResult(
         matched=matched,
@@ -71,6 +85,9 @@ def evaluate_fixture(fixture_payload: dict[str, Any], worker: SentriWorker | Non
         predicted=predicted_count,
         precision=precision,
         recall=recall,
+        f1=f1,
+        slot_accuracy=slot_accuracy,
+        subject_accuracy=subject_accuracy,
         false_negatives=[expected_lookup[key] for key in sorted(false_negative_set)],
         false_positives=[predicted_lookup[key] for key in sorted(false_positive_set)],
     )
@@ -92,10 +109,12 @@ def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
     end = str(entry.get("endTime") or "").strip()
     subject = str(entry.get("subjectName") or "").strip().upper()
     key = "|".join([day, start, end, subject])
+    slot_key = "|".join([day, start, end])
     return {
         "dayOfWeek": day,
         "startTime": start,
         "endTime": end,
         "subjectName": subject,
         "_key": key,
+        "_slot_key": slot_key,
     }
