@@ -11,6 +11,7 @@ if str(SRC) not in sys.path:
 
 from sentri_worker.models import OCRCell
 from sentri_worker.parser import parse_cell_text, parse_timetable, parse_text_schedule
+from sentri_worker.tuning import TuningProfile
 
 
 class ParserTests(unittest.TestCase):
@@ -143,6 +144,24 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(faculty_code, "MA")
         self.assertEqual(location, "LH 20")
         self.assertEqual(notes, ["Revision"])
+
+    def test_parse_cell_text_applies_custom_tuning_profile(self) -> None:
+        tuning_profile = TuningProfile(
+            subject_aliases={"MATH5": "MATHS"},
+            faculty_aliases={"M 4": "MA"},
+            location_aliases={"LABIII": "LAB-III"},
+            subject_noise_tokens=("LECTURE",),
+        )
+
+        subject, faculty_code, location, notes = parse_cell_text(
+            "MATH5 LECTURE\nM 4\nLABIII\nPractice",
+            tuning_profile=tuning_profile,
+        )
+
+        self.assertEqual(subject, "MATHS")
+        self.assertEqual(faculty_code, "MA")
+        self.assertEqual(location, "LAB-III")
+        self.assertEqual(notes, ["Practice"])
 
 
 if __name__ == "__main__":
