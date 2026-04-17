@@ -107,6 +107,26 @@ def evaluate_fixture_file(path: str | Path, worker: SentriWorker | None = None) 
     }
 
 
+def evaluate_fixture_directory(
+    directory: str | Path,
+    pattern: str = "*.json",
+    worker: SentriWorker | None = None,
+) -> dict[str, Any]:
+    directory_path = Path(directory)
+    fixture_paths = sorted(path for path in directory_path.glob(pattern) if path.is_file())
+
+    fixture_reports = [evaluate_fixture_file(path, worker=worker) for path in fixture_paths]
+    aggregate = _aggregate_fixture_reports(fixture_reports)
+
+    return {
+        "directory": str(directory_path),
+        "pattern": pattern,
+        "fixture_count": len(fixture_reports),
+        "aggregate": aggregate,
+        "fixtures": fixture_reports,
+    }
+
+
 def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
     day = str(entry.get("dayOfWeek") or "").strip().upper()
     start = str(entry.get("startTime") or "").strip()
@@ -157,3 +177,44 @@ def _build_per_day_metrics(
             "f1": f1,
         }
     return metrics
+
+
+def _aggregate_fixture_reports(fixture_reports: list[dict[str, Any]]) -> dict[str, Any]:
+    total_matched = 0
+    total_expected = 0
+    total_predicted = 0
+    slot_accuracy_sum = 0.0
+    subject_accuracy_sum = 0.0
+    fixture_count = len(fixture_reports)
+
+    ranking: list[tuple[float, str]] = []
+    for report in fixture_reports:
+        metrics = report.get("metrics", {})
+        total_matched += int(metrics.get("matched", 0))
+        total_expected += int(metrics.get("expected", 0))
+        total_predicted += int(metrics.get("predicted", 0))
+        slot_accuracy_sum += float(metrics.get("slot_accuracy", 0.0))
+        subject_accuracy_sum += float(metrics.get("subject_accuracy", 0.0))
+        ranking.append((float(metrics.get("f1", 0.0)), str(report.get("fixture", "unknown"))))
+
+    precision = round(total_matched / total_predicted, 4) if total_predicted else 0.0
+    recall = round(total_matched / total_expected, 4) if total_expected else 0.0
+    f1 = round((2 * precision * recall) / (precision + recall), 4) if (precision + recall) > 0 else 0.0
+
+    ranking.sort(key=lambda item: item[0])
+    worst_fixtures = [
+        {"fixture": fixture, "f1": score}
+        for score, fixture in ranking[:3]
+    ]
+
+    return {
+        "matched": total_matched,
+        "expected": total_expected,
+        "predicted": total_predicted,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "avg_slot_accuracy": round(slot_accuracy_sum / fixture_count, 4) if fixture_count else 0.0,
+        "avg_subject_accuracy": round(subject_accuracy_sum / fixture_count, 4) if fixture_count else 0.0,
+        "worst_fixtures": worst_fixtures,
+    }

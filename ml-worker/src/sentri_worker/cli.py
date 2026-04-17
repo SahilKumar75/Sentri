@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from .evaluate import evaluate_fixture_file
+from .evaluate import evaluate_fixture_directory, evaluate_fixture_file
 from .pipeline import SentriWorker
 
 
@@ -16,11 +16,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--text", help="Raw OCR text input")
     parser.add_argument("--output", help="Write JSON result to file instead of stdout")
     parser.add_argument("--evaluate-fixture", help="Run parser evaluation from a fixture JSON file")
+    parser.add_argument("--evaluate-fixture-dir", help="Run parser evaluation for all fixtures in a directory")
+    parser.add_argument("--evaluate-pattern", default="*.json", help="Glob pattern for fixture discovery")
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
+
+    if args.evaluate_fixture_dir:
+        evaluation = evaluate_fixture_directory(args.evaluate_fixture_dir, pattern=args.evaluate_pattern)
+        serialized = json.dumps(evaluation, indent=2, ensure_ascii=True)
+        if args.output:
+            Path(args.output).write_text(serialized + "\n", encoding="utf-8")
+        else:
+            sys.stdout.write(serialized + "\n")
+        return 0
 
     if args.evaluate_fixture:
         evaluation = evaluate_fixture_file(args.evaluate_fixture)
