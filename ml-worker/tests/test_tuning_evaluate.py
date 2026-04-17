@@ -9,7 +9,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from sentri_worker.evaluate import evaluate_fixture, evaluate_fixture_file
+from sentri_worker.evaluate import evaluate_fixture, evaluate_fixture_directory, evaluate_fixture_file
 from sentri_worker.pipeline import SentriWorker
 from sentri_worker.tuning import load_tuning_profile
 
@@ -59,6 +59,10 @@ class TuningAndEvaluateTests(unittest.TestCase):
 
         self.assertEqual(report["metrics"]["precision"], 1.0)
         self.assertEqual(report["metrics"]["recall"], 1.0)
+        self.assertEqual(report["metrics"]["f1"], 1.0)
+        self.assertEqual(report["metrics"]["slot_accuracy"], 1.0)
+        self.assertEqual(report["metrics"]["subject_accuracy"], 1.0)
+        self.assertIn("MON", report["metrics"]["per_day"])
 
     def test_evaluate_fixture_detects_missing_entries(self) -> None:
         fixture_payload = {
@@ -84,6 +88,19 @@ class TuningAndEvaluateTests(unittest.TestCase):
         self.assertEqual(report["expected"], 2)
         self.assertEqual(report["predicted"], 1)
         self.assertEqual(report["recall"], 0.5)
+
+    def test_evaluate_fixture_directory_builds_aggregate_summary(self) -> None:
+        fixture_dir = ROOT / "tests" / "fixtures"
+        report = evaluate_fixture_directory(fixture_dir, pattern="parser_eval_fixture*.json")
+
+        self.assertEqual(report["fixture_count"], 2)
+        self.assertIn("aggregate", report)
+        self.assertEqual(report["aggregate"]["expected"], 4)
+        self.assertEqual(report["aggregate"]["predicted"], 3)
+        self.assertEqual(report["aggregate"]["matched"], 3)
+        self.assertEqual(report["aggregate"]["precision"], 1.0)
+        self.assertEqual(report["aggregate"]["recall"], 0.75)
+        self.assertTrue(len(report["aggregate"]["worst_fixtures"]) >= 1)
 
 
 if __name__ == "__main__":
