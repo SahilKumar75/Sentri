@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SectionHeader, SheetHeader, SurfaceCard } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 
 type SentriSheetProps = {
@@ -44,26 +45,18 @@ export default function SentriSheet({ visible, userName, onClose }: SentriSheetP
       <View style={styles.backdrop}>
         <Pressable style={styles.scrim} onPress={onClose} />
         <SafeAreaView style={styles.sheet}>
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.eyebrow}>Sentri</Text>
-              <Text style={styles.title}>Your student copilot</Text>
-            </View>
-            <Pressable style={styles.doneButton} onPress={onClose}>
-              <Text style={styles.doneText}>Done</Text>
-            </Pressable>
-          </View>
+          <SheetHeader eyebrow="Sentri" title="Your student copilot" onActionPress={onClose} />
 
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.heroCard}>
+            <SurfaceCard tone="accent">
               <Text style={styles.heroTitle}>Hi {userName.split(' ')[0]}, Sentri is staged for your student tasks.</Text>
               <Text style={styles.heroBody}>
                 The assistant surface is ready in the navigation flow. Next we can wire it to timetable, Myspace, calorie, and hangout context.
               </Text>
-            </View>
+            </SurfaceCard>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Try asking later</Text>
+              <SectionHeader title="Try asking later" />
               {starterPrompts.map((prompt) => (
                 <Pressable
                   key={prompt}
@@ -78,7 +71,7 @@ export default function SentriSheet({ visible, userName, onClose }: SentriSheetP
               ))}
             </View>
 
-            <View style={styles.composerCard}>
+            <SurfaceCard>
               <Text style={styles.composerLabel}>Assistant input</Text>
               <TextInput
                 value={draft}
@@ -109,13 +102,13 @@ export default function SentriSheet({ visible, userName, onClose }: SentriSheetP
               <View style={styles.helperRow}>
                 <Text style={styles.helperText}>Voice and context-aware answers can plug in here next.</Text>
               </View>
-            </View>
+            </SurfaceCard>
 
             {reply ? (
-              <View style={styles.replyCard}>
+              <SurfaceCard radius="md">
                 <Text style={styles.replyLabel}>Sentri reply</Text>
                 <Text style={styles.replyText}>{reply}</Text>
-              </View>
+              </SurfaceCard>
             ) : null}
           </ScrollView>
         </SafeAreaView>
@@ -141,46 +134,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     paddingTop: 10,
   },
-  header: {
-    paddingHorizontal: theme.chrome.horizontalPadding,
-    paddingBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  eyebrow: {
-    color: theme.colors.accentStrong,
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  title: {
-    marginTop: 6,
-    color: theme.colors.text,
-    fontSize: 26,
-    fontWeight: '800',
-  },
-  doneButton: {
-    borderRadius: 16,
-    backgroundColor: theme.colors.surfaceAlt,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  doneText: {
-    color: theme.colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
   content: {
     paddingHorizontal: theme.chrome.horizontalPadding,
     paddingBottom: 28,
     gap: 14,
-  },
-  heroCard: {
-    backgroundColor: theme.colors.accentSoft,
-    borderRadius: 24,
-    padding: 18,
   },
   heroTitle: {
     color: theme.colors.text,
@@ -197,11 +154,6 @@ const styles = StyleSheet.create({
   section: {
     gap: 10,
   },
-  sectionTitle: {
-    color: theme.colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
   promptCard: {
     borderRadius: 18,
     backgroundColor: theme.colors.surface,
@@ -215,13 +167,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
-  },
-  composerCard: {
-    borderRadius: 24,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.line,
-    padding: 18,
   },
   composerLabel: {
     color: theme.colors.textSoft,
