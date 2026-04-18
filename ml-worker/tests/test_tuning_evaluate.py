@@ -15,6 +15,16 @@ from sentri_worker.tuning import load_tuning_profile
 
 
 class TuningAndEvaluateTests(unittest.TestCase):
+    def test_evaluate_fixture_directory_error_breakdown(self) -> None:
+        fixture_dir = ROOT / "tests" / "fixtures"
+        report = evaluate_fixture_directory(fixture_dir, pattern="parser_eval_fixture*.json")
+
+        # Should include error breakdown keys
+        self.assertIn("false_negatives", report["aggregate"])
+        self.assertIn("false_positives", report["aggregate"])
+        # Should be lists
+        self.assertIsInstance(report["aggregate"]["false_negatives"], list)
+        self.assertIsInstance(report["aggregate"]["false_positives"], list)
     def test_load_tuning_profile_applies_custom_aliases(self) -> None:
         profile = load_tuning_profile(
             {

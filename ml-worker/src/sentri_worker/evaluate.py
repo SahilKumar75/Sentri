@@ -188,6 +188,8 @@ def _aggregate_fixture_reports(fixture_reports: list[dict[str, Any]]) -> dict[st
     fixture_count = len(fixture_reports)
 
     ranking: list[tuple[float, str]] = []
+    all_false_negatives = []
+    all_false_positives = []
     for report in fixture_reports:
         metrics = report.get("metrics", {})
         total_matched += int(metrics.get("matched", 0))
@@ -196,6 +198,11 @@ def _aggregate_fixture_reports(fixture_reports: list[dict[str, Any]]) -> dict[st
         slot_accuracy_sum += float(metrics.get("slot_accuracy", 0.0))
         subject_accuracy_sum += float(metrics.get("subject_accuracy", 0.0))
         ranking.append((float(metrics.get("f1", 0.0)), str(report.get("fixture", "unknown"))))
+        # Collect error breakdowns
+        for fn in metrics.get("false_negatives", []):
+            all_false_negatives.append({"fixture": report.get("fixture", "unknown"), **fn})
+        for fp in metrics.get("false_positives", []):
+            all_false_positives.append({"fixture": report.get("fixture", "unknown"), **fp})
 
     precision = round(total_matched / total_predicted, 4) if total_predicted else 0.0
     recall = round(total_matched / total_expected, 4) if total_expected else 0.0
@@ -217,4 +224,6 @@ def _aggregate_fixture_reports(fixture_reports: list[dict[str, Any]]) -> dict[st
         "avg_slot_accuracy": round(slot_accuracy_sum / fixture_count, 4) if fixture_count else 0.0,
         "avg_subject_accuracy": round(subject_accuracy_sum / fixture_count, 4) if fixture_count else 0.0,
         "worst_fixtures": worst_fixtures,
+        "false_negatives": all_false_negatives,
+        "false_positives": all_false_positives,
     }
