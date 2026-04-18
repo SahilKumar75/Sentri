@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { theme, type TabKey } from '../design/tokens';
 
@@ -7,6 +8,26 @@ type CapsuleTabBarProps = {
   onTabChange: (tab: TabKey) => void;
   onSentriPress: () => void;
   tone?: 'light' | 'dark';
+};
+
+type SurfaceCardProps = {
+  children: ReactNode;
+  tone?: 'default' | 'alt' | 'accent' | 'dark';
+  radius?: 'md' | 'lg';
+  padded?: boolean;
+};
+
+type SectionHeaderProps = {
+  title: string;
+  meta?: string;
+  right?: ReactNode;
+};
+
+type SheetHeaderProps = {
+  eyebrow: string;
+  title: string;
+  actionLabel?: string;
+  onActionPress: () => void;
 };
 
 export function AvatarButton({
@@ -157,6 +178,49 @@ export function CapsuleTabBar({
           onPress={() => onTabChange('hangout')}
         />
       </View>
+    </View>
+  );
+}
+
+export function SurfaceCard({ children, tone = 'default', radius = 'lg', padded = true }: SurfaceCardProps) {
+  return (
+    <View
+      style={[
+        styles.surfaceCard,
+        radius === 'md' ? styles.surfaceCardMd : styles.surfaceCardLg,
+        padded && styles.surfaceCardPadded,
+        tone === 'alt' && styles.surfaceCardAlt,
+        tone === 'accent' && styles.surfaceCardAccent,
+        tone === 'dark' && styles.surfaceCardDark,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
+export function SectionHeader({ title, meta, right }: SectionHeaderProps) {
+  return (
+    <View style={styles.sharedSectionHeader}>
+      <View style={styles.sharedSectionHeaderCopy}>
+        <Text style={styles.sharedSectionTitle}>{title}</Text>
+        {meta ? <Text style={styles.sharedSectionMeta}>{meta}</Text> : null}
+      </View>
+      {right}
+    </View>
+  );
+}
+
+export function SheetHeader({ eyebrow, title, actionLabel = 'Done', onActionPress }: SheetHeaderProps) {
+  return (
+    <View style={styles.sheetHeader}>
+      <View>
+        <Text style={styles.sheetHeaderEyebrow}>{eyebrow}</Text>
+        <Text style={styles.sheetHeaderTitle}>{title}</Text>
+      </View>
+      <Pressable onPress={onActionPress} style={styles.sheetHeaderButton}>
+        <Text style={styles.sheetHeaderButtonText}>{actionLabel}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -347,6 +411,87 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: 15,
     fontWeight: '600',
+  },
+  surfaceCard: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    ...theme.shadow.soft,
+  },
+  surfaceCardMd: {
+    borderRadius: theme.radius.md,
+  },
+  surfaceCardLg: {
+    borderRadius: theme.radius.lg,
+  },
+  surfaceCardPadded: {
+    padding: 18,
+  },
+  surfaceCardAlt: {
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  surfaceCardAccent: {
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accentSoft,
+  },
+  surfaceCardDark: {
+    backgroundColor: theme.colors.darkSurface,
+    borderColor: theme.colors.darkLine,
+  },
+  sharedSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
+  sharedSectionHeaderCopy: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: theme.spacing.xs,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  sharedSectionTitle: {
+    color: theme.colors.text,
+    fontSize: 19,
+    fontWeight: '800',
+  },
+  sharedSectionMeta: {
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sheetHeader: {
+    paddingHorizontal: theme.chrome.horizontalPadding,
+    paddingTop: 12,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sheetHeaderEyebrow: {
+    color: theme.colors.accentStrong,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  sheetHeaderTitle: {
+    marginTop: 6,
+    color: theme.colors.text,
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  sheetHeaderButton: {
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  sheetHeaderButtonText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
   tabWrap: {
     position: 'absolute',

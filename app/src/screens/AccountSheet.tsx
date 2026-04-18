@@ -1,4 +1,5 @@
 import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SectionHeader, SheetHeader, SurfaceCard } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import type { UserProfile } from '../types/auth';
 
@@ -28,18 +29,10 @@ export default function AccountSheet({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.eyebrow}>Account</Text>
-              <Text style={styles.title}>{viewMode === 'settings' ? 'Settings' : displayName}</Text>
-            </View>
-            <Pressable onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeText}>Done</Text>
-            </Pressable>
-          </View>
+          <SheetHeader eyebrow="Account" title={viewMode === 'settings' ? 'Settings' : displayName} onActionPress={onClose} />
 
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.heroCard}>
+            <SurfaceCard>
               <Text style={styles.heroLabel}>Primary contact</Text>
               <Text style={styles.heroValue}>{primaryContact}</Text>
               <Text style={styles.heroBody}>
@@ -57,19 +50,19 @@ export default function AccountSheet({
                   <Text style={styles.heroTagText}>{profile.phone ? 'Phone login' : 'Email login'}</Text>
                 </View>
               </View>
-            </View>
+            </SurfaceCard>
 
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Profile details</Text>
+            <SurfaceCard>
+              <SectionHeader title="Profile details" />
               <DetailRow label="First name" value={profile.firstName} />
               <DetailRow label="Last name" value={profile.lastName} />
               <DetailRow label="Date of birth" value={profile.dob} />
               <DetailRow label="Phone" value={profile.phone || 'Not added'} />
               <DetailRow label="Email" value={profile.email || 'Not added'} />
-            </View>
+            </SurfaceCard>
 
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Access</Text>
+            <SurfaceCard>
+              <SectionHeader title="Access" />
               <DetailRow label="Login method" value={profile.phone ? 'Phone or email + password' : 'Email + password'} />
               <DetailRow label="Password" value={profile.password ? maskPassword(profile.password) : 'Stored securely on backend'} />
               <DetailRow
@@ -81,32 +74,32 @@ export default function AccountSheet({
                 value={profile.lastLoginAt ? formatDateTime(profile.lastLoginAt) : 'This device session is current'}
               />
               <DetailRow label="Account created" value={profile.createdAt ? formatDateTime(profile.createdAt) : 'Unknown'} />
-            </View>
+            </SurfaceCard>
 
             {viewMode === 'settings' ? (
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Settings</Text>
+              <SurfaceCard>
+                <SectionHeader title="Settings" />
                 <DetailRow label="Notifications" value="Weekly timetable reminder every Saturday" />
                 <DetailRow label="Storage" value="Myspace captures linked to this account" />
                 <DetailRow label="Privacy" value="Account data visible only to you" />
                 <DetailRow label="Login preference" value="Phone or email with password" />
-              </View>
+              </SurfaceCard>
             ) : (
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Settings snapshot</Text>
+              <SurfaceCard>
+                <SectionHeader title="Settings snapshot" />
                 <DetailRow label="Notifications" value="Weekly timetable reminder on Saturday" />
                 <DetailRow label="Storage" value="Myspace captures stay linked to this account" />
                 <DetailRow label="Privacy" value="Account data is visible only to you" />
-              </View>
+              </SurfaceCard>
             )}
 
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Sentri flow</Text>
+            <SurfaceCard>
+              <SectionHeader title="Sentri flow" />
               <DetailRow label="Home" value="Timetable, current class, next class, and weekly refresh" />
               <DetailRow label="Myspace" value="Search, save, and resurface screenshots, links, and notes" />
               <DetailRow label="Calorie" value="Body-goal setup, daily target, meals, burns, and cheat days" />
               <DetailRow label="Hangout" value="Create room, share link, join room, and meeting controls" />
-            </View>
+            </SurfaceCard>
 
             <Pressable onPress={onLogout} style={styles.logoutButton}>
               <Text style={styles.logoutButtonText}>Logout</Text>
@@ -153,50 +146,10 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: theme.chrome.horizontalPadding,
-    paddingTop: 12,
-    paddingBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  eyebrow: {
-    color: theme.colors.accentStrong,
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  title: {
-    marginTop: 6,
-    color: theme.colors.text,
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  closeButton: {
-    borderRadius: 16,
-    backgroundColor: theme.colors.surfaceAlt,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  closeText: {
-    color: theme.colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
   content: {
     paddingHorizontal: theme.chrome.horizontalPadding,
     paddingBottom: 28,
     gap: 14,
-  },
-  heroCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: theme.colors.line,
-    padding: 18,
-    ...theme.shadow.soft,
   },
   heroLabel: {
     color: theme.colors.textSoft,
@@ -233,20 +186,6 @@ const styles = StyleSheet.create({
     color: theme.colors.accentStrong,
     fontSize: 12,
     fontWeight: '800',
-  },
-  sectionCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: theme.colors.line,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-  },
-  sectionTitle: {
-    color: theme.colors.text,
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 6,
   },
   detailRow: {
     paddingVertical: 12,
