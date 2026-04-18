@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { AvatarButton } from '../components/sentri-ui';
+import { AvatarButton, SectionHeader, SurfaceCard } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import { calendarTags } from '../features/home/timetable-fixtures';
 import {
@@ -341,11 +341,8 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
       ) : null}
 
       {recentUploads.length ? (
-        <View style={styles.uploadHistoryCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent uploads</Text>
-            <Text style={styles.sectionAction}>{recentUploads.length} tracked</Text>
-          </View>
+        <SurfaceCard>
+          <SectionHeader title="Recent uploads" meta={`${recentUploads.length} tracked`} />
           {recentUploads.map((upload, index) => (
             <View key={upload.batchId} style={[styles.historyRow, index !== 0 && styles.historyRowBorder]}>
               <View style={styles.historyCopy}>
@@ -360,7 +357,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
               </View>
             </View>
           ))}
-        </View>
+        </SurfaceCard>
       ) : null}
 
       <View style={styles.segmentedControl}>
@@ -410,12 +407,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
             })}
           </ScrollView>
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{timelineTitle}</Text>
-            <Text style={styles.sectionAction}>
-              {selectedEntries.length ? `${selectedEntries.length} items` : 'No items'}
-            </Text>
-          </View>
+          <SectionHeader title={timelineTitle} meta={selectedEntries.length ? `${selectedEntries.length} items` : 'No items'} />
 
           {selectedEntries.length ? (
             <View style={styles.scheduleCard}>
@@ -473,10 +465,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
 
       {viewMode === 'week' ? (
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>This week</Text>
-            <Text style={styles.sectionAction}>Tap a day</Text>
-          </View>
+          <SectionHeader title="This week" meta="Tap a day" />
           {weekDays.map((date) => {
             const entries = getEntriesForDate(date);
             return (
@@ -508,10 +497,7 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }: HomeScreenProp
 
       {viewMode === 'month' ? (
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{formatMonthYear(focusedDate)}</Text>
-            <Text style={styles.sectionAction}>Tap a date</Text>
-          </View>
+          <SectionHeader title={formatMonthYear(focusedDate)} meta="Tap a date" />
 
           <View style={styles.weekdayRow}>
             {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, index) => (
