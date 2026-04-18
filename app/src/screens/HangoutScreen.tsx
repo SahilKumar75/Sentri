@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { AvatarButton } from '../components/sentri-ui';
+import { AvatarButton, SectionHeader } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
 import { usePersistedState } from '../lib/use-persisted-state';
@@ -640,14 +640,14 @@ export default function HangoutScreen({
         ) : null}
 
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Live rooms</Text>
-            <Pressable onPress={() => void refreshRooms()}>
-              <Text style={styles.sectionMeta}>
-                {loadingAction === 'refreshing' ? 'Refreshing…' : 'Refresh'}
-              </Text>
-            </Pressable>
-          </View>
+          <SectionHeader
+            title="Live rooms"
+            right={
+              <Pressable onPress={() => void refreshRooms()}>
+                <Text style={styles.sectionMeta}>{loadingAction === 'refreshing' ? 'Refreshing…' : 'Refresh'}</Text>
+              </Pressable>
+            }
+          />
           {loadingAction === 'refreshing' && rooms.length === 0 ? (
             <View style={styles.emptyRooms}>
               <Text style={styles.emptyRoomsTitle}>Refreshing room list</Text>
@@ -684,10 +684,7 @@ export default function HangoutScreen({
         </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Friends</Text>
-            <Text style={styles.sectionMeta}>Invite list</Text>
-          </View>
+          <SectionHeader title="Friends" meta="Invite list" />
           {friends.map((friend) => (
             <View key={friend.name} style={styles.friendRow}>
               <View style={styles.friendLeft}>
