@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { AvatarButton } from '../components/sentri-ui';
+import { AvatarButton, SectionHeader } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import { buildCapturedItem, buildCapturePreview, createEmptyCaptureDraft, type CaptureDraft } from '../features/myspace/capture-builder';
 import type { CaptureOption, SavedItem } from '../features/myspace/models';
@@ -208,10 +208,7 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
         {!emptySearch ? (
           <>
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Pinned</Text>
-                <Text style={styles.sectionMeta}>{pinnedItems.length}</Text>
-              </View>
+              <SectionHeader title="Pinned" meta={`${pinnedItems.length}`} />
 
               {pinnedItems.length ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pinnedRow}>
@@ -233,10 +230,7 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
 
             {recentTodayItems.length ? (
               <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>New today</Text>
-                  <Text style={styles.sectionMeta}>{recentTodayItems.length}</Text>
-                </View>
+                <SectionHeader title="New today" meta={`${recentTodayItems.length}`} />
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pinnedRow}>
                   {recentTodayItems.map((item) => (
                     <PinnedCard key={`today-${item.id}`} item={item} onPress={() => setSelectedItem(item)} />
@@ -246,10 +240,7 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }: MyspaceScre
             ) : null}
 
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Others</Text>
-                <Text style={styles.sectionMeta}>{otherItems.length}</Text>
-              </View>
+              <SectionHeader title="Others" meta={`${otherItems.length}`} />
 
               {otherItems.length ? (
                 <View style={styles.masonry}>
