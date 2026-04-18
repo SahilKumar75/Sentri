@@ -124,16 +124,28 @@ class ParserTests(unittest.TestCase):
                 "8:4S-9:4S D8MS",
                 "TUE5",
                 "10.OO-11.OO PM",
+                "WEDN",
+                "11:00-12:00 MATHS",
+                "THUR",
+                "12:00-13:00 ENGLISH",
+                "FRI1DAY",
+                "13:00-14:00 SCIENCE",
             ]
         )
 
         result = parse_text_schedule(raw_text)
 
-        self.assertEqual(len(result.entries), 2)
+        self.assertEqual(len(result.entries), 5)
         self.assertEqual(result.entries[0].day_of_week, "MON")
         self.assertEqual(result.entries[0].start_time, "08:45")
         self.assertEqual(result.entries[1].day_of_week, "TUE")
         self.assertEqual(result.entries[1].start_time, "10:00")
+        self.assertEqual(result.entries[2].day_of_week, "WED")
+        self.assertEqual(result.entries[2].start_time, "11:00")
+        self.assertEqual(result.entries[3].day_of_week, "THU")
+        self.assertEqual(result.entries[3].start_time, "12:00")
+        self.assertEqual(result.entries[4].day_of_week, "FRI")
+        self.assertEqual(result.entries[4].start_time, "13:00")
 
     def test_parse_cell_text_extracts_faculty_location_and_deduped_notes(self) -> None:
         subject, faculty_code, location, notes = parse_cell_text(

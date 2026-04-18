@@ -87,16 +87,25 @@ def normalize_whitespace(value: str) -> str:
 
 
 def normalize_day(value: str) -> str | None:
-    token = re.sub(r"[^A-Z]", "", value.upper().translate(OCR_DAY_CHAR_SUBSTITUTIONS))
+    # Remove non-alphabetic, but keep trailing digits for cases like 'TUE5'
+    raw = value.upper().translate(OCR_DAY_CHAR_SUBSTITUTIONS)
+    token = re.sub(r"[^A-Z0-9]", "", raw)
     if not token:
         return None
+    # Direct match
     if token in DAY_ALIASES:
         return DAY_ALIASES[token]
-
-    if len(token) >= 3:
-        for alias, normalized in DAY_ALIASES.items():
-            if alias.startswith(token) or token.startswith(alias):
-                return normalized
+    # Remove trailing digits (e.g., 'TUE5' -> 'TUE')
+    token_alpha = re.sub(r"\d+$", "", token)
+    if token_alpha in DAY_ALIASES:
+        return DAY_ALIASES[token_alpha]
+    # Fuzzy match: allow partials and common OCR errors
+    for alias, normalized in DAY_ALIASES.items():
+        if alias.startswith(token_alpha) or token_alpha.startswith(alias):
+            return normalized
+        # Allow up to 1 character difference (simple typo tolerance)
+        if len(token_alpha) == len(alias) and sum(a != b for a, b in zip(token_alpha, alias)) == 1:
+            return normalized
     return None
 
 
