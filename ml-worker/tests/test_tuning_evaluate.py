@@ -51,6 +51,20 @@ class TuningAndEvaluateTests(unittest.TestCase):
         self.assertEqual(profile.normalize_faculty_code("m 4"), "MA")
         self.assertEqual(profile.normalize_location_label("labiii"), "LAB-III")
 
+    def test_load_tuning_profile_extend_vocabulary_appends_to_defaults(self) -> None:
+        profile = load_tuning_profile(
+            {
+                "tuning": {
+                    "extend_vocabulary": ["MATHS", "DATA STRUCTURES"],
+                }
+            }
+        )
+        # Default vocab entries must still be present
+        self.assertIn("DBMS", profile.subject_vocabulary)
+        # Extended entries must also be present
+        self.assertIn("MATHS", profile.subject_vocabulary)
+        self.assertIn("DATA STRUCTURES", profile.subject_vocabulary)
+
     def test_worker_applies_payload_tuning_to_subjects(self) -> None:
         worker = SentriWorker()
         payload = {

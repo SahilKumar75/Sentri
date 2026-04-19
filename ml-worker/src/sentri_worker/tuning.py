@@ -130,6 +130,7 @@ def load_tuning_profile(payload: dict[str, Any] | None) -> TuningProfile:
         return TuningProfile()
 
     vocab = tuning_payload.get("subject_vocabulary")
+    extend_vocab = tuning_payload.get("extend_vocabulary")
     aliases = tuning_payload.get("subject_aliases")
     faculty_aliases = tuning_payload.get("faculty_aliases")
     location_aliases = tuning_payload.get("location_aliases")
@@ -141,6 +142,11 @@ def load_tuning_profile(payload: dict[str, Any] | None) -> TuningProfile:
         normalized_vocab = [str(item).strip().upper() for item in vocab if str(item).strip()]
         if normalized_vocab:
             resolved_vocab = tuple(dict.fromkeys(normalized_vocab))
+    elif isinstance(extend_vocab, list):
+        # Append to the default vocabulary without replacing it
+        extra = [str(item).strip().upper() for item in extend_vocab if str(item).strip()]
+        if extra:
+            resolved_vocab = tuple(dict.fromkeys(list(DEFAULT_SUBJECT_VOCABULARY) + extra))
 
     resolved_aliases: dict[str, str] = DEFAULT_SUBJECT_ALIASES.copy()
     if isinstance(aliases, dict):
