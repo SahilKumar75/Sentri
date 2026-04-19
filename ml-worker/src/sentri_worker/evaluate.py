@@ -150,11 +150,15 @@ def _build_per_day_metrics(
 ) -> dict[str, dict[str, Any]]:
     expected_by_day: dict[str, set[str]] = {}
     predicted_by_day: dict[str, set[str]] = {}
+    predicted_type_by_day: dict[str, list[str]] = {}
 
     for entry in expected_entries:
         expected_by_day.setdefault(entry["dayOfWeek"], set()).add(entry["_key"])
     for entry in predicted_entries:
         predicted_by_day.setdefault(entry["dayOfWeek"], set()).add(entry["_key"])
+        predicted_type_by_day.setdefault(entry["dayOfWeek"], []).append(
+            str(entry.get("entryType") or "lecture")
+        )
 
     days = sorted(set(expected_by_day.keys()) | set(predicted_by_day.keys()))
     metrics: dict[str, dict[str, Any]] = {}
@@ -168,6 +172,10 @@ def _build_per_day_metrics(
         recall = round(len(matched) / expected_count, 4) if expected_count else 0.0
         f1 = round((2 * precision * recall) / (precision + recall), 4) if (precision + recall) > 0 else 0.0
 
+        type_counts: dict[str, int] = {}
+        for entry_type in predicted_type_by_day.get(day, []):
+            type_counts[entry_type] = type_counts.get(entry_type, 0) + 1
+
         metrics[day] = {
             "matched": len(matched),
             "expected": expected_count,
@@ -175,6 +183,7 @@ def _build_per_day_metrics(
             "precision": precision,
             "recall": recall,
             "f1": f1,
+            "entry_type_counts": type_counts,
         }
     return metrics
 

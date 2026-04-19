@@ -11,7 +11,7 @@ if str(SRC) not in sys.path:
 
 from sentri_worker.evaluate import evaluate_fixture, evaluate_fixture_directory, evaluate_fixture_file
 from sentri_worker.pipeline import SentriWorker
-from sentri_worker.tuning import load_tuning_profile
+from sentri_worker.tuning import load_tuning_profile, TuningProfile
 
 
 class TuningAndEvaluateTests(unittest.TestCase):
@@ -50,6 +50,48 @@ class TuningAndEvaluateTests(unittest.TestCase):
         self.assertEqual(profile.normalize_subject("dbm5"), "DBMS")
         self.assertEqual(profile.normalize_faculty_code("m 4"), "MA")
         self.assertEqual(profile.normalize_location_label("labiii"), "LAB-III")
+
+    def test_load_tuning_profile_extend_vocabulary_appends_to_defaults(self) -> None:
+        profile = load_tuning_profile(
+            {
+                "tuning": {
+                    "extend_vocabulary": ["MATHS", "DATA STRUCTURES"],
+                }
+            }
+        )
+        # Default vocab entries must still be present
+        self.assertIn("DBMS", profile.subject_vocabulary)
+        # Extended entries must also be present
+        self.assertIn("MATHS", profile.subject_vocabulary)
+        self.assertIn("DATA STRUCTURES", profile.subject_vocabulary)
+
+    def test_per_day_metrics_include_entry_type_counts(self) -> None:
+        fixture_path = ROOT / "tests" / "fixtures" / "parser_eval_fixture.json"
+        report = evaluate_fixture_file(fixture_path)
+        per_day = report["metrics"]["per_day"]
+        for day_metrics in per_day.values():
+            self.assertIn("entry_type_counts", day_metrics)
+            self.assertIsInstance(day_metrics["entry_type_counts"], dict)
+
+    def test_tuning_profile_merge_combines_vocab_and_aliases(self) -> None:
+        base = TuningProfile(
+            subject_vocabulary=("DBMS", "OS"),
+            subject_aliases={"DBM5": "DBMS"},
+            min_match_score=0.80,
+        )
+        override = TuningProfile(
+            subject_vocabulary=("MATHS",),
+            subject_aliases={"M4THS": "MATHS"},
+            min_match_score=0.90,
+        )
+        merged = base.merge(override)
+
+        self.assertIn("DBMS", merged.subject_vocabulary)
+        self.assertIn("OS", merged.subject_vocabulary)
+        self.assertIn("MATHS", merged.subject_vocabulary)
+        self.assertIn("DBM5", (merged.subject_aliases or {}))
+        self.assertIn("M4THS", (merged.subject_aliases or {}))
+        self.assertAlmostEqual(merged.min_match_score, 0.90)
 
     def test_worker_applies_payload_tuning_to_subjects(self) -> None:
         worker = SentriWorker()

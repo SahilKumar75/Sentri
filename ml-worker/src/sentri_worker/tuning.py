@@ -122,6 +122,40 @@ class TuningProfile:
             return aliases[compact]
         return cleaned
 
+    def merge(self, other: "TuningProfile") -> "TuningProfile":
+        """Return a new TuningProfile combining self (base) with other (overrides).
+
+        - subject_vocabulary: other's entries are appended after self's (deduplicated)
+        - aliases: other's entries override self's for matching keys
+        - min_match_score: other's value takes precedence
+        - subject_noise_tokens: merged (deduplicated, other appended)
+        """
+        merged_vocab = tuple(
+            dict.fromkeys(list(self.subject_vocabulary) + list(other.subject_vocabulary))
+        )
+
+        base_aliases = dict(self.subject_aliases or DEFAULT_SUBJECT_ALIASES)
+        base_aliases.update(other.subject_aliases or DEFAULT_SUBJECT_ALIASES)
+
+        base_faculty = dict(self.faculty_aliases or DEFAULT_FACULTY_ALIASES)
+        base_faculty.update(other.faculty_aliases or DEFAULT_FACULTY_ALIASES)
+
+        base_location = dict(self.location_aliases or DEFAULT_LOCATION_ALIASES)
+        base_location.update(other.location_aliases or DEFAULT_LOCATION_ALIASES)
+
+        merged_noise = tuple(
+            dict.fromkeys(list(self.subject_noise_tokens) + list(other.subject_noise_tokens))
+        )
+
+        return TuningProfile(
+            subject_vocabulary=merged_vocab,
+            subject_aliases=base_aliases,
+            faculty_aliases=base_faculty,
+            location_aliases=base_location,
+            subject_noise_tokens=merged_noise,
+            min_match_score=other.min_match_score,
+        )
+
 
 def load_tuning_profile(payload: dict[str, Any] | None) -> TuningProfile:
     payload = payload or {}
@@ -130,6 +164,7 @@ def load_tuning_profile(payload: dict[str, Any] | None) -> TuningProfile:
         return TuningProfile()
 
     vocab = tuning_payload.get("subject_vocabulary")
+    extend_vocab = tuning_payload.get("extend_vocabulary")
     aliases = tuning_payload.get("subject_aliases")
     faculty_aliases = tuning_payload.get("faculty_aliases")
     location_aliases = tuning_payload.get("location_aliases")
@@ -141,6 +176,11 @@ def load_tuning_profile(payload: dict[str, Any] | None) -> TuningProfile:
         normalized_vocab = [str(item).strip().upper() for item in vocab if str(item).strip()]
         if normalized_vocab:
             resolved_vocab = tuple(dict.fromkeys(normalized_vocab))
+    elif isinstance(extend_vocab, list):
+        # Append to the default vocabulary without replacing it
+        extra = [str(item).strip().upper() for item in extend_vocab if str(item).strip()]
+        if extra:
+            resolved_vocab = tuple(dict.fromkeys(list(DEFAULT_SUBJECT_VOCABULARY) + extra))
 
     resolved_aliases: dict[str, str] = DEFAULT_SUBJECT_ALIASES.copy()
     if isinstance(aliases, dict):
