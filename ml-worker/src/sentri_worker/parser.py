@@ -194,7 +194,13 @@ def normalize_time_range(value: str) -> tuple[str | None, str | None] | None:
 
 
 def split_lines(raw_text: str) -> list[str]:
-    return [normalize_whitespace(line) for line in raw_text.splitlines() if normalize_whitespace(line)]
+    lines = [normalize_whitespace(line) for line in raw_text.splitlines() if normalize_whitespace(line)]
+    # Remove adjacent duplicate lines (common OCR doubling artifact)
+    deduplicated: list[str] = []
+    for line in lines:
+        if not deduplicated or line != deduplicated[-1]:
+            deduplicated.append(line)
+    return deduplicated
 
 
 def parse_date_value(value: str) -> str | None:

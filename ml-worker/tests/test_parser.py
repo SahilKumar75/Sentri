@@ -10,7 +10,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from sentri_worker.models import OCRCell
-from sentri_worker.parser import classify_entry, normalize_time_label, parse_cell_text, parse_date_value, parse_timetable, parse_text_schedule
+from sentri_worker.parser import classify_entry, normalize_time_label, parse_cell_text, parse_date_value, parse_timetable, parse_text_schedule, split_lines
 from sentri_worker.tuning import TuningProfile
 
 
@@ -58,6 +58,14 @@ class ParserTests(unittest.TestCase):
         # If row 2 were picked as header, no day rows would exist and entries would be empty
         # Row 0 as header means row 1 (MON) and row 2 produce day entries
         self.assertEqual(result.cells_count, len(cells))
+
+    def test_split_lines_removes_adjacent_duplicates(self) -> None:
+        raw = "MON\nMON\nDBMS\nDBMS\nFRI"
+        self.assertEqual(split_lines(raw), ["MON", "DBMS", "FRI"])
+
+    def test_split_lines_keeps_non_adjacent_duplicates(self) -> None:
+        raw = "MON\nDBMS\nMON"
+        self.assertEqual(split_lines(raw), ["MON", "DBMS", "MON"])
 
     def test_parse_header_metadata_from_text(self) -> None:
         raw_text = "\n".join(
