@@ -10,7 +10,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from sentri_worker.models import OCRCell
-from sentri_worker.parser import parse_cell_text, parse_timetable, parse_text_schedule
+from sentri_worker.parser import parse_cell_text, parse_date_value, parse_timetable, parse_text_schedule
 from sentri_worker.tuning import TuningProfile
 
 
@@ -26,6 +26,11 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(found)
         self.assertIn("This is not a day", found[0].message)
         self.assertIn("This is not a time", found[0].message)
+
+    def test_parse_date_value_short_year_slash_format(self) -> None:
+        self.assertEqual(parse_date_value("23/03/26"), "2026-03-23")
+        self.assertEqual(parse_date_value("01/06/25"), "2025-06-01")
+
     def test_parse_header_metadata_from_text(self) -> None:
         raw_text = "\n".join(
             [

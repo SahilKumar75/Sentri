@@ -193,7 +193,9 @@ def parse_date_value(value: str) -> str | None:
         "%d %B %y",
         "%d %b %y",
         "%d-%m-%Y",
+        "%d-%m-%y",
         "%d/%m/%Y",
+        "%d/%m/%y",
         "%d %m %Y",
     ]
     for fmt in formats:
