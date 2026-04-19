@@ -15,6 +15,17 @@ from sentri_worker.tuning import TuningProfile
 
 
 class ParserTests(unittest.TestCase):
+    def test_parse_text_schedule_reports_problematic_lines(self) -> None:
+        raw_text = """
+        This is not a day
+        This is not a time
+        """
+        result = parse_text_schedule(raw_text)
+        self.assertEqual(len(result.entries), 0)
+        found = [iss for iss in result.issues if iss.code == "no_entries_from_text"]
+        self.assertTrue(found)
+        self.assertIn("This is not a day", found[0].message)
+        self.assertIn("This is not a time", found[0].message)
     def test_parse_header_metadata_from_text(self) -> None:
         raw_text = "\n".join(
             [

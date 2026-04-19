@@ -650,7 +650,10 @@ def parse_text_schedule(
     entries = sorted(_deduplicate_entries(entries, issues), key=_entry_sort_key)
 
     if not entries:
-        issues.append(ParseIssue(code="no_entries_from_text", message="Could not infer timetable entries from OCR text."))
+        # Find non-blank, non-day, non-time lines for debugging
+        debug_lines = [line for line in lines if line.strip() and not normalize_day(line) and not normalize_time_range(line)]
+        msg = "Could not infer timetable entries from OCR text. Problematic lines: " + ", ".join(repr(l) for l in debug_lines) if debug_lines else "Could not infer timetable entries from OCR text."
+        issues.append(ParseIssue(code="no_entries_from_text", message=msg))
 
     return ParseResult(source=source, batch=batch, entries=entries, issues=issues, raw_text=raw_text, cells_count=0)
 
