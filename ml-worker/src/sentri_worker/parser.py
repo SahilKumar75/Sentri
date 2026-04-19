@@ -279,9 +279,9 @@ def classify_entry(text: str) -> str:
         return "blank"
     if "HOLIDAY" in upper:
         return "holiday"
-    if "BREAK" in upper:
+    if "LUNCH" in upper or "BREAK" in upper:
         return "break"
-    if "LAB" in upper:
+    if "LAB" in upper or "PRACTICAL" in upper:
         return "lab"
     if "TUT" in upper or "TUTORIAL" in upper:
         return "tutorial"
