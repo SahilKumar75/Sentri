@@ -11,7 +11,7 @@ if str(SRC) not in sys.path:
 
 from sentri_worker.evaluate import evaluate_fixture, evaluate_fixture_directory, evaluate_fixture_file
 from sentri_worker.pipeline import SentriWorker
-from sentri_worker.tuning import load_tuning_profile
+from sentri_worker.tuning import load_tuning_profile, TuningProfile
 
 
 class TuningAndEvaluateTests(unittest.TestCase):
@@ -72,6 +72,26 @@ class TuningAndEvaluateTests(unittest.TestCase):
         for day_metrics in per_day.values():
             self.assertIn("entry_type_counts", day_metrics)
             self.assertIsInstance(day_metrics["entry_type_counts"], dict)
+
+    def test_tuning_profile_merge_combines_vocab_and_aliases(self) -> None:
+        base = TuningProfile(
+            subject_vocabulary=("DBMS", "OS"),
+            subject_aliases={"DBM5": "DBMS"},
+            min_match_score=0.80,
+        )
+        override = TuningProfile(
+            subject_vocabulary=("MATHS",),
+            subject_aliases={"M4THS": "MATHS"},
+            min_match_score=0.90,
+        )
+        merged = base.merge(override)
+
+        self.assertIn("DBMS", merged.subject_vocabulary)
+        self.assertIn("OS", merged.subject_vocabulary)
+        self.assertIn("MATHS", merged.subject_vocabulary)
+        self.assertIn("DBM5", (merged.subject_aliases or {}))
+        self.assertIn("M4THS", (merged.subject_aliases or {}))
+        self.assertAlmostEqual(merged.min_match_score, 0.90)
 
     def test_worker_applies_payload_tuning_to_subjects(self) -> None:
         worker = SentriWorker()
