@@ -10,7 +10,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from sentri_worker.models import OCRCell
-from sentri_worker.parser import classify_entry, parse_cell_text, parse_date_value, parse_timetable, parse_text_schedule
+from sentri_worker.parser import classify_entry, normalize_time_label, parse_cell_text, parse_date_value, parse_timetable, parse_text_schedule
 from sentri_worker.tuning import TuningProfile
 
 
@@ -36,6 +36,13 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(classify_entry("lunch"), "break")
         self.assertEqual(classify_entry("Practical"), "lab")
         self.assertEqual(classify_entry("PRACTICAL EXAM"), "lab")
+
+    def test_normalize_time_label_am_pm_suffix(self) -> None:
+        self.assertEqual(normalize_time_label("9am"), "09:00")
+        self.assertEqual(normalize_time_label("9AM"), "09:00")
+        self.assertEqual(normalize_time_label("9:45pm"), "21:45")
+        self.assertEqual(normalize_time_label("12pm"), "12:00")
+        self.assertEqual(normalize_time_label("12am"), "00:00")
 
     def test_parse_header_metadata_from_text(self) -> None:
         raw_text = "\n".join(
