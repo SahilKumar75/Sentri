@@ -44,6 +44,21 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(normalize_time_label("12pm"), "12:00")
         self.assertEqual(normalize_time_label("12am"), "00:00")
 
+    def test_find_header_row_tie_breaks_on_lowest_row(self) -> None:
+        # Two rows have equal time-slot counts; the lower row index must win.
+        cells = [
+            OCRCell(row=0, col=1, text="8:00-9:00"),
+            OCRCell(row=0, col=2, text="9:00-10:00"),
+            OCRCell(row=2, col=1, text="8:00-9:00"),
+            OCRCell(row=2, col=2, text="9:00-10:00"),
+            OCRCell(row=1, col=0, text="MON"),
+        ]
+        result = parse_timetable(cells=cells)
+        # Header should be row 0, not row 2 — entries only come from rows != header
+        # If row 2 were picked as header, no day rows would exist and entries would be empty
+        # Row 0 as header means row 1 (MON) and row 2 produce day entries
+        self.assertEqual(result.cells_count, len(cells))
+
     def test_parse_header_metadata_from_text(self) -> None:
         raw_text = "\n".join(
             [

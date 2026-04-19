@@ -420,7 +420,10 @@ def _find_header_row(cells: Sequence[OCRCell]) -> int | None:
             score_by_row[cell.row] += 1
     if not score_by_row:
         return None
-    return score_by_row.most_common(1)[0][0]
+    max_score = max(score_by_row.values())
+    # Among all rows with the top score, prefer the lowest row index for determinism
+    candidates = [row for row, score in score_by_row.items() if score == max_score]
+    return min(candidates)
 
 
 def _find_day_col(cells: Sequence[OCRCell]) -> int | None:
