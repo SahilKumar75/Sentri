@@ -65,6 +65,14 @@ class TuningAndEvaluateTests(unittest.TestCase):
         self.assertIn("MATHS", profile.subject_vocabulary)
         self.assertIn("DATA STRUCTURES", profile.subject_vocabulary)
 
+    def test_per_day_metrics_include_entry_type_counts(self) -> None:
+        fixture_path = ROOT / "tests" / "fixtures" / "parser_eval_fixture.json"
+        report = evaluate_fixture_file(fixture_path)
+        per_day = report["metrics"]["per_day"]
+        for day_metrics in per_day.values():
+            self.assertIn("entry_type_counts", day_metrics)
+            self.assertIsInstance(day_metrics["entry_type_counts"], dict)
+
     def test_worker_applies_payload_tuning_to_subjects(self) -> None:
         worker = SentriWorker()
         payload = {
