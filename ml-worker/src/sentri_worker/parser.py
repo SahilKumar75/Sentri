@@ -115,6 +115,19 @@ def normalize_time_label(value: str) -> str | None:
     value = value.replace(" ", "")
     if not value:
         return None
+
+    # Handle am/pm suffix (e.g. "9am", "9:45pm", "9:45AM")
+    am_pm_match = re.match(r"^(\d{1,2}(?::\d{2})?)([AaPp][Mm])$", value)
+    if am_pm_match:
+        time_part, meridiem = am_pm_match.group(1), am_pm_match.group(2).upper()
+        if ":" not in time_part:
+            time_part = f"{time_part}:00"
+        try:
+            parsed = datetime.strptime(f"{time_part} {meridiem}", "%I:%M %p")
+            return parsed.strftime("%H:%M")
+        except ValueError:
+            pass
+
     if ":" not in value:
         if len(value) in {3, 4}:
             value = f"{value[:-2]}:{value[-2:]}"
@@ -181,7 +194,13 @@ def normalize_time_range(value: str) -> tuple[str | None, str | None] | None:
 
 
 def split_lines(raw_text: str) -> list[str]:
-    return [normalize_whitespace(line) for line in raw_text.splitlines() if normalize_whitespace(line)]
+    lines = [normalize_whitespace(line) for line in raw_text.splitlines() if normalize_whitespace(line)]
+    # Remove adjacent duplicate lines (common OCR doubling artifact)
+    deduplicated: list[str] = []
+    for line in lines:
+        if not deduplicated or line != deduplicated[-1]:
+            deduplicated.append(line)
+    return deduplicated
 
 
 def parse_date_value(value: str) -> str | None:
@@ -407,7 +426,10 @@ def _find_header_row(cells: Sequence[OCRCell]) -> int | None:
             score_by_row[cell.row] += 1
     if not score_by_row:
         return None
-    return score_by_row.most_common(1)[0][0]
+    max_score = max(score_by_row.values())
+    # Among all rows with the top score, prefer the lowest row index for determinism
+    candidates = [row for row, score in score_by_row.items() if score == max_score]
+    return min(candidates)
 
 
 def _find_day_col(cells: Sequence[OCRCell]) -> int | None:
