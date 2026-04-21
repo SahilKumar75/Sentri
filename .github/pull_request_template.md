@@ -4,6 +4,10 @@
 - why it changed
 - what areas are affected
 
+## Linked Issue
+
+- closes #
+
 ## Checklist
 
 - [ ] I did not push directly to `main`
@@ -18,6 +22,11 @@
 - frontend changes:
 - backend changes:
 - AI / reasoning changes:
+- ML worker changes:
+
+## Review Focus
+
+- what should reviewers check most closely?
 
 ## Risks
 
