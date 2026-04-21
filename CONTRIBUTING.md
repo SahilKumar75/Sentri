@@ -7,12 +7,13 @@ Sentri should be developed using a review-first workflow even when only one deve
 ### Required Git Flow
 
 1. Never push directly to `main`.
-2. Create a feature branch for every change.
-3. Keep commits small and logical.
-4. Push the branch to GitHub.
-5. Open a pull request.
-6. Review the full diff before merging.
-7. Merge only after the review notes are addressed.
+2. Start non-trivial work from a linked GitHub issue.
+3. Create a feature branch for every change.
+4. Keep commits small and logical.
+5. Push the branch to GitHub.
+6. Open a pull request that references the issue.
+7. Review the full diff before merging.
+8. Merge only after the review notes are addressed.
 
 ### Branch Naming
 
@@ -32,10 +33,18 @@ Each commit should do one meaningful thing:
 
 Avoid mixing UI redesign, backend behavior, and infra changes in a single commit unless they are inseparable.
 
+### Issue and PR Hygiene
+
+- Use the issue templates for bug reports and feature requests.
+- A PR should close or clearly reference one tracked issue unless the change is emergency-only.
+- The PR description should call out the exact frontend, backend, or ML worker surface touched.
+- If a change is intentionally partial, note the follow-up issue in the PR body.
+
 ### Review Checklist
 
 Before merging a PR, check:
 
+- a linked issue exists for non-trivial work
 - architecture impact is documented
 - API contracts are explicit
 - tests pass
