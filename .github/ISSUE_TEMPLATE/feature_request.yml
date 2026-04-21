@@ -1,0 +1,45 @@
+name: Feature request
+description: Propose a new feature or product improvement for Sentri
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for product improvements, new capabilities, or engineering workflow upgrades.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or engineering problem are we solving?
+      placeholder: Describe the current gap and why it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should change?
+      placeholder: Describe the intended feature or engineering change.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Which areas are affected?
+      placeholder: Example: app Home upload flow, backend timetable API, ML worker parser
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for this to be done?
+      placeholder: List the observable outcomes.
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks or follow-up work
+      description: Note tradeoffs, open questions, or future phases if known.

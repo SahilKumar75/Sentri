@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a reproducible bug in Sentri
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for broken behavior, regressions, crashes, or incorrect output.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is failing, and what did you expect instead?
+      placeholder: Describe the bug and the expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the shortest path to reproduce the bug.
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: User impact
+      description: Who is affected and how severe is the issue?
+      placeholder: Example: timetable upload is blocked for all users on iPhone.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include device, app, backend, or worker details if relevant.
+      placeholder: Example: iPhone 14 / Expo Go / backend main / parser fixture X
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs or screenshots
+      description: Paste logs, stack traces, or screenshots if available.
