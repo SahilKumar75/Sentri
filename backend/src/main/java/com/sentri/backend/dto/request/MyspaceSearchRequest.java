@@ -5,6 +5,8 @@ import java.util.List;
 public record MyspaceSearchRequest(
         String query,
         String selectedSubject,
-        List<MyspaceSearchItemRequest> items
+        List<MyspaceSearchItemRequest> items,
+        List<Float> queryEmbedding,
+        Integer vectorLimit
 ) {
 }

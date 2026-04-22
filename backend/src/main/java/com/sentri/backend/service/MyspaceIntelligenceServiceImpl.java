@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,16 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
             "revision", List.of("study", "prep", "practice")
     );
 
+    private final MyspaceVectorStoreService myspaceVectorStoreService;
+
+    public MyspaceIntelligenceServiceImpl() {
+        this(new NoOpMyspaceVectorStoreService());
+    }
+
+    public MyspaceIntelligenceServiceImpl(MyspaceVectorStoreService myspaceVectorStoreService) {
+        this.myspaceVectorStoreService = myspaceVectorStoreService;
+    }
+
     @Override
     public MyspaceSearchResponse search(MyspaceSearchRequest request) {
         if (request == null || request.items() == null) {
@@ -43,10 +54,17 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
         String selectedSubject = request.selectedSubject() == null || request.selectedSubject().isBlank()
                 ? "All"
                 : request.selectedSubject().trim();
+        Map<String, MyspaceVectorMatch> vectorMatchesById = loadVectorMatches(request);
 
         List<MyspaceSearchMatchResponse> matches = new ArrayList<>();
         for (int index = 0; index < request.items().size(); index++) {
-            MyspaceSearchMatchResponse match = scoreItem(request.items().get(index), query, selectedSubject, index);
+            MyspaceSearchMatchResponse match = scoreItem(
+                    request.items().get(index),
+                    query,
+                    selectedSubject,
+                    index,
+                    vectorMatchesById.get(request.items().get(index).id())
+            );
             if (match != null) {
                 matches.add(match);
             }
@@ -63,16 +81,31 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
             MyspaceSearchItemRequest item,
             String query,
             String selectedSubject,
-            int index
+            int index,
+            MyspaceVectorMatch vectorMatch
     ) {
         if (!"All".equals(selectedSubject) && !selectedSubject.equals(item.subject())) {
             return null;
         }
 
+        Double vectorSimilarity = vectorMatch == null ? null : vectorMatch.similarity();
+
         if (query.isBlank()) {
             int score = (Boolean.TRUE.equals(item.pinned()) ? 100 : 0)
                     + (Boolean.TRUE.equals(item.featured()) ? 30 : 0)
                     - index;
+            if (vectorSimilarity != null) {
+                score += vectorBoost(vectorSimilarity);
+            }
+            List<String> reasons = new ArrayList<>();
+            if (Boolean.TRUE.equals(item.featured())) {
+                reasons.add("semantic-alias");
+            } else {
+                reasons.add("tag");
+            }
+            if (vectorSimilarity != null) {
+                reasons.add("vector");
+            }
             return new MyspaceSearchMatchResponse(
                     item.id(),
                     item.title(),
@@ -80,10 +113,9 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
                     item.source(),
                     item.dateLabel(),
                     score,
-                    List.of(Boolean.TRUE.equals(item.featured()) ? "semantic-alias" : "tag"),
-                    Boolean.TRUE.equals(item.featured())
-                            ? "Suggested from recent study context"
-                            : "Indexed for OCR, subject, and date recall"
+                    vectorSimilarity,
+                    reasons,
+                    buildExplanation(reasons)
             );
         }
 
@@ -145,7 +177,14 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
         }
 
         if (score == 0) {
-            return null;
+            if (vectorSimilarity == null) {
+                return null;
+            }
+            score = vectorBoost(vectorSimilarity);
+            reasons.add("vector");
+        } else if (vectorSimilarity != null) {
+            score += vectorBoost(vectorSimilarity);
+            reasons.add("vector");
         }
 
         List<String> orderedReasons = new ArrayList<>(reasons);
@@ -156,9 +195,24 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
                 item.source(),
                 item.dateLabel(),
                 score,
+                vectorSimilarity,
                 orderedReasons,
                 buildExplanation(orderedReasons)
         );
+    }
+
+    private Map<String, MyspaceVectorMatch> loadVectorMatches(MyspaceSearchRequest request) {
+        if (request.queryEmbedding() == null || request.queryEmbedding().isEmpty() || !myspaceVectorStoreService.isAvailable()) {
+            return Map.of();
+        }
+
+        int limit = request.vectorLimit() == null ? 8 : request.vectorLimit();
+        List<MyspaceVectorMatch> vectorMatches = myspaceVectorStoreService.search(toFloatArray(request.queryEmbedding()), limit);
+        Map<String, MyspaceVectorMatch> matchesById = new HashMap<>();
+        for (MyspaceVectorMatch match : vectorMatches) {
+            matchesById.put(match.itemId(), match);
+        }
+        return matchesById;
     }
 
     private List<String> expandAliases(String token) {
@@ -174,6 +228,8 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
     }
 
     private String buildExplanation(List<String> reasons) {
+        if (reasons.contains("vector") && reasons.size() > 1) return "Matched text and vector similarity";
+        if (reasons.contains("vector")) return "Matched vector similarity";
         if (reasons.contains("title")) return "Matched title";
         if (reasons.contains("subject-alias")) return "Matched subject alias";
         if (reasons.contains("ocr")) return "Matched OCR text";
@@ -182,7 +238,40 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
         return "Matched by context";
     }
 
+    private int vectorBoost(double similarity) {
+        return (int) Math.round(Math.max(0, Math.min(1, similarity)) * 40);
+    }
+
+    private float[] toFloatArray(List<Float> embedding) {
+        float[] values = new float[embedding.size()];
+        for (int index = 0; index < embedding.size(); index++) {
+            values[index] = embedding.get(index);
+        }
+        return values;
+    }
+
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private static final class NoOpMyspaceVectorStoreService implements MyspaceVectorStoreService {
+
+        @Override
+        public boolean isAvailable() {
+            return false;
+        }
+
+        @Override
+        public void upsert(MyspaceVectorDocument document) {
+        }
+
+        @Override
+        public void upsertAll(List<MyspaceVectorDocument> documents) {
+        }
+
+        @Override
+        public List<MyspaceVectorMatch> search(float[] embedding, int limit) {
+            return List.of();
+        }
     }
 }

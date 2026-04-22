@@ -43,7 +43,9 @@ class MyspaceIntelligenceServiceTest {
                                 false,
                                 false
                         )
-                )
+                ),
+                null,
+                null
         ));
 
         assertThat(response.totalMatches()).isEqualTo(1);
@@ -81,10 +83,140 @@ class MyspaceIntelligenceServiceTest {
                                 true,
                                 true
                         )
-                )
+                ),
+                null,
+                null
         ));
 
         assertThat(response.matches()).hasSize(2);
         assertThat(response.matches().get(0).id()).isEqualTo("item-2");
+    }
+
+    @Test
+    void includesVectorOnlyMatchesWhenQueryEmbeddingIsPresent() {
+        MyspaceVectorStoreService vectorStoreService = new MyspaceVectorStoreService() {
+            @Override
+            public boolean isAvailable() {
+                return true;
+            }
+
+            @Override
+            public void upsert(MyspaceVectorDocument document) {
+            }
+
+            @Override
+            public void upsertAll(List<MyspaceVectorDocument> documents) {
+            }
+
+            @Override
+            public List<MyspaceVectorMatch> search(float[] embedding, int limit) {
+                return List.of(new MyspaceVectorMatch(
+                        "item-1",
+                        "Permutation and Combination",
+                        "P&S",
+                        "Board photo",
+                        "Today",
+                        "test-embedding",
+                        0.84,
+                        "{\"kind\":\"board\"}"
+                ));
+            }
+        };
+
+        MyspaceIntelligenceService service = new MyspaceIntelligenceServiceImpl(vectorStoreService);
+        MyspaceSearchResponse response = service.search(new MyspaceSearchRequest(
+                "",
+                "All",
+                List.of(
+                        new MyspaceSearchItemRequest(
+                                "item-1",
+                                "Permutation and Combination",
+                                "Blackboard photo from class",
+                                "P&S",
+                                List.of("math"),
+                                "Board photo",
+                                "Today",
+                                "Permutation notes",
+                                false,
+                                false
+                        )
+                ),
+                List.of(0.1f, 0.2f, 0.3f),
+                5
+        ));
+
+        assertThat(response.totalMatches()).isEqualTo(1);
+        assertThat(response.matches().get(0).vectorSimilarity()).isEqualTo(0.84);
+        assertThat(response.matches().get(0).reasons()).contains("vector");
+    }
+
+    @Test
+    void boostsLexicalMatchesWithVectorSimilarity() {
+        MyspaceVectorStoreService vectorStoreService = new MyspaceVectorStoreService() {
+            @Override
+            public boolean isAvailable() {
+                return true;
+            }
+
+            @Override
+            public void upsert(MyspaceVectorDocument document) {
+            }
+
+            @Override
+            public void upsertAll(List<MyspaceVectorDocument> documents) {
+            }
+
+            @Override
+            public List<MyspaceVectorMatch> search(float[] embedding, int limit) {
+                return List.of(new MyspaceVectorMatch(
+                        "item-2",
+                        "DBMS normalization quick sheet",
+                        "DBMS",
+                        "Screenshot",
+                        "Today",
+                        "test-embedding",
+                        0.95,
+                        "{\"kind\":\"sheet\"}"
+                ));
+            }
+        };
+
+        MyspaceIntelligenceService service = new MyspaceIntelligenceServiceImpl(vectorStoreService);
+        MyspaceSearchResponse response = service.search(new MyspaceSearchRequest(
+                "normalization",
+                "All",
+                List.of(
+                        new MyspaceSearchItemRequest(
+                                "item-1",
+                                "Normalization basics",
+                                "Short lexical hit",
+                                "DBMS",
+                                List.of("sql"),
+                                "Screenshot",
+                                "Today",
+                                "normalization",
+                                false,
+                                false
+                        ),
+                        new MyspaceSearchItemRequest(
+                                "item-2",
+                                "DBMS normalization quick sheet",
+                                "Detailed vector-backed note",
+                                "DBMS",
+                                List.of("sql", "dbms"),
+                                "Screenshot",
+                                "Today",
+                                "normalization forms",
+                                false,
+                                false
+                        )
+                ),
+                List.of(0.5f, 0.4f, 0.3f),
+                5
+        ));
+
+        assertThat(response.matches().get(0).id()).isEqualTo("item-2");
+        assertThat(response.matches().get(0).reasons()).contains("vector");
+        assertThat(response.matches().get(0).explanation()).isEqualTo("Matched text and vector similarity");
     }
 }

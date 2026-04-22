@@ -9,6 +9,7 @@ public record MyspaceSearchMatchResponse(
         String source,
         String dateLabel,
         Integer score,
+        Double vectorSimilarity,
         List<String> reasons,
         String explanation
 ) {
