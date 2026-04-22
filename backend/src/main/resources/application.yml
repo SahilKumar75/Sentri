@@ -22,6 +22,12 @@ server:
   port: ${SERVER_PORT:8080}
 
 sentri:
+  myspace:
+    vector:
+      enabled: ${SENTRI_MYSPACE_VECTOR_ENABLED:true}
+      dimension: ${SENTRI_MYSPACE_VECTOR_DIMENSION:384}
+      max-search-limit: ${SENTRI_MYSPACE_VECTOR_MAX_SEARCH_LIMIT:20}
+      distance-metric: ${SENTRI_MYSPACE_VECTOR_DISTANCE_METRIC:cosine}
   timetable:
     upload:
       storage-dir: ${SENTRI_TIMETABLE_UPLOAD_DIR:./data/timetable-uploads}
