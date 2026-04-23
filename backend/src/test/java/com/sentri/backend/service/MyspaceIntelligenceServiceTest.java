@@ -219,4 +219,78 @@ class MyspaceIntelligenceServiceTest {
         assertThat(response.matches().get(0).reasons()).contains("vector");
         assertThat(response.matches().get(0).explanation()).isEqualTo("Matched text and vector similarity");
     }
+
+    @Test
+    void searchesStoredSqlItemsWhenRequestItemsAreMissing() {
+        MyspaceItemService itemService = new MyspaceItemService() {
+            @Override
+            public com.sentri.backend.dto.response.MyspaceItemResponse upsert(com.sentri.backend.dto.request.UpsertMyspaceItemRequest request) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public com.sentri.backend.dto.response.MyspaceItemResponse getItem(String itemId) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public List<com.sentri.backend.dto.response.MyspaceItemResponse> listItems() {
+                return List.of();
+            }
+
+            @Override
+            public void deleteItem(String itemId) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public List<MyspaceSearchItemRequest> listSearchItems() {
+                return List.of(
+                        new MyspaceSearchItemRequest(
+                                "item-1",
+                                "Permutation and Combination",
+                                "Blackboard photo from class",
+                                "P&S",
+                                List.of("math", "blackboard"),
+                                "Board photo",
+                                "Today",
+                                "Permutation examples",
+                                true,
+                                true
+                        )
+                );
+            }
+        };
+
+        MyspaceIntelligenceService service = new MyspaceIntelligenceServiceImpl(itemService, new MyspaceVectorStoreService() {
+            @Override
+            public boolean isAvailable() {
+                return false;
+            }
+
+            @Override
+            public void upsert(MyspaceVectorDocument document) {
+            }
+
+            @Override
+            public void upsertAll(List<MyspaceVectorDocument> documents) {
+            }
+
+            @Override
+            public List<MyspaceVectorMatch> search(float[] embedding, int limit) {
+                return List.of();
+            }
+        });
+
+        MyspaceSearchResponse response = service.search(new MyspaceSearchRequest(
+                "math",
+                "All",
+                List.of(),
+                null,
+                null
+        ));
+
+        assertThat(response.totalMatches()).isEqualTo(1);
+        assertThat(response.matches().get(0).id()).isEqualTo("item-1");
+    }
 }

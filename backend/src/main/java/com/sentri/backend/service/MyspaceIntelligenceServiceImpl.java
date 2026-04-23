@@ -34,36 +34,53 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
             "revision", List.of("study", "prep", "practice")
     );
 
+    private final MyspaceItemService myspaceItemService;
     private final MyspaceVectorStoreService myspaceVectorStoreService;
 
     public MyspaceIntelligenceServiceImpl() {
-        this(new NoOpMyspaceVectorStoreService());
+        this(new NoOpMyspaceItemService(), new NoOpMyspaceVectorStoreService());
     }
 
     public MyspaceIntelligenceServiceImpl(MyspaceVectorStoreService myspaceVectorStoreService) {
+        this(new NoOpMyspaceItemService(), myspaceVectorStoreService);
+    }
+
+    public MyspaceIntelligenceServiceImpl(
+            MyspaceItemService myspaceItemService,
+            MyspaceVectorStoreService myspaceVectorStoreService
+    ) {
+        this.myspaceItemService = myspaceItemService;
         this.myspaceVectorStoreService = myspaceVectorStoreService;
     }
 
     @Override
     public MyspaceSearchResponse search(MyspaceSearchRequest request) {
-        if (request == null || request.items() == null) {
-            throw new BadRequestException("Myspace search items are required");
+        if (request == null) {
+            throw new BadRequestException("Myspace search request is required");
         }
 
         String query = request.query() == null ? "" : request.query().trim().toLowerCase();
         String selectedSubject = request.selectedSubject() == null || request.selectedSubject().isBlank()
                 ? "All"
                 : request.selectedSubject().trim();
+        List<MyspaceSearchItemRequest> searchItems = request.items() == null || request.items().isEmpty()
+                ? myspaceItemService.listSearchItems()
+                : request.items();
+
+        if (searchItems == null || searchItems.isEmpty()) {
+            return new MyspaceSearchResponse(query, selectedSubject, 0, List.of());
+        }
+
         Map<String, MyspaceVectorMatch> vectorMatchesById = loadVectorMatches(request);
 
         List<MyspaceSearchMatchResponse> matches = new ArrayList<>();
-        for (int index = 0; index < request.items().size(); index++) {
+        for (int index = 0; index < searchItems.size(); index++) {
             MyspaceSearchMatchResponse match = scoreItem(
-                    request.items().get(index),
+                    searchItems.get(index),
                     query,
                     selectedSubject,
                     index,
-                    vectorMatchesById.get(request.items().get(index).id())
+                    vectorMatchesById.get(searchItems.get(index).id())
             );
             if (match != null) {
                 matches.add(match);
@@ -271,6 +288,34 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
 
         @Override
         public List<MyspaceVectorMatch> search(float[] embedding, int limit) {
+            return List.of();
+        }
+    }
+
+    private static final class NoOpMyspaceItemService implements MyspaceItemService {
+
+        @Override
+        public com.sentri.backend.dto.response.MyspaceItemResponse upsert(com.sentri.backend.dto.request.UpsertMyspaceItemRequest request) {
+            throw new UnsupportedOperationException("No-op service");
+        }
+
+        @Override
+        public com.sentri.backend.dto.response.MyspaceItemResponse getItem(String itemId) {
+            throw new UnsupportedOperationException("No-op service");
+        }
+
+        @Override
+        public List<com.sentri.backend.dto.response.MyspaceItemResponse> listItems() {
+            return List.of();
+        }
+
+        @Override
+        public void deleteItem(String itemId) {
+            throw new UnsupportedOperationException("No-op service");
+        }
+
+        @Override
+        public List<MyspaceSearchItemRequest> listSearchItems() {
             return List.of();
         }
     }
