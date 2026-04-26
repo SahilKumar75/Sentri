@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: sentri-postgres
+    environment:
+      POSTGRES_DB: sentri
+      POSTGRES_USER: sentri
+      POSTGRES_PASSWORD: sentri
+    ports:
+      - "5432:5432"
+    volumes:
+      - sentri-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentri -d sentri"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentri-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SENTRI_DATABASE_URL: jdbc:postgresql://postgres:5432/sentri
+      SENTRI_DATABASE_USERNAME: sentri
+      SENTRI_DATABASE_PASSWORD: sentri
+      SENTRI_TIMETABLE_UPLOAD_DIR: /app/data/timetable-uploads
+    ports:
+      - "8080:8080"
+    volumes:
+      - sentri-backend-data:/app/data
+
+volumes:
+  sentri-postgres-data:
+  sentri-backend-data:
