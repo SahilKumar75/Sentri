@@ -32,6 +32,21 @@ Run tests:
 mvn test
 ```
 
+## Run with Docker
+
+From the repo root:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+- `postgres` on `localhost:5432`
+- `sentri-backend` on `localhost:8080`
+
+The backend container uses the same PostgreSQL schema and upload storage paths as local development.
+
 ## API
 
 Base path: `/api/v1`
