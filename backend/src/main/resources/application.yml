@@ -23,6 +23,13 @@ server:
 
 sentri:
   myspace:
+    graph:
+      enabled: ${SENTRI_MYSPACE_GRAPH_ENABLED:false}
+      uri: ${SENTRI_MYSPACE_GRAPH_URI:bolt://localhost:7687}
+      username: ${SENTRI_MYSPACE_GRAPH_USERNAME:neo4j}
+      password: ${SENTRI_MYSPACE_GRAPH_PASSWORD:sentri-graph}
+      database: ${SENTRI_MYSPACE_GRAPH_DATABASE:neo4j}
+      max-related-limit: ${SENTRI_MYSPACE_GRAPH_MAX_RELATED_LIMIT:12}
     vector:
       enabled: ${SENTRI_MYSPACE_VECTOR_ENABLED:true}
       dimension: ${SENTRI_MYSPACE_VECTOR_DIMENSION:384}

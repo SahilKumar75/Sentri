@@ -21,19 +21,42 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sentri-backend
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       SENTRI_DATABASE_URL: jdbc:postgresql://postgres:5432/sentri
       SENTRI_DATABASE_USERNAME: sentri
       SENTRI_DATABASE_PASSWORD: sentri
+      SENTRI_MYSPACE_GRAPH_ENABLED: "true"
+      SENTRI_MYSPACE_GRAPH_URI: bolt://neo4j:7687
+      SENTRI_MYSPACE_GRAPH_USERNAME: neo4j
+      SENTRI_MYSPACE_GRAPH_PASSWORD: sentri-graph
       SENTRI_TIMETABLE_UPLOAD_DIR: /app/data/timetable-uploads
     ports:
       - "8080:8080"
     volumes:
       - sentri-backend-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+
+  neo4j:
+    image: neo4j:5
+    container_name: sentri-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/sentri-graph
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - sentri-neo4j-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p sentri-graph 'RETURN 1' >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
 
 volumes:
   sentri-postgres-data:
   sentri-backend-data:
+  sentri-neo4j-data:
