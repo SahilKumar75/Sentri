@@ -61,4 +61,39 @@ class MyspaceItemServiceTest {
         assertThatThrownBy(() -> myspaceItemService.getItem("item-2"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+
+    @Test
+    void bulkUpsertsItems() {
+        List<MyspaceItemResponse> responses = myspaceItemService.bulkUpsert(List.of(
+                new UpsertMyspaceItemRequest(
+                        "item-3",
+                        "CG notes",
+                        "Z buffer",
+                        "CG",
+                        List.of("graphics"),
+                        "Board",
+                        "Today",
+                        "z buffer",
+                        false,
+                        true
+                ),
+                new UpsertMyspaceItemRequest(
+                        "item-4",
+                        "OS notes",
+                        "Paging",
+                        "OS",
+                        List.of("os"),
+                        "Screenshot",
+                        "Today",
+                        "paging",
+                        false,
+                        false
+                )
+        ));
+
+        assertThat(responses).hasSize(2);
+        assertThat(myspaceItemService.listItems())
+                .extracting(MyspaceItemResponse::id)
+                .contains("item-3", "item-4");
+    }
 }

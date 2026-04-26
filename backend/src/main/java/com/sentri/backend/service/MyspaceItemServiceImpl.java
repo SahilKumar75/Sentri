@@ -55,6 +55,14 @@ public class MyspaceItemServiceImpl implements MyspaceItemService {
     }
 
     @Override
+    @Transactional
+    public List<MyspaceItemResponse> bulkUpsert(List<UpsertMyspaceItemRequest> requests) {
+        return requests.stream()
+                .map(this::upsert)
+                .toList();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public MyspaceItemResponse getItem(String itemId) {
         return toResponse(load(itemId));

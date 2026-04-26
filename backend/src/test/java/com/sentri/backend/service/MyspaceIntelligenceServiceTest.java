@@ -229,6 +229,11 @@ class MyspaceIntelligenceServiceTest {
             }
 
             @Override
+            public List<com.sentri.backend.dto.response.MyspaceItemResponse> bulkUpsert(List<com.sentri.backend.dto.request.UpsertMyspaceItemRequest> requests) {
+                return List.of();
+            }
+
+            @Override
             public com.sentri.backend.dto.response.MyspaceItemResponse getItem(String itemId) {
                 throw new UnsupportedOperationException();
             }
