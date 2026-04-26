@@ -10,6 +10,8 @@ public interface MyspaceItemService {
 
     MyspaceItemResponse upsert(UpsertMyspaceItemRequest request);
 
+    List<MyspaceItemResponse> bulkUpsert(List<UpsertMyspaceItemRequest> requests);
+
     MyspaceItemResponse getItem(String itemId);
 
     List<MyspaceItemResponse> listItems();
