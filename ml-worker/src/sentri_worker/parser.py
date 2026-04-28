@@ -91,6 +91,7 @@ def normalize_whitespace(value: str) -> str:
 
 @lru_cache(maxsize=256)
 def normalize_day(value: str) -> str | None:
+    value = normalize_whitespace(value)
     # Remove non-alphabetic, but keep trailing digits for cases like 'TUE5'
     raw = value.upper().translate(OCR_DAY_CHAR_SUBSTITUTIONS)
     token = re.sub(r"[^A-Z0-9]", "", raw)
@@ -115,6 +116,7 @@ def normalize_day(value: str) -> str | None:
 
 @lru_cache(maxsize=256)
 def normalize_time_label(value: str) -> str | None:
+    value = normalize_whitespace(value)
     value = value.strip().replace(".", ":")
     value = value.translate(OCR_TIME_CHAR_SUBSTITUTIONS)
     value = value.replace(" ", "")
@@ -198,14 +200,14 @@ def normalize_time_range(value: str) -> tuple[str | None, str | None] | None:
     return start, end
 
 
-def split_lines(raw_text: str) -> list[str]:
-    lines = [normalize_whitespace(line) for line in raw_text.splitlines() if normalize_whitespace(line)]
-    # Remove adjacent duplicate lines (common OCR doubling artifact)
-    deduplicated: list[str] = []
+def split_lines(text: str) -> list[str]:
+    # Split on newlines, normalize whitespace, skip empty, remove adjacent duplicates
+    lines = [normalize_whitespace(line) for line in text.splitlines() if normalize_whitespace(line)]
+    deduped = []
     for line in lines:
-        if not deduplicated or line != deduplicated[-1]:
-            deduplicated.append(line)
-    return deduplicated
+        if not deduped or deduped[-1] != line:
+            deduped.append(line)
+    return deduped
 
 
 def parse_date_value(value: str) -> str | None:
