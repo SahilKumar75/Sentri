@@ -7,6 +7,7 @@ from typing import Sequence
 
 from .models import OCRCell, ParseIssue, ParseResult, TimetableBatch, TimetableEntry
 from .tuning import TuningProfile
+from sentri_worker.lib.lru_cache import lru_cache
 
 DAY_ALIASES = {
     "MON": "MON",
@@ -83,10 +84,14 @@ SUBJECT_ALIASES = {
 
 
 def normalize_whitespace(value: str) -> str:
+    # Remove invisible Unicode and normalize all whitespace
+    value = re.sub(r"[\u200B-\u200D\uFEFF]", "", value)
     return re.sub(r"\s+", " ", value.strip())
 
 
+@lru_cache(maxsize=256)
 def normalize_day(value: str) -> str | None:
+    value = normalize_whitespace(value)
     # Remove non-alphabetic, but keep trailing digits for cases like 'TUE5'
     raw = value.upper().translate(OCR_DAY_CHAR_SUBSTITUTIONS)
     token = re.sub(r"[^A-Z0-9]", "", raw)
@@ -109,7 +114,9 @@ def normalize_day(value: str) -> str | None:
     return None
 
 
+@lru_cache(maxsize=256)
 def normalize_time_label(value: str) -> str | None:
+    value = normalize_whitespace(value)
     value = value.strip().replace(".", ":")
     value = value.translate(OCR_TIME_CHAR_SUBSTITUTIONS)
     value = value.replace(" ", "")
@@ -193,14 +200,14 @@ def normalize_time_range(value: str) -> tuple[str | None, str | None] | None:
     return start, end
 
 
-def split_lines(raw_text: str) -> list[str]:
-    lines = [normalize_whitespace(line) for line in raw_text.splitlines() if normalize_whitespace(line)]
-    # Remove adjacent duplicate lines (common OCR doubling artifact)
-    deduplicated: list[str] = []
+def split_lines(text: str) -> list[str]:
+    # Split on newlines, normalize whitespace, skip empty, remove adjacent duplicates
+    lines = [normalize_whitespace(line) for line in text.splitlines() if normalize_whitespace(line)]
+    deduped = []
     for line in lines:
-        if not deduplicated or line != deduplicated[-1]:
-            deduplicated.append(line)
-    return deduplicated
+        if not deduped or deduped[-1] != line:
+            deduped.append(line)
+    return deduped
 
 
 def parse_date_value(value: str) -> str | None:
@@ -307,11 +314,21 @@ def classify_entry(text: str) -> str:
     return "lecture"
 
 
-def parse_cell_text(
-    text: str,
-    tuning_profile: TuningProfile | None = None,
-) -> tuple[str, str | None, str | None, list[str]]:
+@lru_cache(maxsize=1024)
+def _parse_cell_text_cached(text: str):
+    return _parse_cell_text_impl(text, None)
+
+def _parse_cell_text_impl(text: str, tuning_profile: TuningProfile | None):
     lines = split_lines(text)
+    if not lines:
+        return "", None, None, []
+    cleaned_lines = []
+    for line in lines:
+        norm = normalize_whitespace(line)
+        if not norm or len(norm) == 1 or all(c in "-_.:;|/\\" for c in norm):
+            continue
+        cleaned_lines.append(line)
+    lines = cleaned_lines
     if not lines:
         return "", None, None, []
     subject = normalize_subject_text(lines[0], tuning_profile=tuning_profile)
@@ -711,3 +728,10 @@ def parse_timetable(
                 )
         return cell_result
     return parse_text_schedule(raw_text=raw_text, source=source, tuning_profile=tuning_profile)
+
+
+# Exported for import
+def parse_cell_text(text: str, tuning_profile: TuningProfile | None = None):
+    if tuning_profile is None:
+        return _parse_cell_text_cached(text)
+    return _parse_cell_text_impl(text, tuning_profile)

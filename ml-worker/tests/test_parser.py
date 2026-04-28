@@ -227,6 +227,31 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(location, "LAB-III")
         self.assertEqual(notes, ["Practice"])
 
+    def test_parse_cell_text_skips_noise_lines(self):
+        # Should skip lines that are just punctuation or single chars
+        subj, fac, loc, notes = parse_cell_text("DBMS\n-\n.\nA\nLH 20")
+        self.assertEqual(subj, "DBMS")
+        self.assertEqual(loc, "LH 20")
+        self.assertNotIn("-", notes)
+        self.assertNotIn(".", notes)
+        self.assertNotIn("A", notes)
+
+    def test_parse_cell_text_cache(self):
+        calls = []
+        def fake_tuning(x, *args, **kwargs):
+            calls.append(x)
+            return x
+        # Patch normalize_subject_text to count calls
+        import sentri_worker.parser as parser_mod
+        orig = parser_mod.normalize_subject_text
+        parser_mod.normalize_subject_text = fake_tuning
+        try:
+            parser_mod.parse_cell_text("DBMS\nLH 20")
+            parser_mod.parse_cell_text("DBMS\nLH 20")
+            self.assertEqual(len(calls), 2)  # Only called for subject and location, once per unique input
+        finally:
+            parser_mod.normalize_subject_text = orig
+
 
 if __name__ == "__main__":
     unittest.main()
