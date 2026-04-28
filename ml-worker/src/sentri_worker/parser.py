@@ -310,14 +310,14 @@ def classify_entry(text: str) -> str:
     return "lecture"
 
 
-def parse_cell_text(
-    text: str,
-    tuning_profile: TuningProfile | None = None,
-) -> tuple[str, str | None, str | None, list[str]]:
+@lru_cache(maxsize=1024)
+def _parse_cell_text_cached(text: str):
+    return _parse_cell_text_impl(text, None)
+
+def _parse_cell_text_impl(text: str, tuning_profile: TuningProfile | None):
     lines = split_lines(text)
     if not lines:
         return "", None, None, []
-    # Refinement: skip lines that are pure noise or ambiguous (e.g., only punctuation or single char)
     cleaned_lines = []
     for line in lines:
         norm = normalize_whitespace(line)
@@ -724,3 +724,10 @@ def parse_timetable(
                 )
         return cell_result
     return parse_text_schedule(raw_text=raw_text, source=source, tuning_profile=tuning_profile)
+
+
+# Exported for import
+def parse_cell_text(text: str, tuning_profile: TuningProfile | None = None):
+    if tuning_profile is None:
+        return _parse_cell_text_cached(text)
+    return _parse_cell_text_impl(text, tuning_profile)
