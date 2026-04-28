@@ -7,6 +7,7 @@ from typing import Sequence
 
 from .models import OCRCell, ParseIssue, ParseResult, TimetableBatch, TimetableEntry
 from .tuning import TuningProfile
+from sentri_worker.lib.lru_cache import lru_cache
 
 DAY_ALIASES = {
     "MON": "MON",
@@ -86,6 +87,7 @@ def normalize_whitespace(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip())
 
 
+@lru_cache(maxsize=256)
 def normalize_day(value: str) -> str | None:
     # Remove non-alphabetic, but keep trailing digits for cases like 'TUE5'
     raw = value.upper().translate(OCR_DAY_CHAR_SUBSTITUTIONS)
@@ -109,6 +111,7 @@ def normalize_day(value: str) -> str | None:
     return None
 
 
+@lru_cache(maxsize=256)
 def normalize_time_label(value: str) -> str | None:
     value = value.strip().replace(".", ":")
     value = value.translate(OCR_TIME_CHAR_SUBSTITUTIONS)
