@@ -317,6 +317,16 @@ def parse_cell_text(
     lines = split_lines(text)
     if not lines:
         return "", None, None, []
+    # Refinement: skip lines that are pure noise or ambiguous (e.g., only punctuation or single char)
+    cleaned_lines = []
+    for line in lines:
+        norm = normalize_whitespace(line)
+        if not norm or len(norm) == 1 or all(c in "-_.:;|/\\" for c in norm):
+            continue
+        cleaned_lines.append(line)
+    lines = cleaned_lines
+    if not lines:
+        return "", None, None, []
     subject = normalize_subject_text(lines[0], tuning_profile=tuning_profile)
     faculty_code = None
     location = None
