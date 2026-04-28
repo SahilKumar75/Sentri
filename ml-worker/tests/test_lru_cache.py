@@ -27,5 +27,13 @@ class LRUCacheTests(unittest.TestCase):
         # LRU: f(2), f(3), f(4), f(2) triggers 4 actual calls
         self.assertEqual(len(calls), 4)
 
+    def test_parser_normalization_cache_clear(self):
+        from sentri_worker.parser import normalize_day, normalize_time_label
+        normalize_day("MONDAY")
+        normalize_time_label("9am")
+        # Should not error
+        normalize_day.cache_clear()
+        normalize_time_label.cache_clear()
+
 if __name__ == "__main__":
     unittest.main()
