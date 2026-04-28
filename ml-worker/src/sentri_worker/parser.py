@@ -84,6 +84,8 @@ SUBJECT_ALIASES = {
 
 
 def normalize_whitespace(value: str) -> str:
+    # Remove invisible Unicode and normalize all whitespace
+    value = re.sub(r"[\u200B-\u200D\uFEFF]", "", value)
     return re.sub(r"\s+", " ", value.strip())
 
 
