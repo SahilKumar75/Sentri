@@ -23,6 +23,8 @@ This repository is currently split into 3 working parts:
 
 ## Why This Structure
 
+### Design Philosophy
+
 The app should stay simple and cheap to run:
 
 - Expo keeps one mobile codebase for both platforms
