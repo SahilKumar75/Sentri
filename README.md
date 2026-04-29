@@ -33,6 +33,8 @@ The app should stay simple and cheap to run:
 
 ## Architecture
 
+### Documentation
+
 - HLD: [docs/system-design-hld.md](/Users/sahilkumarsingh/Desktop/SENTRI/docs/system-design-hld.md)
 - LLD: [docs/system-design-lld.md](/Users/sahilkumarsingh/Desktop/SENTRI/docs/system-design-lld.md)
 - Home AI logic: [docs/ai-logic-home-timetable.md](/Users/sahilkumarsingh/Desktop/SENTRI/docs/ai-logic-home-timetable.md)
