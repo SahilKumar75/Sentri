@@ -2,6 +2,8 @@
 
 Sentri is a zero-budget cross-platform student companion for Army Institute of Technology.
 
+[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
+
 This repository is currently split into 3 working parts:
 
 - `app/`: Expo React Native frontend for iPhone and Android
