@@ -1,6 +1,10 @@
-# Sentri
+# Sentri 🎓
 
 Sentri is a zero-budget cross-platform student companion for Army Institute of Technology.
+
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/SahilKumar75/sentri)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey)](https://expo.dev)
 
 This repository is currently split into 3 working parts:
 
