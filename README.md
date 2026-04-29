@@ -12,7 +12,7 @@ This repository is currently split into 3 working parts:
 
 ## Product Scope
 
-Current focus:
+### Current Focus
 
 - timetable import from screenshots
 - weekly Saturday prompt to refresh the next timetable
