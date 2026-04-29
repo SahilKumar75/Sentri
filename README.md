@@ -42,7 +42,7 @@ The app should stay simple and cheap to run:
 - Myspace indexing pipeline: [docs/myspace-indexing-pipeline.md](/Users/sahilkumarsingh/Desktop/SENTRI/docs/myspace-indexing-pipeline.md)
 - Contribution workflow: [CONTRIBUTING.md](/Users/sahilkumarsingh/Desktop/SENTRI/CONTRIBUTING.md)
 
-Recent performance-focused work includes:
+### Performance Optimizations
 
 - on-demand tab mounting in the mobile shell
 - shared persisted state utilities with cached storage reads
