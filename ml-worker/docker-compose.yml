@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  sentri-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sentri-worker:latest
+    container_name: sentri-worker
+    restart: unless-stopped
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Environment variables
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - TESSERACT_CMD=/usr/bin/tesseract
+    
+    # Volumes for input/output
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output:rw
+      - ./logs:/app/logs:rw
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sentri_worker; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Development service with hot reload
+  sentri-worker-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    image: sentri-worker:dev
+    container_name: sentri-worker-dev
+    
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=DEBUG
+      - TESSERACT_CMD=/usr/bin/tesseract
+    
+    volumes:
+      - .:/app:rw
+      - ./data:/app/data:ro
+      - ./output:/app/output:rw
+    
+    command: ["--help"]
+    
+    profiles:
+      - dev
+
+volumes:
+  data:
+  output:
+  logs:
