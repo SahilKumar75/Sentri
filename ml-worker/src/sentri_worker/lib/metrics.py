@@ -9,86 +9,147 @@ from typing import Any
 
 
 @dataclass
-class OperationMetrics:
-    """Metrics for a single operation."""
+class OCRMetrics:
+    """Metrics for OCR operations."""
 
-    operation_name: str
-    start_time: float = field(default_factory=time.time)
-    end_time: float | None = None
-    success: bool = True
-    error_message: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    total_images: int = 0
+    successful_extractions: int = 0
+    failed_extractions: int = 0
+    total_processing_time: float = 0.0
+    avg_confidence: float = 0.0
+    engine_usage: dict[str, int] = field(default_factory=lambda: defaultdict(int))
 
-    def complete(self, success: bool = True, error_message: str | None = None) -> None:
-        """Mark operation as complete."""
-        self.end_time = time.time()
-        self.success = success
-        self.error_message = error_message
+    def record_success(self, duration: float, confidence: float | None, engine: str) -> None:
+        """Record a successful OCR operation."""
+        self.total_images += 1
+        self.successful_extractions += 1
+        self.total_processing_time += duration
+        if confidence is not None:
+            self.avg_confidence = (
+                self.avg_confidence * (self.successful_extractions - 1) + confidence
+            ) / self.successful_extractions
+        self.engine_usage[engine] += 1
 
-    @property
-    def duration(self) -> float | None:
-        """Get operation duration in seconds."""
-        if self.end_time is None:
-            return None
-        return self.end_time - self.start_time
+    def record_failure(self, duration: float) -> None:
+        """Record a failed OCR operation."""
+        self.total_images += 1
+        self.failed_extractions += 1
+        self.total_processing_time += duration
+
+    def get_success_rate(self) -> float:
+        """Calculate success rate."""
+        if self.total_images == 0:
+            return 0.0
+        return self.successful_extractions / self.total_images
+
+    def get_avg_processing_time(self) -> float:
+        """Calculate average processing time."""
+        if self.total_images == 0:
+            return 0.0
+        return self.total_processing_time / self.total_images
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary."""
+        """Convert metrics to dictionary."""
         return {
-            "operation": self.operation_name,
-            "duration": self.duration,
-            "success": self.success,
-            "error": self.error_message,
-            "metadata": self.metadata,
+            "total_images": self.total_images,
+            "successful_extractions": self.successful_extractions,
+            "failed_extractions": self.failed_extractions,
+            "success_rate": round(self.get_success_rate(), 4),
+            "total_processing_time": round(self.total_processing_time, 4),
+            "avg_processing_time": round(self.get_avg_processing_time(), 4),
+            "avg_confidence": round(self.avg_confidence, 4),
+            "engine_usage": dict(self.engine_usage),
+        }
+
+
+@dataclass
+class ParsingMetrics:
+    """Metrics for parsing operations."""
+
+    total_parses: int = 0
+    successful_parses: int = 0
+    failed_parses: int = 0
+    total_entries_extracted: int = 0
+    total_issues: int = 0
+    issue_types: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    entry_types: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+
+    def record_parse(
+        self,
+        success: bool,
+        entries_count: int,
+        issues: list[str],
+        entry_type_counts: dict[str, int] | None = None,
+    ) -> None:
+        """Record a parsing operation."""
+        self.total_parses += 1
+        if success:
+            self.successful_parses += 1
+            self.total_entries_extracted += entries_count
+
+        if not success:
+            self.failed_parses += 1
+
+        self.total_issues += len(issues)
+        for issue in issues:
+            self.issue_types[issue] += 1
+
+        if entry_type_counts:
+            for entry_type, count in entry_type_counts.items():
+                self.entry_types[entry_type] += count
+
+    def get_success_rate(self) -> float:
+        """Calculate success rate."""
+        if self.total_parses == 0:
+            return 0.0
+        return self.successful_parses / self.total_parses
+
+    def get_avg_entries_per_parse(self) -> float:
+        """Calculate average entries per parse."""
+        if self.successful_parses == 0:
+            return 0.0
+        return self.total_entries_extracted / self.successful_parses
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert metrics to dictionary."""
+        return {
+            "total_parses": self.total_parses,
+            "successful_parses": self.successful_parses,
+            "failed_parses": self.failed_parses,
+            "success_rate": round(self.get_success_rate(), 4),
+            "total_entries_extracted": self.total_entries_extracted,
+            "avg_entries_per_parse": round(self.get_avg_entries_per_parse(), 4),
+            "total_issues": self.total_issues,
+            "issue_types": dict(self.issue_types),
+            "entry_types": dict(self.entry_types),
         }
 
 
 class MetricsCollector:
-    """Collect and aggregate metrics."""
+    """Centralized metrics collection."""
 
     def __init__(self) -> None:
-        self.operations: list[OperationMetrics] = []
-        self.counters: dict[str, int] = defaultdict(int)
-        self.gauges: dict[str, float] = {}
+        self.ocr_metrics = OCRMetrics()
+        self.parsing_metrics = ParsingMetrics()
+        self.start_time = time.time()
 
-    def start_operation(self, name: str, **metadata: Any) -> OperationMetrics:
-        """Start tracking an operation."""
-        metric = OperationMetrics(operation_name=name, metadata=metadata)
-        self.operations.append(metric)
-        return metric
+    def get_uptime(self) -> float:
+        """Get uptime in seconds."""
+        return time.time() - self.start_time
 
-    def increment_counter(self, name: str, value: int = 1) -> None:
-        """Increment a counter metric."""
-        self.counters[name] += value
-
-    def set_gauge(self, name: str, value: float) -> None:
-        """Set a gauge metric."""
-        self.gauges[name] = value
-
-    def get_summary(self) -> dict[str, Any]:
-        """Get summary of all metrics."""
-        completed_ops = [op for op in self.operations if op.end_time is not None]
-        successful_ops = [op for op in completed_ops if op.success]
-        failed_ops = [op for op in completed_ops if not op.success]
-
-        durations = [op.duration for op in completed_ops if op.duration is not None]
-        avg_duration = sum(durations) / len(durations) if durations else 0
-
+    def get_all_metrics(self) -> dict[str, Any]:
+        """Get all collected metrics."""
         return {
-            "total_operations": len(completed_ops),
-            "successful_operations": len(successful_ops),
-            "failed_operations": len(failed_ops),
-            "success_rate": len(successful_ops) / len(completed_ops) if completed_ops else 0,
-            "average_duration": avg_duration,
-            "counters": dict(self.counters),
-            "gauges": dict(self.gauges),
+            "uptime_seconds": round(self.get_uptime(), 2),
+            "ocr": self.ocr_metrics.to_dict(),
+            "parsing": self.parsing_metrics.to_dict(),
         }
 
     def reset(self) -> None:
         """Reset all metrics."""
-        self.operations.clear()
-        self.counters.clear()
-        self.gauges.clear()
+        self.ocr_metrics = OCRMetrics()
+        self.parsing_metrics = ParsingMetrics()
+        self.start_time = time.time()
 
 
 # Global metrics collector
@@ -96,5 +157,5 @@ _metrics_collector = MetricsCollector()
 
 
 def get_metrics_collector() -> MetricsCollector:
-    """Get global metrics collector."""
+    """Get the global metrics collector instance."""
     return _metrics_collector
