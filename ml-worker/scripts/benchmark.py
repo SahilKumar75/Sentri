@@ -13,54 +13,71 @@ from sentri_worker.pipeline import SentriWorker
 
 
 def benchmark_ocr(worker: SentriWorker, image_path: Path, iterations: int = 10) -> dict[str, Any]:
-    """Benchmark OCR performance."""
+    """Benchmark OCR performance.
+
+    Args:
+        worker: SentriWorker instance
+        image_path: Path to test image
+        iterations: Number of iterations
+
+    Returns:
+        Benchmark results
+    """
     durations = []
+    payload = {"image_path": str(image_path)}
 
     for _ in range(iterations):
-        payload = {"image_path": str(image_path)}
         start = time.perf_counter()
-        worker.process(payload)
+        result = worker.process(payload)
         duration = time.perf_counter() - start
         durations.append(duration)
 
     return {
         "operation": "ocr",
         "iterations": iterations,
-        "min": min(durations),
-        "max": max(durations),
-        "avg": sum(durations) / len(durations),
-        "total": sum(durations),
+        "min_time": min(durations),
+        "max_time": max(durations),
+        "avg_time": sum(durations) / len(durations),
+        "total_time": sum(durations),
     }
 
 
-def benchmark_parsing(worker: SentriWorker, text: str, iterations: int = 100) -> dict[str, Any]:
-    """Benchmark parsing performance."""
+def benchmark_parsing(worker: SentriWorker, payload: dict[str, Any], iterations: int = 100) -> dict[str, Any]:
+    """Benchmark parsing performance.
+
+    Args:
+        worker: SentriWorker instance
+        payload: Test payload
+        iterations: Number of iterations
+
+    Returns:
+        Benchmark results
+    """
     durations = []
 
     for _ in range(iterations):
-        payload = {"ocr_text": text}
         start = time.perf_counter()
-        worker.process(payload)
+        result = worker.process(payload)
         duration = time.perf_counter() - start
         durations.append(duration)
 
     return {
         "operation": "parsing",
         "iterations": iterations,
-        "min": min(durations),
-        "max": max(durations),
-        "avg": sum(durations) / len(durations),
-        "total": sum(durations),
+        "min_time": min(durations),
+        "max_time": max(durations),
+        "avg_time": sum(durations) / len(durations),
+        "total_time": sum(durations),
     }
 
 
 def main() -> int:
     """Run benchmarks."""
     parser = argparse.ArgumentParser(description="Benchmark Sentri Worker performance")
-    parser.add_argument("--image", help="Image path for OCR benchmark")
-    parser.add_argument("--text", help="Text for parsing benchmark")
+    parser.add_argument("--image", help="Path to test image for OCR benchmark")
+    parser.add_argument("--payload", help="Path to test payload JSON for parsing benchmark")
     parser.add_argument("--iterations", type=int, default=10, help="Number of iterations")
-    parser.add_argument("--output", help="Output JSON file for results")
+    parser.add_argument("--output", help="Output file for results")
 
     args = parser.parse_args()
 
@@ -68,32 +85,26 @@ def main() -> int:
     results = []
 
     if args.image:
-        image_path = Path(args.image)
-        if not image_path.exists():
-            print(f"Error: Image not found: {image_path}")
-            return 1
-
         print(f"Benchmarking OCR with {args.iterations} iterations...")
-        ocr_results = benchmark_ocr(worker, image_path, args.iterations)
+        ocr_results = benchmark_ocr(worker, Path(args.image), args.iterations)
         results.append(ocr_results)
-        print(f"OCR avg: {ocr_results['avg']:.4f}s")
+        print(f"  Avg time: {ocr_results['avg_time']:.4f}s")
+        print(f"  Min time: {ocr_results['min_time']:.4f}s")
+        print(f"  Max time: {ocr_results['max_time']:.4f}s")
 
-    if args.text:
+    if args.payload:
         print(f"Benchmarking parsing with {args.iterations} iterations...")
-        parse_results = benchmark_parsing(worker, args.text, args.iterations)
+        payload = json.loads(Path(args.payload).read_text())
+        parse_results = benchmark_parsing(worker, payload, args.iterations)
         results.append(parse_results)
-        print(f"Parsing avg: {parse_results['avg']:.4f}s")
-
-    if not results:
-        print("No benchmarks to run. Provide --image or --text")
-        return 1
+        print(f"  Avg time: {parse_results['avg_time']:.4f}s")
+        print(f"  Min time: {parse_results['min_time']:.4f}s")
+        print(f"  Max time: {parse_results['max_time']:.4f}s")
 
     if args.output:
         output_path = Path(args.output)
         output_path.write_text(json.dumps(results, indent=2))
-        print(f"Results written to {output_path}")
-    else:
-        print(json.dumps(results, indent=2))
+        print(f"\nResults written to {output_path}")
 
     return 0
 
