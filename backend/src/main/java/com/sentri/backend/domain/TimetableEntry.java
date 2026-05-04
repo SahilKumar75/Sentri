@@ -52,6 +52,9 @@ public class TimetableEntry {
     @Column(nullable = false)
     private Integer sortOrder = 0;
 
+    @Column(nullable = false)
+    private Boolean deleted = Boolean.FALSE;
+
     @Lob
     @Column(columnDefinition = "TEXT")
     private String noteText;
@@ -155,6 +158,14 @@ public class TimetableEntry {
         this.sortOrder = sortOrder;
     }
 
+    public Boolean getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(Boolean deleted) {
+        this.deleted = deleted;
+    }
+
     public String getNoteText() {
         return noteText;
     }
@@ -181,6 +192,9 @@ public class TimetableEntry {
         }
         if (sortOrder == null) {
             sortOrder = 0;
+        }
+        if (deleted == null) {
+            deleted = Boolean.FALSE;
         }
     }
 }
