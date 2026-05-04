@@ -30,6 +30,11 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.UNAUTHORIZED, exception.getMessage(), request.getRequestURI(), List.of());
     }
 
+    @ExceptionHandler(DuplicateBatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateBatch(DuplicateBatchException exception, HttpServletRequest request) {
+        return buildError(HttpStatus.CONFLICT, exception.getMessage(), request.getRequestURI(), List.of());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception, HttpServletRequest request) {
         List<String> details = exception.getBindingResult().getFieldErrors().stream()
