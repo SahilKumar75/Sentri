@@ -19,4 +19,6 @@ public interface TimetableBatchService {
     TimetableBatchDetailResponse getBatch(Long batchId);
 
     TimetableBatchDetailResponse saveParsedTimetable(Long batchId, ParsedTimetableImportRequest request);
+
+    void deleteBatch(Long batchId);
 }
