@@ -63,3 +63,20 @@ class CaloriePredictor:
             data = pickle.load(f)
             self.model = data['model']
             self.is_trained = data['is_trained']
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    predictor = CaloriePredictor()
+    dummy_data = [
+        {"duration_minutes": 30, "intensity": 0.8, "avg_heart_rate": 140},
+        {"duration_minutes": 45, "intensity": 0.6, "avg_heart_rate": 120}
+    ]
+    dummy_targets = [300, 250]
+    
+    logger.info("Training predictor...")
+    predictor.train_model(dummy_data, dummy_targets)
+    
+    logger.info("Predicting...")
+    predictions = predictor.predict_calories(dummy_data)
+    for t, p in zip(dummy_targets, predictions):
+        logger.info(f"Target: {t}, Predicted: {p:.2f}")
