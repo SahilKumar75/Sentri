@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+import pickle
 from sklearn.linear_model import Ridge
 
 logger = logging.getLogger(__name__)
@@ -44,3 +45,21 @@ class CaloriePredictor:
         X_features = self.extract_features(X)
         predictions = self.model.predict(X_features)
         return [max(0.0, float(p)) for p in predictions]
+
+    def save_model(self, path: str = None):
+        """Saves the trained model to disk."""
+        save_path = path or self.model_path
+        if not save_path:
+            raise ValueError("No model path provided for saving.")
+        with open(save_path, 'wb') as f:
+            pickle.dump({'model': self.model, 'is_trained': self.is_trained}, f)
+
+    def load_model(self, path: str = None):
+        """Loads a trained model from disk."""
+        load_path = path or self.model_path
+        if not load_path:
+            raise ValueError("No model path provided for loading.")
+        with open(load_path, 'rb') as f:
+            data = pickle.load(f)
+            self.model = data['model']
+            self.is_trained = data['is_trained']
