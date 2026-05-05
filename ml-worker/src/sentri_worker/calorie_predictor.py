@@ -35,3 +35,12 @@ class CaloriePredictor:
         self.model.fit(X_features, y)
         self.is_trained = True
         logger.info("Calorie predictor model trained successfully.")
+
+    def predict_calories(self, data: list) -> list:
+        """Predicts calories burned for given activity data."""
+        if not self.is_trained:
+            logger.warning("Predicting with untrained model, results may be inaccurate.")
+        X = self.preprocess_activity_data(data)
+        X_features = self.extract_features(X)
+        predictions = self.model.predict(X_features)
+        return [max(0.0, float(p)) for p in predictions]
