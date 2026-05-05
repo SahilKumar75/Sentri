@@ -10,3 +10,14 @@ class CaloriePredictor:
         self.model_path = model_path
         self.model = Ridge(alpha=1.0)
         self.is_trained = False
+
+    def preprocess_activity_data(self, data: list) -> np.ndarray:
+        """Preprocesses raw activity data into structured features."""
+        # Dummy preprocessing: just extracting numerical values
+        processed = []
+        for entry in data:
+            duration = entry.get('duration_minutes', 0)
+            intensity = entry.get('intensity', 1.0)
+            heart_rate = entry.get('avg_heart_rate', 70)
+            processed.append([duration, intensity, heart_rate])
+        return np.array(processed)
