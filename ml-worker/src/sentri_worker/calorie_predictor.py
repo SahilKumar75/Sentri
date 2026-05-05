@@ -13,7 +13,6 @@ class CaloriePredictor:
 
     def preprocess_activity_data(self, data: list) -> np.ndarray:
         """Preprocesses raw activity data into structured features."""
-        # Dummy preprocessing: just extracting numerical values
         processed = []
         for entry in data:
             duration = entry.get('duration_minutes', 0)
@@ -21,3 +20,9 @@ class CaloriePredictor:
             heart_rate = entry.get('avg_heart_rate', 70)
             processed.append([duration, intensity, heart_rate])
         return np.array(processed)
+
+    def extract_features(self, X: np.ndarray) -> np.ndarray:
+        """Extracts polynomial features from base activity data."""
+        # Simple feature engineering: duration * intensity
+        interaction = (X[:, 0] * X[:, 1]).reshape(-1, 1)
+        return np.hstack((X, interaction))
