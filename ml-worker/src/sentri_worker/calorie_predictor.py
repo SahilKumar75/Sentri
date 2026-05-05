@@ -23,6 +23,15 @@ class CaloriePredictor:
 
     def extract_features(self, X: np.ndarray) -> np.ndarray:
         """Extracts polynomial features from base activity data."""
-        # Simple feature engineering: duration * intensity
         interaction = (X[:, 0] * X[:, 1]).reshape(-1, 1)
         return np.hstack((X, interaction))
+
+    def train_model(self, data: list, target_calories: list):
+        """Trains the calorie prediction model."""
+        X = self.preprocess_activity_data(data)
+        X_features = self.extract_features(X)
+        y = np.array(target_calories)
+        
+        self.model.fit(X_features, y)
+        self.is_trained = True
+        logger.info("Calorie predictor model trained successfully.")
