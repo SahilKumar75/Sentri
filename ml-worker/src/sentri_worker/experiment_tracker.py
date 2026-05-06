@@ -1,4 +1,5 @@
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -39,3 +40,13 @@ class ExperimentTracker:
             summary += f"  Parameters: {run['parameters']}\n"
             summary += f"  Metrics: {run['metrics']}\n"
         return summary
+
+    def save_to_disk(self, file_path: str):
+        """Saves experiment data to a JSON file."""
+        data = {
+            "experiment_name": self.experiment_name,
+            "runs": self.runs
+        }
+        with open(file_path, "w") as f:
+            json.dump(data, f, indent=4)
+        logger.info(f"Experiment saved to {file_path}")
