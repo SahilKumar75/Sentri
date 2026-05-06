@@ -41,3 +41,15 @@ class MetricsCollector:
         """Resets all metrics to empty state."""
         self.metrics.clear()
         logger.info("Metrics collector has been reset")
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    collector = MetricsCollector()
+    
+    collector.inc_counter("requests")
+    collector.set_gauge("memory_mb", 256.5)
+    
+    with collector.measure_time("inference"):
+        time.sleep(0.1)  # Simulate work
+        
+    print(collector.export_json())
