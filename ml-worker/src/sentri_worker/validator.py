@@ -55,3 +55,16 @@ class DataValidator:
                 elif v_type == 'string':
                     self.validate_string(val, field)
         return True
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    validator = DataValidator(strict_mode=True)
+    
+    schema = {
+        "age": {"type": "numeric", "required": True},
+        "name": {"type": "string", "required": True}
+    }
+    
+    test_payload = {"age": 25, "name": "Test User"}
+    is_valid = validator.validate_payload(test_payload, schema)
+    print(f"Payload valid: {is_valid}")
