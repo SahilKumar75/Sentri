@@ -1,5 +1,6 @@
 import logging
 import time
+import json
 from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
@@ -31,3 +32,7 @@ class MetricsCollector:
         yield
         duration = time.time() - start
         self.set_gauge(f"{name}_duration_seconds", duration)
+
+    def export_json(self) -> str:
+        """Exports all current metrics as a JSON string."""
+        return json.dumps(self.metrics, indent=2)
