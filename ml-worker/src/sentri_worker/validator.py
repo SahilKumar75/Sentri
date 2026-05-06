@@ -46,4 +46,12 @@ class DataValidator:
                 if self.strict_mode:
                     raise KeyError(f"Missing required field: {field}")
                 return False
+            
+            if field in payload:
+                val = payload[field]
+                v_type = rules.get('type')
+                if v_type == 'numeric':
+                    self.validate_numeric(val, field)
+                elif v_type == 'string':
+                    self.validate_string(val, field)
         return True
