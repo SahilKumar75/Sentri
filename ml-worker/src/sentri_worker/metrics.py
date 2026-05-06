@@ -15,3 +15,9 @@ class MetricsCollector:
             self.metrics[full_name] = 0
         self.metrics[full_name] += value
         logger.debug(f"Counter {full_name} incremented by {value}")
+
+    def set_gauge(self, name: str, value: float):
+        """Sets a gauge metric to a specific value."""
+        full_name = f"{self.prefix}_{name}"
+        self.metrics[full_name] = value
+        logger.debug(f"Gauge {full_name} set to {value}")
