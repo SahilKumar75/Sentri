@@ -36,3 +36,8 @@ class MetricsCollector:
     def export_json(self) -> str:
         """Exports all current metrics as a JSON string."""
         return json.dumps(self.metrics, indent=2)
+
+    def reset(self):
+        """Resets all metrics to empty state."""
+        self.metrics.clear()
+        logger.info("Metrics collector has been reset")
