@@ -38,3 +38,12 @@ class DataValidator:
                 raise ValueError(f"{field_name} exceeds max length {max_length}")
             return False
         return True
+
+    def validate_payload(self, payload: dict, schema: dict) -> bool:
+        """Validates a dictionary payload against a schema."""
+        for field, rules in schema.items():
+            if field not in payload and rules.get('required', False):
+                if self.strict_mode:
+                    raise KeyError(f"Missing required field: {field}")
+                return False
+        return True
