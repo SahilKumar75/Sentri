@@ -22,3 +22,11 @@ class ExperimentTracker:
                 run["parameters"][key] = value
                 logger.debug(f"Logged parameter {key}={value} for {run_name}")
                 break
+
+    def log_metric(self, run_name: str, key: str, value: float):
+        """Logs a metric for a specific run."""
+        for run in self.runs:
+            if run["name"] == run_name:
+                run["metrics"][key] = value
+                logger.debug(f"Logged metric {key}={value} for {run_name}")
+                break
