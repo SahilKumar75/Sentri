@@ -52,6 +52,12 @@ The app should stay simple and cheap to run:
 
 ## Run Locally
 
+### Prerequisites
+
+- Node.js 16+ for frontend
+- Java 17+ for backend
+- Python 3.8+ for ML worker
+
 ### Frontend
 
 ```bash
