@@ -1,4 +1,6 @@
 import logging
+import time
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -21,3 +23,11 @@ class MetricsCollector:
         full_name = f"{self.prefix}_{name}"
         self.metrics[full_name] = value
         logger.debug(f"Gauge {full_name} set to {value}")
+
+    @contextmanager
+    def measure_time(self, name: str):
+        """Context manager to measure execution time."""
+        start = time.time()
+        yield
+        duration = time.time() - start
+        self.set_gauge(f"{name}_duration_seconds", duration)
