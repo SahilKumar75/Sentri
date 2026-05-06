@@ -26,3 +26,15 @@ class DataValidator:
                 raise ValueError(f"{field_name} out of bounds")
             return False
         return True
+
+    def validate_string(self, value, field_name: str, max_length: int = 255) -> bool:
+        """Validates a string field."""
+        if not isinstance(value, str):
+            if self.strict_mode:
+                raise TypeError(f"Expected string for {field_name}")
+            return False
+        if len(value) > max_length:
+            if self.strict_mode:
+                raise ValueError(f"{field_name} exceeds max length {max_length}")
+            return False
+        return True
