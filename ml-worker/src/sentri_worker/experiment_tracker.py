@@ -50,3 +50,13 @@ class ExperimentTracker:
         with open(file_path, "w") as f:
             json.dump(data, f, indent=4)
         logger.info(f"Experiment saved to {file_path}")
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    tracker = ExperimentTracker("test_experiment")
+    
+    tracker.start_run("run_1")
+    tracker.log_parameter("run_1", "learning_rate", 0.01)
+    tracker.log_metric("run_1", "accuracy", 0.95)
+    
+    print(tracker.summarize())
