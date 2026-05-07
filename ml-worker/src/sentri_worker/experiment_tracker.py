@@ -30,3 +30,12 @@ class ExperimentTracker:
                 run["metrics"][key] = value
                 logger.debug(f"Logged metric {key}={value} for {run_name}")
                 break
+
+    def summarize(self):
+        """Returns a summary of all runs."""
+        summary = f"Experiment: {self.experiment_name}\n"
+        for run in self.runs:
+            summary += f"Run: {run['name']}\n"
+            summary += f"  Parameters: {run['parameters']}\n"
+            summary += f"  Metrics: {run['metrics']}\n"
+        return summary
