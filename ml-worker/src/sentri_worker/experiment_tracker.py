@@ -14,3 +14,11 @@ class ExperimentTracker:
         self.runs.append(run)
         logger.info(f"Started run: {run_name}")
         return run
+
+    def log_parameter(self, run_name: str, key: str, value: any):
+        """Logs a parameter for a specific run."""
+        for run in self.runs:
+            if run["name"] == run_name:
+                run["parameters"][key] = value
+                logger.debug(f"Logged parameter {key}={value} for {run_name}")
+                break
