@@ -9,4 +9,15 @@ def binary_search(arr, target):
             left = mid + 1
         else:
             right = mid - 1
-    return -1\n\n
+    return -1\n\ndef bubble_sort(arr):
+    """Sort a list using bubble sort algorithm."""
+    n = len(arr)
+    for i in range(n):
+        swapped = False
+        for j in range(0, n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swapped = True
+        if not swapped:
+            break
+    return arr\n\n
