@@ -106,4 +106,8 @@ def binary_search(arr, target):
         return None
         
     def size(self):
-        return len(self.items)\n\n
+        return len(self.items)\n\nclass Node:
+    """A basic node for a singly linked list."""
+    def __init__(self, data):
+        self.data = data
+        self.next = None\n\n
