@@ -70,4 +70,23 @@ def binary_search(arr, target):
     left = [x for x in arr if x < pivot]
     middle = [x for x in arr if x == pivot]
     right = [x for x in arr if x > pivot]
-    return quick_sort(left) + middle + quick_sort(right)\n\n
+    return quick_sort(left) + middle + quick_sort(right)\n\nclass Stack:
+    """A basic stack implementation."""
+    def __init__(self):
+        self.items = []
+        
+    def is_empty(self):
+        return len(self.items) == 0
+        
+    def push(self, item):
+        self.items.append(item)
+        
+    def pop(self):
+        if not self.is_empty():
+            return self.items.pop()
+        return None
+        
+    def peek(self):
+        if not self.is_empty():
+            return self.items[-1]
+        return None\n\n
