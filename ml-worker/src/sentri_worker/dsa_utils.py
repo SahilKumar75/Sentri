@@ -123,4 +123,11 @@ def binary_search(arr, target):
         last_node = self.head
         while last_node.next:
             last_node = last_node.next
-        last_node.next = new_node\n\n
+        last_node.next = new_node\n\ndef dfs(graph, start, visited=None):
+    """Perform depth-first search on a graph."""
+    if visited is None:
+        visited = set()
+    visited.add(start)
+    for next_node in graph[start] - visited:
+        dfs(graph, next_node, visited)
+    return visited\n\n
