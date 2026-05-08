@@ -130,4 +130,15 @@ def binary_search(arr, target):
     visited.add(start)
     for next_node in graph[start] - visited:
         dfs(graph, next_node, visited)
+    return visited\n\ndef bfs(graph, start):
+    """Perform breadth-first search on a graph."""
+    visited = set()
+    queue = [start]
+    visited.add(start)
+    while queue:
+        vertex = queue.pop(0)
+        for node in graph[vertex]:
+            if node not in visited:
+                visited.add(node)
+                queue.append(node)
     return visited\n\n
