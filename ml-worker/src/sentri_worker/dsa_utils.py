@@ -110,4 +110,17 @@ def binary_search(arr, target):
     """A basic node for a singly linked list."""
     def __init__(self, data):
         self.data = data
-        self.next = None\n\n
+        self.next = None\n\nclass LinkedList:
+    """A basic singly linked list implementation."""
+    def __init__(self):
+        self.head = None
+        
+    def insert(self, data):
+        new_node = Node(data)
+        if self.head is None:
+            self.head = new_node
+            return
+        last_node = self.head
+        while last_node.next:
+            last_node = last_node.next
+        last_node.next = new_node\n\n
