@@ -10,6 +10,8 @@ from collections import OrderedDict
 from typing import Any, Callable, TypeVar
 
 F = TypeVar("F", bound=Callable[..., Any])
+_MISSING = object()
+_USE_DEFAULT_TTL = object()
 
 
 class CacheEntry:
@@ -19,7 +21,7 @@ class CacheEntry:
 
     def __init__(self, value: Any, ttl: float | None = None) -> None:
         self.value = value
-        self.timestamp = time.time()
+        self.timestamp = time.monotonic()
         self.ttl = ttl
         self.hits = 0
 
@@ -27,7 +29,7 @@ class CacheEntry:
         """Check if the cache entry has expired."""
         if self.ttl is None:
             return False
-        return (time.time() - self.timestamp) > self.ttl
+        return (time.monotonic() - self.timestamp) > self.ttl
 
     def access(self) -> Any:
         """Access the cached value and increment hit counter."""
@@ -45,37 +47,41 @@ class LRUCache:
             maxsize: Maximum number of entries
             ttl: Time-to-live in seconds (None for no expiration)
         """
+        if maxsize < 1:
+            raise ValueError("maxsize must be at least 1")
+
         self.maxsize = maxsize
         self.ttl = ttl
         self.cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self.hits = 0
         self.misses = 0
 
-    def get(self, key: str) -> Any | None:
+    def get(self, key: str, default: Any = None) -> Any:
         """Get value from cache.
 
         Args:
             key: Cache key
+            default: Value returned when the key is not cached or expired
 
         Returns:
-            Cached value or None if not found or expired
+            Cached value or default if not found or expired
         """
         if key not in self.cache:
             self.misses += 1
-            return None
+            return default
 
         entry = self.cache[key]
         if entry.is_expired():
             del self.cache[key]
             self.misses += 1
-            return None
+            return default
 
         # Move to end (most recently used)
         self.cache.move_to_end(key)
         self.hits += 1
         return entry.access()
 
-    def set(self, key: str, value: Any, ttl: float | None = None) -> None:
+    def set(self, key: str, value: Any, ttl: float | None | object = _USE_DEFAULT_TTL) -> None:
         """Set value in cache.
 
         Args:
@@ -86,7 +92,8 @@ class LRUCache:
         if key in self.cache:
             del self.cache[key]
 
-        entry = CacheEntry(value, ttl or self.ttl)
+        entry_ttl = self.ttl if ttl is _USE_DEFAULT_TTL else ttl
+        entry = CacheEntry(value, entry_ttl)  # type: ignore[arg-type]
         self.cache[key] = entry
         self.cache.move_to_end(key)
 
@@ -114,7 +121,7 @@ class LRUCache:
             "maxsize": self.maxsize,
             "hits": self.hits,
             "misses": self.misses,
-            "hit_rate": round(hit_rate, 4),
+            "hit_rate": hit_rate,
             "total_requests": total_requests,
         }
 
@@ -167,9 +174,9 @@ def cached(maxsize: int = 128, ttl: float | None = None) -> Callable[[F], F]:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             cache_key = make_cache_key(*args, **kwargs)
-            result = cache.get(cache_key)
+            result = cache.get(cache_key, _MISSING)
 
-            if result is None:
+            if result is _MISSING:
                 result = func(*args, **kwargs)
                 cache.set(cache_key, result)
 

@@ -64,6 +64,9 @@ def validate_range(value: float | int, min_val: float | int, max_val: float | in
     Raises:
         ValidationError: If value is outside the range
     """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValidationError(field_name, f"Expected numeric value, got {type(value).__name__}")
+
     if not (min_val <= value <= max_val):
         raise ValidationError(field_name, f"Value must be between {min_val} and {max_val}, got {value}")
 
@@ -158,7 +161,7 @@ def validate_confidence(value: float | None, field_name: str = "confidence") -> 
     if value is None:
         return None
 
-    if not isinstance(value, (int, float)):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValidationError(field_name, f"Expected numeric value, got {type(value).__name__}")
 
     if not (0.0 <= value <= 1.0):
