@@ -60,6 +60,11 @@ class TestValidateRange:
         with pytest.raises(ValidationError):
             validate_range(11, 0, 10, "field")
 
+    def test_bool_value(self):
+        """Test bool is not accepted as numeric input."""
+        with pytest.raises(ValidationError):
+            validate_range(True, 0, 10, "field")  # type: ignore[arg-type]
+
 
 class TestValidateNonEmpty:
     """Test validate_non_empty function."""
@@ -146,3 +151,8 @@ class TestValidateConfidence:
         """Test with invalid type."""
         with pytest.raises(ValidationError):
             validate_confidence("0.5")  # type: ignore
+
+    def test_bool_confidence(self):
+        """Test bool is not accepted as confidence input."""
+        with pytest.raises(ValidationError):
+            validate_confidence(True)  # type: ignore[arg-type]

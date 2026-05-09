@@ -3,6 +3,8 @@ from typing import Any, Callable, Optional
 
 class LRUCache:
     def __init__(self, maxsize: int = 128):
+        if maxsize < 1:
+            raise ValueError("maxsize must be at least 1")
         self.maxsize = maxsize
         self.cache = OrderedDict()
 

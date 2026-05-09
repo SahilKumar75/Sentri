@@ -12,6 +12,10 @@ class LRUCacheTests(unittest.TestCase):
         self.assertEqual(cache.get('c'), 3)
         self.assertEqual(cache.get('a'), 1)
 
+    def test_lru_cache_rejects_invalid_maxsize(self):
+        with self.assertRaisesRegex(ValueError, "maxsize"):
+            LRUCache(maxsize=0)
+
     def test_lru_cache_decorator(self):
         calls = []
         @lru_cache(maxsize=2)

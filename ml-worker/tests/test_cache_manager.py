@@ -169,6 +169,11 @@ class TestLRUCache:
         assert cache.get("key2") is None
         assert cache.get("key3") == "value3"
 
+    def test_cache_rejects_invalid_maxsize(self):
+        """Test cache requires a positive max size."""
+        with pytest.raises(ValueError, match="maxsize"):
+            LRUCache(maxsize=0)
+
 
 class TestMakeCacheKey:
     """Tests for make_cache_key function."""
@@ -293,6 +298,20 @@ class TestCachedDecorator:
         stats = stats_function.cache_stats()
         assert stats["hits"] == 1
         assert stats["misses"] == 2
+
+    def test_cached_decorator_caches_none_results(self):
+        """Test that cached decorator caches None as a valid value."""
+        call_count = 0
+
+        @cached(maxsize=10)
+        def none_function(x):
+            nonlocal call_count
+            call_count += 1
+            return None
+
+        assert none_function("missing") is None
+        assert none_function("missing") is None
+        assert call_count == 1
 
 
 class TestCacheManager:
