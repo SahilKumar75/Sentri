@@ -1,59 +1,13 @@
-import type { TimetableUploadHistoryItem } from '../features/home/timetable-types';
 import { API_BASE_URL, extractErrorMessage, getNetworkMessage } from './http-client';
 
-export type TimetableUploadResult =
-  | {
-      ok: true;
-      batchId: number;
-      sourceImageName?: string;
-      status: string;
-      createdAt?: string;
-    }
-  | {
-      ok: false;
-      message: string;
-    };
-
-export type TimetableBatchStatusResult =
-  | {
-      ok: true;
-      batchId: number;
-      sourceImageName?: string;
-      status: string;
-      createdAt?: string;
-      updatedAt?: string;
-      extractionConfidence?: number;
-      entryCount: number;
-    }
-  | {
-      ok: false;
-      message: string;
-    };
-
-export type TimetableHistoryResult =
-  | {
-      ok: true;
-      uploads: TimetableUploadHistoryItem[];
-    }
-  | {
-      ok: false;
-      message: string;
-    };
-
-export async function uploadTimetableScreenshot(payload: {
-  uri: string;
-  name: string;
-  mimeType: string;
-  sourceHint: string;
-  sourceNotes?: string;
-}): Promise<TimetableUploadResult> {
+export async function uploadTimetableScreenshot(payload) {
   try {
     const formData = new FormData();
     formData.append('file', {
       uri: payload.uri,
       name: payload.name,
       type: payload.mimeType,
-    } as unknown as Blob);
+    });
     formData.append('sourceHint', payload.sourceHint);
     if (payload.sourceNotes) {
       formData.append('sourceNotes', payload.sourceNotes);
@@ -89,7 +43,7 @@ export async function uploadTimetableScreenshot(payload: {
   }
 }
 
-export async function getTimetableBatchStatus(batchId: number): Promise<TimetableBatchStatusResult> {
+export async function getTimetableBatchStatus(batchId) {
   try {
     const response = await fetch(`${API_BASE_URL}/timetable-batches/${batchId}`);
     const rawText = await response.text();
@@ -120,7 +74,7 @@ export async function getTimetableBatchStatus(batchId: number): Promise<Timetabl
   }
 }
 
-export async function listTimetableUploadHistory(limit = 4): Promise<TimetableHistoryResult> {
+export async function listTimetableUploadHistory(limit = 4) {
   try {
     const response = await fetch(`${API_BASE_URL}/timetable-batches`);
     const rawText = await response.text();

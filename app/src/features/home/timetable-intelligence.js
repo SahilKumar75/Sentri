@@ -1,27 +1,10 @@
 import { calendarTags, scheduleByDay } from './timetable-fixtures';
-import type { CalendarTag, ClassEntry, UploadMeta, UploadSource } from './timetable-types';
 
-export type ScheduleInsight = {
-  status: 'live' | 'upcoming' | 'free' | 'holiday' | 'complete' | 'empty';
-  headline: string;
-  explanation: string;
-  currentClass: ClassEntry | null;
-  nextClass: ClassEntry | null;
-  recommendedAction: 'open_today' | 'upload_timetable' | 'check_next_class' | 'none';
-};
-
-export type RefreshInsight = {
-  state: 'fresh' | 'due' | 'updated';
-  title: string;
-  body: string;
-  urgency: 'low' | 'high';
-};
-
-export function getEntriesForDate(date: Date) {
+export function getEntriesForDate(date) {
   return scheduleByDay[dayKeyForDate(date)] || [];
 }
 
-export function buildWeekDates(anchor: Date) {
+export function buildWeekDates(anchor) {
   const start = startOfWeek(anchor);
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(start);
@@ -30,9 +13,9 @@ export function buildWeekDates(anchor: Date) {
   });
 }
 
-export function buildMonthRows(anchor: Date) {
+export function buildMonthRows(anchor) {
   const cells = buildMonthCells(anchor);
-  const rows: ReturnType<typeof buildMonthCells>[] = [];
+  const rows = [];
 
   for (let index = 0; index < cells.length; index += 7) {
     rows.push(cells.slice(index, index + 7));
@@ -41,7 +24,7 @@ export function buildMonthRows(anchor: Date) {
   return rows;
 }
 
-export function getScheduleInsight(entries: ClassEntry[], focusedDate: Date, now: Date): ScheduleInsight {
+export function getScheduleInsight(entries, focusedDate, now) {
   if (!entries.length) {
     return {
       status: 'empty',
@@ -123,11 +106,7 @@ export function getScheduleInsight(entries: ClassEntry[], focusedDate: Date, now
   };
 }
 
-export function getRefreshInsight(
-  today: Date,
-  uploadState: 'idle' | 'uploading' | 'updated' | 'error',
-  lastUploadMeta: UploadMeta | null
-): RefreshInsight {
+export function getRefreshInsight(today, uploadState, lastUploadMeta) {
   if (uploadState === 'updated') {
     return {
       state: 'updated',
@@ -160,11 +139,11 @@ export function getRefreshInsight(
   };
 }
 
-export function formatMonthYear(date: Date) {
+export function formatMonthYear(date) {
   return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(date);
 }
 
-export function formatLongDate(date: Date) {
+export function formatLongDate(date) {
   return new Intl.DateTimeFormat('en-IN', {
     weekday: 'short',
     day: 'numeric',
@@ -172,28 +151,28 @@ export function formatLongDate(date: Date) {
   }).format(date);
 }
 
-export function formatWeekdayShort(date: Date) {
+export function formatWeekdayShort(date) {
   return new Intl.DateTimeFormat('en-IN', { weekday: 'short' }).format(date);
 }
 
-export function formatMonthShort(date: Date) {
+export function formatMonthShort(date) {
   return new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(date);
 }
 
-export function formatUploadSource(source: UploadSource) {
+export function formatUploadSource(source) {
   if (source === 'mail') return 'Outlook screenshot';
   if (source === 'photos') return 'Photos';
   return 'Share into Sentri';
 }
 
-export function formatParserBadge(status?: string) {
+export function formatParserBadge(status) {
   if (status === 'PARSED') return 'Parsed';
   if (status === 'VERIFIED') return 'Verified';
   if (status === 'PLACEHOLDER') return 'Awaiting parser';
   return 'No parser status';
 }
 
-export function formatUploadHistoryTitle(status: string, entryCount: number) {
+export function formatUploadHistoryTitle(status, entryCount) {
   if (status === 'VERIFIED') {
     return entryCount > 0 ? `${entryCount} verified items` : 'Verified upload';
   }
@@ -203,7 +182,7 @@ export function formatUploadHistoryTitle(status: string, entryCount: number) {
   return 'Awaiting parser';
 }
 
-function formatParserStatus(lastUploadMeta: UploadMeta) {
+function formatParserStatus(lastUploadMeta) {
   if (lastUploadMeta.status === 'VERIFIED') {
     return {
       title: 'Timetable verified',
@@ -234,7 +213,7 @@ function formatParserStatus(lastUploadMeta: UploadMeta) {
   };
 }
 
-export function formatShortDateTime(value: string) {
+export function formatShortDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -247,11 +226,11 @@ export function formatShortDateTime(value: string) {
   }).format(date);
 }
 
-export function dayKeyForDate(date: Date) {
+export function dayKeyForDate(date) {
   return ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][date.getDay()];
 }
 
-export function isSameDate(left: Date, right: Date) {
+export function isSameDate(left, right) {
   return (
     left.getFullYear() === right.getFullYear() &&
     left.getMonth() === right.getMonth() &&
@@ -259,7 +238,7 @@ export function isSameDate(left: Date, right: Date) {
   );
 }
 
-function buildMonthCells(anchor: Date) {
+function buildMonthCells(anchor) {
   const year = anchor.getFullYear();
   const month = anchor.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -270,7 +249,7 @@ function buildMonthCells(anchor: Date) {
   return Array.from({ length: totalCells }, (_, index) => {
     const dayNumber = index - startIndex + 1;
     if (dayNumber < 1 || dayNumber > daysInMonth) {
-      return { key: `blank-${index}`, date: null, tags: [] as CalendarTag[] };
+      return { key: `blank-${index}`, date: null, tags: [] };
     }
 
     const date = new Date(year, month, dayNumber);
@@ -283,7 +262,7 @@ function buildMonthCells(anchor: Date) {
   });
 }
 
-function startOfWeek(date: Date) {
+function startOfWeek(date) {
   const result = new Date(date);
   const day = result.getDay();
   const offset = day === 0 ? -6 : 1 - day;
@@ -292,20 +271,20 @@ function startOfWeek(date: Date) {
   return result;
 }
 
-function getRefreshSaturday(date: Date) {
+function getRefreshSaturday(date) {
   const saturday = startOfWeek(date);
   saturday.setDate(saturday.getDate() + 5);
   saturday.setHours(0, 0, 0, 0);
   return saturday;
 }
 
-function dateKey(date: Date) {
+function dateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
     date.getDate()
   ).padStart(2, '0')}`;
 }
 
-function toMinutes(time: string) {
+function toMinutes(time) {
   const [hour, minute] = time.split(':').map(Number);
   return hour * 60 + minute;
 }

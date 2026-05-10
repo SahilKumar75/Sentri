@@ -1,42 +1,6 @@
-import type { ContactMethod, UserProfile } from '../types/auth';
 import { API_BASE_URL, extractErrorMessage, getNetworkMessage, requestJson } from './http-client';
 
-type AuthResult = {
-  ok: boolean;
-  message: string;
-  requiresOtp?: boolean;
-  pendingUserId?: number;
-  otpCode?: string;
-  sessionToken?: string;
-  user?: UserProfile;
-};
-
-type BackendUser = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  dob: string;
-  phone?: string | null;
-  email?: string | null;
-  verifiedPhone: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  lastLoginAt?: string | null;
-};
-
-type BackendAuthResult = {
-  message: string;
-  requiresOtp: boolean;
-  pendingUserId?: number | null;
-  debugOtpCode?: string | null;
-  sessionToken?: string | null;
-  user?: BackendUser | null;
-};
-
-export async function signup(payload: {
-  profile: UserProfile;
-  contactMethod: ContactMethod;
-}): Promise<AuthResult> {
+export async function signup(payload) {
   return postAuth('/auth/signup', {
     firstName: payload.profile.firstName,
     lastName: payload.profile.lastName,
@@ -48,23 +12,17 @@ export async function signup(payload: {
   });
 }
 
-export async function verifyOtp(payload: {
-  pendingUserId: number;
-  otpCode: string;
-}): Promise<AuthResult> {
+export async function verifyOtp(payload) {
   return postAuth('/auth/verify-otp', payload);
 }
 
-export async function login(payload: {
-  identifier: string;
-  password: string;
-}): Promise<AuthResult> {
+export async function login(payload) {
   return postAuth('/auth/login', payload);
 }
 
-export async function restoreSession(sessionToken: string): Promise<AuthResult> {
+export async function restoreSession(sessionToken) {
   try {
-    const response = await requestJson<BackendAuthResult>('/auth/session', {
+    const response = await requestJson('/auth/session', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${sessionToken}`,
@@ -79,7 +37,7 @@ export async function restoreSession(sessionToken: string): Promise<AuthResult> 
   }
 }
 
-export async function logout(sessionToken: string) {
+export async function logout(sessionToken) {
   try {
     await fetch(`${API_BASE_URL}/auth/logout`, {
       method: 'POST',
@@ -92,9 +50,9 @@ export async function logout(sessionToken: string) {
   }
 }
 
-async function postAuth(path: string, payload: object): Promise<AuthResult> {
+async function postAuth(path, payload) {
   try {
-    const response = await requestJson<BackendAuthResult>(path, {
+    const response = await requestJson(path, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -110,7 +68,7 @@ async function postAuth(path: string, payload: object): Promise<AuthResult> {
   }
 }
 
-function mapAuthResult(data: BackendAuthResult): AuthResult {
+function mapAuthResult(data) {
   return {
     ok: true,
     message: data.message,
@@ -122,7 +80,7 @@ function mapAuthResult(data: BackendAuthResult): AuthResult {
   };
 }
 
-function mapUser(user: BackendUser): UserProfile {
+function mapUser(user) {
   return {
     id: user.id,
     firstName: user.firstName,
@@ -137,7 +95,7 @@ function mapUser(user: BackendUser): UserProfile {
   };
 }
 
-function formatDob(dob: string) {
+function formatDob(dob) {
   if (!dob.includes('-')) {
     return dob;
   }

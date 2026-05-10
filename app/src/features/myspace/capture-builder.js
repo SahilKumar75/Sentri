@@ -1,15 +1,5 @@
-import type { CaptureOption, SavedItem, SavedItemAccent, SavedItemKind } from './models';
 
-export type CaptureDraft = {
-  title: string;
-  body: string;
-  subject: string;
-  source: string;
-  tags: string;
-  ocrText: string;
-};
-
-const subjectMap: Record<string, string> = {
+const subjectMap = {
   image: 'Notes',
   link: 'Research',
   note: 'Personal',
@@ -17,7 +7,7 @@ const subjectMap: Record<string, string> = {
   screenshot: 'Class',
 };
 
-const accentMap: Record<string, SavedItemAccent> = {
+const accentMap = {
   image: 'sand',
   link: 'sky',
   note: 'mint',
@@ -25,7 +15,7 @@ const accentMap: Record<string, SavedItemAccent> = {
   screenshot: 'ink',
 };
 
-export function createEmptyCaptureDraft(option: CaptureOption): CaptureDraft {
+export function createEmptyCaptureDraft(option) {
   return {
     title: `${option.label} capture`,
     body: '',
@@ -36,7 +26,7 @@ export function createEmptyCaptureDraft(option: CaptureOption): CaptureDraft {
   };
 }
 
-export function buildCapturePreview(option: CaptureOption): SavedItem {
+export function buildCapturePreview(option) {
   return buildCapturedItem(option, {
     title: `${option.label} capture preview`,
     body: `This ${option.label.toLowerCase()} will be indexed by OCR text, source, date, and subject.`,
@@ -47,7 +37,7 @@ export function buildCapturePreview(option: CaptureOption): SavedItem {
   });
 }
 
-export function buildCapturedItem(option: CaptureOption, draft: CaptureDraft): SavedItem {
+export function buildCapturedItem(option, draft) {
   const title = draft.title.trim() || `${option.label} capture`;
   const body = draft.body.trim() || `Saved from ${option.hint} for future retrieval.`;
   const subject = draft.subject.trim() || subjectMap[option.id] || 'Personal';
@@ -61,7 +51,7 @@ export function buildCapturedItem(option: CaptureOption, draft: CaptureDraft): S
     id: `capture-${option.id}-${Date.now()}`,
     title,
     body,
-    kind: option.id as SavedItemKind,
+    kind: option.id,
     subject,
     tags: tags.length ? tags : [option.id, 'capture'],
     source,

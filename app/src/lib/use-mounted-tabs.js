@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { TabKey } from '../design/tokens';
 
-const HOME_TAB: TabKey[] = ['home'];
+const HOME_TAB = ['home'];
 
-export function useMountedTabs(activeTab: TabKey) {
-  const [mountedTabs, setMountedTabs] = useState<TabKey[]>(HOME_TAB);
+export function useMountedTabs(activeTab) {
+  const [mountedTabs, setMountedTabs] = useState(HOME_TAB);
 
   useEffect(() => {
     setMountedTabs((current) => (current.includes(activeTab) ? current : [...current, activeTab]));

@@ -1,10 +1,10 @@
 const RECENT_SEARCH_LIMIT = 6;
 
-export function normalizeSearchQuery(query: string) {
+export function normalizeSearchQuery(query) {
   return query.trim().replace(/\s+/g, ' ');
 }
 
-export function pushRecentSearch(history: string[], query: string) {
+export function pushRecentSearch(history, query) {
   const normalized = normalizeSearchQuery(query);
   if (!normalized) {
     return history;
@@ -16,8 +16,8 @@ export function pushRecentSearch(history: string[], query: string) {
   );
 }
 
-export function buildSearchSuggestions(history: string[], items: { tags: string[]; subject: string; title: string }[]) {
-  const suggestions = new Set<string>();
+export function buildSearchSuggestions(history, items) {
+  const suggestions = new Set();
 
   history.forEach((entry) => {
     if (entry) {

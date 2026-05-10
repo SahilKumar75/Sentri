@@ -3,7 +3,7 @@ import { startTransition, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, SafeAreaView, StyleSheet, View } from 'react-native';
 
 import { CapsuleTabBar, DrawerSheet } from './src/components/sentri-ui';
-import { theme, type TabKey } from './src/design/tokens';
+import { theme } from './src/design/tokens';
 import {
   clearStoredSessionToken,
   clearStoredSessionUser,
@@ -23,28 +23,21 @@ import HangoutScreen from './src/screens/HangoutScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import MyspaceScreen from './src/screens/MyspaceScreen';
 import SentriSheet from './src/screens/SentriSheet';
-import type { ContactMethod, PendingSignup, UserProfile } from './src/types/auth';
 
-type ScreenProps = {
-  onOpenDrawer: () => void;
-  avatarLabel: string;
-};
-
-type AuthMode = 'signup' | 'login' | 'otp';
-const ALL_TABS: TabKey[] = ['home', 'myspace', 'calorie', 'hangout'];
+const ALL_TABS = ['home', 'myspace', 'calorie', 'hangout'];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabKey>('home');
+  const [activeTab, setActiveTab] = useState('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [authenticatedUser, setAuthenticatedUser] = useState<UserProfile | null>(null);
-  const [pendingSignup, setPendingSignup] = useState<PendingSignup | null>(null);
-  const [authMode, setAuthMode] = useState<AuthMode>('signup');
-  const [authStatusMessage, setAuthStatusMessage] = useState<string | null>(null);
-  const [accountView, setAccountView] = useState<'account' | 'settings'>('account');
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [authenticatedUser, setAuthenticatedUser] = useState(null);
+  const [pendingSignup, setPendingSignup] = useState(null);
+  const [authMode, setAuthMode] = useState('signup');
+  const [authStatusMessage, setAuthStatusMessage] = useState(null);
+  const [accountView, setAccountView] = useState('account');
+  const [sessionToken, setSessionToken] = useState(null);
   const [authInitializing, setAuthInitializing] = useState(true);
-  const [incomingHangoutCode, setIncomingHangoutCode] = useState<string | null>(null);
+  const [incomingHangoutCode, setIncomingHangoutCode] = useState(null);
   const [hangoutMeetingMode, setHangoutMeetingMode] = useState(false);
   const [sentriSheetOpen, setSentriSheetOpen] = useState(false);
   const mountedTabs = useMountedTabs(activeTab);
@@ -57,7 +50,7 @@ export default function App() {
     ? `${authenticatedUser.firstName.charAt(0)}${authenticatedUser.lastName.charAt(0)}`.toUpperCase()
     : 'SK';
 
-  const screenProps = useMemo<ScreenProps>(
+  const screenProps = useMemo(
     () => ({ onOpenDrawer: () => setDrawerOpen(true), avatarLabel }),
     [avatarLabel]
   );
@@ -75,7 +68,7 @@ export default function App() {
   }, [activeTab]);
 
   useEffect(() => {
-    const consumeUrl = (url: string | null) => {
+    const consumeUrl = (url) => {
       if (!url) {
         return;
       }
@@ -134,13 +127,7 @@ export default function App() {
     }
   };
 
-  const handleSignup = async ({
-    profile,
-    contactMethod,
-  }: {
-    profile: UserProfile;
-    contactMethod: ContactMethod;
-  }) => {
+  const handleSignup = async ({ profile, contactMethod }) => {
     const result = await authApi.signup({ profile, contactMethod });
     setAuthStatusMessage(result.message);
 
@@ -170,7 +157,7 @@ export default function App() {
     return result;
   };
 
-  const handleVerifyOtp = async (otp: string) => {
+  const handleVerifyOtp = async (otp) => {
     if (!pendingSignup) {
       return { ok: false, message: 'No phone verification is waiting right now.' };
     }
@@ -193,7 +180,7 @@ export default function App() {
     return result;
   };
 
-  const handleLogin = async ({ identifier, password }: { identifier: string; password: string }) => {
+  const handleLogin = async ({ identifier, password }) => {
     const result = await authApi.login({ identifier, password });
     setAuthStatusMessage(result.message);
 
@@ -227,7 +214,7 @@ export default function App() {
     setAuthStatusMessage('You are logged out. Login again to continue.');
   };
 
-  const handleDrawerSelection = (item: 'account' | 'settings' | 'logout') => {
+  const handleDrawerSelection = (item) => {
     if (item === 'logout') {
       void handleLogout();
       return;
@@ -333,17 +320,7 @@ export default function App() {
   );
 }
 
-function renderActiveScreen(
-  activeTab: TabKey,
-  props: ScreenProps,
-  extras: {
-    sessionToken: string | null;
-    userName: string;
-    incomingHangoutCode: string | null;
-    onConsumeHangoutCode: () => void;
-    onMeetingModeChange: (visible: boolean) => void;
-  }
-) {
+function renderActiveScreen(activeTab, props, extras) {
   switch (activeTab) {
     case 'home':
       return <HomeScreen {...props} />;
