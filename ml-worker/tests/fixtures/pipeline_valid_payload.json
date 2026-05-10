@@ -1,0 +1,31 @@
+{
+  "source_name": "fixture-valid.png",
+  "ocr_text": "Class: SE IT-B\nAcademic Year - 2025-26 - SEM II\nVenue: LH 20",
+  "extraction_confidence": 0.81,
+  "quality_options": {
+    "min_extraction_confidence": 0.7
+  },
+  "cells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": "TIME/DAY"
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "text": "8.45-9.45"
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "text": "MON"
+    },
+    {
+      "row": 1,
+      "col": 1,
+      "text": "DBMS\n(MA)\nLab-III",
+      "confidence": 0.82
+    }
+  ]
+}

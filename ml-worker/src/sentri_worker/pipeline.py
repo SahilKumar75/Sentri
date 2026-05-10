@@ -13,6 +13,7 @@ class SentriWorker:
         self.ocr_service = ocr_service or OCRService()
 
     def process(self, payload: dict[str, Any]) -> dict[str, Any]:
+        payload, pipeline_warnings = self._prepare_payload(payload)
         source = {
             "source_name": payload.get("source_name"),
             "image_path": payload.get("image_path"),
@@ -22,7 +23,7 @@ class SentriWorker:
 
         cells, payload_warnings = self._parse_cells(payload.get("cells"))
         tuning_profile = load_tuning_profile(payload)
-        parsing_options = payload.get("parsing_options") if isinstance(payload.get("parsing_options"), dict) else {}
+        parsing_options = payload["parsing_options"]
         fallback_to_text_schedule = parsing_options.get("fallback_to_text_schedule")
         if not isinstance(fallback_to_text_schedule, bool):
             fallback_to_text_schedule = True
@@ -36,27 +37,17 @@ class SentriWorker:
         )
         result.source["ocr"] = ocr_result.to_dict()
         if ocr_result.warnings:
-            result.issues.extend(
-                [
-                    ParseIssue(code="ocr_warning", message=warning)
-                    for warning in ocr_result.warnings
-                ]
-            )
+            result.issues.extend([ParseIssue(code="ocr_warning", message=warning) for warning in ocr_result.warnings])
         if payload_warnings:
+            result.issues.extend([ParseIssue(code="payload_warning", message=warning) for warning in payload_warnings])
+        if pipeline_warnings:
             result.issues.extend(
-                [
-                    ParseIssue(code="payload_warning", message=warning)
-                    for warning in payload_warnings
-                ]
+                [ParseIssue(code="pipeline_warning", message=warning) for warning in pipeline_warnings]
             )
 
         extraction_confidence = self._coerce_float(payload.get("extraction_confidence"))
         if extraction_confidence is None:
-            confidences = [
-                float(cell.confidence)
-                for cell in cells
-                if cell.confidence is not None
-            ]
+            confidences = [float(cell.confidence) for cell in cells if cell.confidence is not None]
             cell_confidence = round(sum(confidences) / len(confidences), 4) if confidences else None
             extraction_confidence = self._blend_confidence(
                 cell_confidence,
@@ -64,10 +55,42 @@ class SentriWorker:
                 payload.get("confidence_weights"),
             )
         extraction_confidence = self._clamp_confidence(extraction_confidence)
+        threshold, threshold_warning = self._parse_confidence_threshold(payload["quality_options"])
+        if threshold_warning:
+            result.issues.append(ParseIssue(code="pipeline_warning", message=threshold_warning))
+        if extraction_confidence is not None and threshold is not None and extraction_confidence < threshold:
+            result.issues.append(
+                ParseIssue(
+                    code="low_confidence",
+                    message=f"Extraction confidence {extraction_confidence:.2f} is below threshold {threshold:.2f}.",
+                )
+            )
 
-        return result.to_backend_import_dict(
-            extraction_confidence=extraction_confidence
-        )
+        return result.to_backend_import_dict(extraction_confidence=extraction_confidence)
+
+    def _prepare_payload(self, payload: Any) -> tuple[dict[str, Any], list[str]]:
+        warnings: list[str] = []
+        if not isinstance(payload, dict):
+            warnings.append("Replaced payload because it is not an object.")
+            payload = {}
+        else:
+            payload = dict(payload)
+
+        for field in ("parsing_options", "quality_options"):
+            value = payload.get(field)
+            if value is None:
+                payload[field] = {}
+                continue
+            if not isinstance(value, dict):
+                warnings.append(f"Ignored {field} because it is not an object.")
+                payload[field] = {}
+
+        confidence_weights = payload.get("confidence_weights")
+        if confidence_weights is not None and not isinstance(confidence_weights, dict):
+            warnings.append("Ignored confidence_weights because it is not an object.")
+            payload["confidence_weights"] = None
+
+        return payload, warnings
 
     def _parse_cells(self, cells_payload: Any) -> tuple[list[OCRCell], list[str]]:
         if cells_payload is None:
@@ -124,6 +147,14 @@ class SentriWorker:
         if value is None:
             return None
         return max(0.0, min(1.0, value))
+
+    def _parse_confidence_threshold(self, quality_options: dict[str, Any]) -> tuple[float | None, str | None]:
+        if "min_extraction_confidence" not in quality_options:
+            return None, None
+        threshold = self._coerce_float(quality_options.get("min_extraction_confidence"))
+        if threshold is None:
+            return None, "Ignored min_extraction_confidence because it is not numeric."
+        return self._clamp_confidence(threshold), None
 
     def _blend_confidence(
         self,

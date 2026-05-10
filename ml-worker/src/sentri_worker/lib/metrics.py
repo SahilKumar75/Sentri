@@ -9,6 +9,41 @@ from typing import Any
 
 
 @dataclass
+class OperationMetrics:
+    """Timing and status for one named operation."""
+
+    operation_name: str
+    metadata: dict[str, Any] = field(default_factory=dict)
+    start_time: float = field(default_factory=time.perf_counter)
+    end_time: float | None = None
+    success: bool = True
+    error_message: str | None = None
+
+    @property
+    def duration(self) -> float | None:
+        """Return elapsed seconds after the operation is completed."""
+        if self.end_time is None:
+            return None
+        return self.end_time - self.start_time
+
+    def complete(self, success: bool = True, error_message: str | None = None) -> None:
+        """Mark the operation as completed."""
+        self.end_time = time.perf_counter()
+        self.success = success
+        self.error_message = error_message
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert operation metrics to a serializable dictionary."""
+        return {
+            "operation": self.operation_name,
+            "success": self.success,
+            "error_message": self.error_message,
+            "duration": round(self.duration, 4) if self.duration is not None else None,
+            "metadata": dict(self.metadata),
+        }
+
+
+@dataclass
 class OCRMetrics:
     """Metrics for OCR operations."""
 
@@ -131,7 +166,39 @@ class MetricsCollector:
     def __init__(self) -> None:
         self.ocr_metrics = OCRMetrics()
         self.parsing_metrics = ParsingMetrics()
+        self.operations: list[OperationMetrics] = []
+        self.counters: dict[str, int] = defaultdict(int)
+        self.gauges: dict[str, float] = {}
         self.start_time = time.time()
+
+    def start_operation(self, operation_name: str, metadata: dict[str, Any] | None = None) -> OperationMetrics:
+        """Start and store operation-level metrics."""
+        metric = OperationMetrics(operation_name=operation_name, metadata=metadata or {})
+        self.operations.append(metric)
+        return metric
+
+    def increment_counter(self, name: str, amount: int = 1) -> None:
+        """Increment a named counter."""
+        self.counters[name] += amount
+
+    def set_gauge(self, name: str, value: float) -> None:
+        """Set a named gauge value."""
+        self.gauges[name] = value
+
+    def get_summary(self) -> dict[str, Any]:
+        """Return operation-level summary metrics."""
+        total_operations = len(self.operations)
+        successful_operations = sum(1 for operation in self.operations if operation.success)
+        failed_operations = sum(1 for operation in self.operations if not operation.success)
+        success_rate = successful_operations / total_operations if total_operations else 0.0
+        return {
+            "total_operations": total_operations,
+            "successful_operations": successful_operations,
+            "failed_operations": failed_operations,
+            "success_rate": round(success_rate, 4),
+            "counters": dict(self.counters),
+            "gauges": dict(self.gauges),
+        }
 
     def get_uptime(self) -> float:
         """Get uptime in seconds."""
@@ -143,12 +210,16 @@ class MetricsCollector:
             "uptime_seconds": round(self.get_uptime(), 2),
             "ocr": self.ocr_metrics.to_dict(),
             "parsing": self.parsing_metrics.to_dict(),
+            "operations": self.get_summary(),
         }
 
     def reset(self) -> None:
         """Reset all metrics."""
         self.ocr_metrics = OCRMetrics()
         self.parsing_metrics = ParsingMetrics()
+        self.operations = []
+        self.counters = defaultdict(int)
+        self.gauges = {}
         self.start_time = time.time()
 
 
