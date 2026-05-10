@@ -8,7 +8,7 @@ This document translates the high-level architecture into concrete modules, resp
 
 #### App Shell
 
-- `App.tsx`
+- `App.jsx`
   - restores session token
   - restores last active tab
   - resolves deep links
@@ -22,8 +22,8 @@ Target design:
 
 #### Shared Storage Layer
 
-- `src/lib/auth-storage.ts`
-- `src/lib/device-store.ts`
+- `src/lib/auth-storage.js`
+- `src/lib/device-store.js`
 
 Target design:
 

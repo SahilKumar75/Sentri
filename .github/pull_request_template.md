@@ -12,7 +12,7 @@ Closes #
 
 ## Verification
 
-- [ ] `cd app && npx tsc --noEmit`
+- [ ] `cd app && npx expo export --platform web --output-dir /tmp/sentri-web-export`
 - [ ] `cd backend && mvn test`
 - [ ] `cd ml-worker && pytest`
 - [ ] Other:

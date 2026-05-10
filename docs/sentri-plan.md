@@ -50,7 +50,7 @@ Those things either cost money, add risk, or both.
 
 ## Mobile
 
-- `React Native + Expo + TypeScript`
+- `React Native + Expo + JavaScript`
 - one app for iOS and Android
 - `expo-sqlite` for local cache and offline data
 - `Expo Router` for navigation
