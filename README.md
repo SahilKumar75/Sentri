@@ -56,7 +56,7 @@ The app should stay simple and cheap to run:
 
 - Node.js 16+ for frontend
 - Java 17+ for backend
-- Python 3.8+ for ML worker
+- Python 3.11+ for ML worker
 
 ### Frontend
 
@@ -76,8 +76,11 @@ mvn spring-boot:run
 
 ```bash
 cd ml-worker
-python3 -m unittest discover -s tests
+python -m pip install -e ".[dev]"
+pytest
 ```
+
+The same worker test command runs in GitHub Actions for pull requests that touch `ml-worker` or the worker workflow.
 
 ## Notes
 
