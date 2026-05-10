@@ -21,7 +21,7 @@ flowchart LR
 
 ## Core Data Model
 
-Myspace currently indexes the `SavedItem` shape from [app/src/features/myspace/models.ts](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/models.ts):
+Myspace currently indexes the `SavedItem` shape used by [app/src/features/myspace/seed-data.js](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/seed-data.js) and the retrieval engine:
 
 - `id`
 - `title`
@@ -40,7 +40,7 @@ These fields are sufficient for the current retrieval logic because ranking is d
 
 ## Capture Ingestion
 
-Capture actions are defined in [app/src/features/myspace/seed-data.ts](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/seed-data.ts) as:
+Capture actions are defined in [app/src/features/myspace/seed-data.js](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/seed-data.js) as:
 
 - `image`
 - `link`
@@ -48,7 +48,7 @@ Capture actions are defined in [app/src/features/myspace/seed-data.ts](/Users/sa
 - `file`
 - `screenshot`
 
-The capture flow is implemented in [app/src/features/myspace/capture-builder.ts](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/capture-builder.ts).
+The capture flow is implemented in [app/src/features/myspace/capture-builder.js](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/capture-builder.js).
 
 ### Capture Steps
 
@@ -74,7 +74,7 @@ The capture flow is implemented in [app/src/features/myspace/capture-builder.ts]
 
 Myspace state is currently persisted with `usePersistedState` under:
 
-- [app/src/lib/persistent-keys.ts](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/lib/persistent-keys.ts)
+- [app/src/lib/persistent-keys.js](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/lib/persistent-keys.js)
   - `sentri.myspace.items`
   - `sentri.myspace.recentSearches`
 
@@ -86,7 +86,7 @@ This means the device currently owns:
 
 ## Retrieval Engine
 
-The retrieval engine lives in [app/src/features/myspace/retrieval-engine.ts](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/retrieval-engine.ts).
+The retrieval engine lives in [app/src/features/myspace/retrieval-engine.js](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/retrieval-engine.js).
 
 ### Match Reasons
 
@@ -145,7 +145,7 @@ This is why newly captured items and pinned notes remain discoverable without re
 
 ## Search Suggestions
 
-Suggestion logic lives in [app/src/features/myspace/search-history.ts](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/search-history.ts).
+Suggestion logic lives in [app/src/features/myspace/search-history.js](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/features/myspace/search-history.js).
 
 The suggestion list is built from:
 
@@ -158,7 +158,7 @@ This is intentionally lightweight. It improves recall without requiring a backen
 
 ## UI Contract
 
-The screen integration is currently in [app/src/screens/MyspaceScreen.tsx](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/screens/MyspaceScreen.tsx).
+The screen integration is currently in [app/src/screens/MyspaceScreen.jsx](/Users/sahilkumarsingh/Desktop/SENTRI/app/src/screens/MyspaceScreen.jsx).
 
 The UI depends on three retrieval guarantees:
 
