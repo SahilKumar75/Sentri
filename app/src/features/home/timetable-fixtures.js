@@ -1,6 +1,5 @@
-import type { CalendarTag, ClassEntry } from './timetable-types';
 
-export const scheduleByDay: Record<string, ClassEntry[]> = {
+export const scheduleByDay = {
   mon: [
     {
       id: 'mon-1',
@@ -152,7 +151,7 @@ export const scheduleByDay: Record<string, ClassEntry[]> = {
   sun: [],
 };
 
-export const calendarTags: Record<string, CalendarTag[]> = {
+export const calendarTags = {
   '2026-03-23': [{ id: 'dbms', title: 'DBMS exam form', tone: 'blue' }],
   '2026-03-24': [{ id: 'resume', title: 'Resume check', tone: 'green' }],
   '2026-03-25': [{ id: 'cg', title: 'CG viva', tone: 'accent' }],

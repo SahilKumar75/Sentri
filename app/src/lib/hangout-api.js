@@ -1,30 +1,8 @@
 import { extractErrorMessage, getNetworkMessage, requestJson } from './http-client';
 
-export type HangoutRoom = {
-  id: number;
-  roomCode: string;
-  roomName: string;
-  roomType: string;
-  ownerDisplayName: string;
-  participantCount: number;
-  active: boolean;
-  joinLink: string;
-  createdAt: string;
-  updatedAt: string;
-  lastJoinedAt?: string;
-};
-
-type RoomResult =
-  | { ok: true; room: HangoutRoom }
-  | { ok: false; message: string };
-
-type RoomsResult =
-  | { ok: true; rooms: HangoutRoom[] }
-  | { ok: false; message: string };
-
-export async function listRooms(): Promise<RoomsResult> {
+export async function listRooms() {
   try {
-    const response = await requestJson<HangoutRoom[]>('/hangout/rooms');
+    const response = await requestJson('/hangout/rooms');
     if (!response.ok) {
       return { ok: false, message: extractErrorMessage(response.error, 'Room request failed.') };
     }
@@ -34,18 +12,15 @@ export async function listRooms(): Promise<RoomsResult> {
   }
 }
 
-export async function createRoom(
-  sessionToken: string,
-  payload: { roomName: string; roomType: string }
-): Promise<RoomResult> {
+export async function createRoom(sessionToken, payload) {
   return mutateRoom('/hangout/rooms', 'POST', payload, sessionToken);
 }
 
-export async function getRoom(roomCode: string): Promise<RoomResult> {
+export async function getRoom(roomCode) {
   return fetchRoom(`/hangout/rooms/${normalizeRoomCode(roomCode)}`);
 }
 
-export async function joinRoom(roomCode: string, guestName?: string): Promise<RoomResult> {
+export async function joinRoom(roomCode, guestName) {
   return mutateRoom(
     `/hangout/rooms/${normalizeRoomCode(roomCode)}/join`,
     'POST',
@@ -54,7 +29,7 @@ export async function joinRoom(roomCode: string, guestName?: string): Promise<Ro
   );
 }
 
-export function extractRoomCode(value: string) {
+export function extractRoomCode(value) {
   const trimmed = value.trim();
   if (!trimmed) {
     return '';
@@ -81,9 +56,9 @@ export function extractRoomCode(value: string) {
   return '';
 }
 
-async function fetchRoom(path: string): Promise<RoomResult> {
+async function fetchRoom(path) {
   try {
-    const response = await requestJson<HangoutRoom>(path);
+    const response = await requestJson(path);
     if (!response.ok) {
       return { ok: false, message: extractErrorMessage(response.error, 'Room request failed.') };
     }
@@ -93,14 +68,9 @@ async function fetchRoom(path: string): Promise<RoomResult> {
   }
 }
 
-async function mutateRoom(
-  path: string,
-  method: 'POST',
-  payload: object,
-  sessionToken: string | null
-): Promise<RoomResult> {
+async function mutateRoom(path, method, payload, sessionToken) {
   try {
-    const response = await requestJson<HangoutRoom>(path, {
+    const response = await requestJson(path, {
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -117,6 +87,6 @@ async function mutateRoom(
   }
 }
 
-function normalizeRoomCode(value: string) {
+function normalizeRoomCode(value) {
   return value.trim().toUpperCase();
 }

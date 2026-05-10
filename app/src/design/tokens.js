@@ -1,4 +1,3 @@
-export type TabKey = 'home' | 'myspace' | 'calorie' | 'hangout';
 
 export const theme = {
   colors: {
@@ -84,4 +83,4 @@ export const theme = {
     floatingBarOffset: 12,
     screenBottomInset: 122,
   },
-} as const;
+};

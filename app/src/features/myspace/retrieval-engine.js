@@ -1,25 +1,6 @@
-import type { SavedItem } from './models';
 
-export type RetrievalReason =
-  | 'title'
-  | 'body'
-  | 'subject'
-  | 'subject-alias'
-  | 'source'
-  | 'date'
-  | 'ocr'
-  | 'tag'
-  | 'context-alias'
-  | 'semantic-alias';
 
-export type RetrievalMatch = {
-  item: SavedItem;
-  score: number;
-  reasons: RetrievalReason[];
-  explanation: string;
-};
-
-const SUBJECT_ALIASES: Record<string, string[]> = {
+const SUBJECT_ALIASES = {
   DBMS: ['database', 'db', 'normalization', 'sql'],
   'P&S': ['math', 'statistics', 'probability', 'permutation', 'combination'],
   OS: ['operating systems', 'paging', 'cpu', 'memory'],
@@ -28,20 +9,20 @@ const SUBJECT_ALIASES: Record<string, string[]> = {
   Placement: ['interview', 'aptitude', 'company', 'job'],
 };
 
-const CONTEXT_ALIASES: Record<string, string[]> = {
+const CONTEXT_ALIASES = {
   blackboard: ['board', 'chalkboard', 'class board'],
   screenshot: ['screen', 'slide', 'capture'],
   image: ['photo', 'picture'],
   revision: ['study', 'prep', 'practice'],
 };
 
-export function rankMyspaceItems(items: SavedItem[], query: string, subject = 'All'): RetrievalMatch[] {
+export function rankMyspaceItems(items, query, subject = 'All') {
   const normalizedQuery = query.trim().toLowerCase();
   const normalizedSubject = subject.trim();
 
   return items
     .map((item, index) => scoreItem(item, normalizedQuery, normalizedSubject, index))
-    .filter((entry): entry is RetrievalMatch => entry !== null)
+    .filter((entry) => entry !== null)
     .sort((left, right) => {
       if (right.score !== left.score) {
         return right.score - left.score;
@@ -53,7 +34,7 @@ export function rankMyspaceItems(items: SavedItem[], query: string, subject = 'A
     });
 }
 
-export function explainMatch(match: RetrievalMatch | null, fallbackItem: SavedItem, query: string) {
+export function explainMatch(match, fallbackItem, query) {
   if (!query.trim()) {
     return fallbackItem.featured ? 'Suggested from recent study context' : 'Indexed for OCR, subject, and date recall';
   }
@@ -69,7 +50,7 @@ export function explainMatch(match: RetrievalMatch | null, fallbackItem: SavedIt
   return match.explanation;
 }
 
-function scoreItem(item: SavedItem, normalizedQuery: string, normalizedSubject: string, index: number) {
+function scoreItem(item, normalizedQuery, normalizedSubject, index) {
   const subjectMatches = normalizedSubject === 'All' || item.subject === normalizedSubject;
   if (!subjectMatches) {
     return null;
@@ -81,7 +62,7 @@ function scoreItem(item: SavedItem, normalizedQuery: string, normalizedSubject: 
       score: (item.pinned ? 100 : 0) + (item.featured ? 30 : 0) - index,
       reasons: item.featured ? ['semantic-alias'] : ['tag'],
       explanation: item.featured ? 'Suggested from recent study context' : 'Indexed for OCR, subject, and date recall',
-    } satisfies RetrievalMatch;
+    };
   }
 
   const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
@@ -93,7 +74,7 @@ function scoreItem(item: SavedItem, normalizedQuery: string, normalizedSubject: 
   const ocr = (item.ocrText ?? '').toLowerCase();
   const tags = item.tags.map((tag) => tag.toLowerCase());
 
-  const reasons = new Set<RetrievalReason>();
+  const reasons = new Set();
   let score = 0;
 
   for (const token of tokens) {
@@ -151,11 +132,11 @@ function scoreItem(item: SavedItem, normalizedQuery: string, normalizedSubject: 
     score,
     reasons: orderedReasons,
     explanation: buildExplanation(orderedReasons),
-  } satisfies RetrievalMatch;
+  };
 }
 
-function expandAliases(token: string) {
-  const aliases = new Set<string>([token]);
+function expandAliases(token) {
+  const aliases = new Set([token]);
   Object.entries(CONTEXT_ALIASES).forEach(([root, related]) => {
     if (root.includes(token) || related.some((value) => value.includes(token))) {
       aliases.add(root);
@@ -165,7 +146,7 @@ function expandAliases(token: string) {
   return Array.from(aliases);
 }
 
-function buildExplanation(reasons: RetrievalReason[]) {
+function buildExplanation(reasons) {
   if (reasons.includes('title')) return 'Matched title';
   if (reasons.includes('subject-alias')) return 'Matched subject alias';
   if (reasons.includes('ocr')) return 'Matched OCR text';

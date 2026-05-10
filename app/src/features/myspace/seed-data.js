@@ -1,6 +1,5 @@
-import type { CaptureOption, SavedItem } from './models';
 
-export const captureOptions: CaptureOption[] = [
+export const captureOptions = [
   { id: 'image', label: 'Image', hint: 'Board photo or slide', symbol: 'photo' },
   { id: 'link', label: 'Link', hint: 'Article or drive link', symbol: 'link' },
   { id: 'note', label: 'Note', hint: 'Quick thought or reminder', symbol: 'note.text' },
@@ -8,7 +7,7 @@ export const captureOptions: CaptureOption[] = [
   { id: 'screenshot', label: 'Screenshot', hint: 'Share from any app', symbol: 'rectangle.on.rectangle' },
 ];
 
-export const savedItems: SavedItem[] = [
+export const savedItems = [
   {
     id: 'math-blackboard',
     title: 'Permutation and Combination',

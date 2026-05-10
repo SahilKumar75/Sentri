@@ -1,51 +1,8 @@
-import type { HangoutRoom } from './hangout-api';
 
-export type MeetingLayout = 'spotlight' | 'grid';
-export type MeetingPanel = 'none' | 'people' | 'chat' | 'details' | 'settings';
-
-export type MeetingParticipant = {
-  id: string;
-  name: string;
-  role: 'host' | 'guest';
-  subtitle: string;
-  muted: boolean;
-  videoOn: boolean;
-  handRaised: boolean;
-  tileTone: string;
-  connection: 'strong' | 'fair' | 'weak';
-  speaking: boolean;
-};
-
-export type MeetingChatMessage = {
-  id: string;
-  author: string;
-  text: string;
-  timeLabel: string;
-};
-
-export type MeetingActivityItem = {
-  id: string;
-  title: string;
-  detail: string;
-  timeLabel: string;
-};
-
-export type MeetingSettings = {
-  layout: MeetingLayout;
-  noiseCancellation: boolean;
-  lowLightMode: boolean;
-  mirrorSelfView: boolean;
-  captionsLanguage: 'English';
-  audioOutput: 'Speaker' | 'Earpiece' | 'Bluetooth';
-  videoQuality: 'Auto' | '720p';
-  allowChat: boolean;
-  allowGuestScreenShare: boolean;
-  waitingRoomEnabled: boolean;
-};
 
 const palette = ['#1A73E8', '#185ABC', '#5F6368', '#8AB4F8', '#3C4043'];
 
-export const defaultMeetingSettings: MeetingSettings = {
+export const defaultMeetingSettings = {
   layout: 'spotlight',
   noiseCancellation: true,
   lowLightMode: false,
@@ -58,7 +15,7 @@ export const defaultMeetingSettings: MeetingSettings = {
   waitingRoomEnabled: true,
 };
 
-export function buildSeedParticipants(room: HangoutRoom, userName: string): MeetingParticipant[] {
+export function buildSeedParticipants(room, userName) {
   const names = [
     userName,
     room.ownerDisplayName,
@@ -82,7 +39,7 @@ export function buildSeedParticipants(room: HangoutRoom, userName: string): Meet
   }));
 }
 
-export function buildSeedChat(room: HangoutRoom): MeetingChatMessage[] {
+export function buildSeedChat(room) {
   return [
     {
       id: `${room.roomCode}-chat-1`,
@@ -99,7 +56,7 @@ export function buildSeedChat(room: HangoutRoom): MeetingChatMessage[] {
   ];
 }
 
-export function buildSeedActivity(room: HangoutRoom): MeetingActivityItem[] {
+export function buildSeedActivity(room) {
   return [
     {
       id: `${room.roomCode}-activity-1`,
