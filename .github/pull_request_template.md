@@ -1,34 +1,27 @@
 ## Summary
 
-- what changed
-- why it changed
-- what areas are affected
+-
 
 ## Linked Issue
 
-- closes #
+Closes #
 
-## Checklist
+## What Changed
 
-- [ ] I did not push directly to `main`
-- [ ] This branch has small logical commits
-- [ ] I reviewed my own diff before requesting merge
-- [ ] `app` compiles with `npx tsc --noEmit`
-- [ ] `backend` tests pass with `mvn test`
-- [ ] Any architecture-impacting changes are documented
+-
 
-## Screens / API Notes
+## Verification
 
-- frontend changes:
-- backend changes:
-- AI / reasoning changes:
-- ML worker changes:
+- [ ] `cd app && npx tsc --noEmit`
+- [ ] `cd backend && mvn test`
+- [ ] `cd ml-worker && pytest`
+- [ ] Other:
 
-## Review Focus
+## Review Notes
 
-- what should reviewers check most closely?
+- Areas to check:
+- Data, API, or ML worker contract changes:
 
-## Risks
+## Risks And Follow-Up
 
-- known gaps:
-- follow-up work:
+-

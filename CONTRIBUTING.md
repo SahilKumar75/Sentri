@@ -37,6 +37,7 @@ Avoid mixing UI redesign, backend behavior, and infra changes in a single commit
 
 - Use the issue templates for bug reports and feature requests.
 - A PR should close or clearly reference one tracked issue unless the change is emergency-only.
+- Use `.github/pull_request_template.md` for every PR. Keep the summary short, link the issue, and list the verification commands that actually ran.
 - The PR description should call out the exact frontend, backend, or ML worker surface touched.
 - If a change is intentionally partial, note the follow-up issue in the PR body.
 
@@ -48,6 +49,7 @@ Before merging a PR, check:
 - architecture impact is documented
 - API contracts are explicit
 - tests pass
+- ML worker changes include `cd ml-worker && pytest` output or a clear reason it was not run
 - mobile build still compiles
 - no dead demo-only code path was introduced silently
 - performance-sensitive reads and renders are considered

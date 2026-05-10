@@ -1,6 +1,6 @@
 # Sentri OCR Worker
 
-[![CI](https://github.com/yourusername/sentri/workflows/CI/badge.svg)](https://github.com/yourusername/sentri/actions)
+[![ML Worker](https://github.com/SahilKumar75/sentri/actions/workflows/ml-worker.yml/badge.svg)](https://github.com/SahilKumar75/sentri/actions/workflows/ml-worker.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -9,13 +9,13 @@ Zero-budget OCR and timetable parsing worker for Sentri. Designed to sit behind 
 
 ## Features
 
-- 🔍 **OCR Processing** - Extract text from timetable images using Tesseract
-- 📊 **Intelligent Parsing** - Convert raw OCR text into structured timetable entries
-- 🎯 **High Accuracy** - Deterministic parsing logic with fuzzy matching
-- 🔧 **Configurable** - Tuning profiles for customization
-- 📈 **Metrics** - Built-in performance monitoring and evaluation
-- 🐳 **Docker Ready** - Containerized deployment with Docker Compose
-- ✅ **Well Tested** - Comprehensive test suite with high coverage
+- OCR processing with Tesseract when the binary is available
+- Deterministic parsing from raw OCR text and cell-like table input
+- Fuzzy matching for common timetable OCR errors
+- Tuning profiles for subject, faculty, and parser behavior
+- Metrics and fixture evaluation for parser quality checks
+- Docker support for repeatable local runs
+- Pytest coverage for parser, worker, cache, validation, and utility code
 
 ## Quick Start
 
@@ -117,7 +117,7 @@ pre-commit install
 
 ```bash
 # Run all tests
-make test
+pytest
 
 # Run with coverage
 make test-cov
@@ -125,6 +125,8 @@ make test-cov
 # Run specific test
 pytest tests/test_parser.py -v
 ```
+
+GitHub Actions runs `pytest` on Python 3.11 and 3.12 whenever a pull request changes worker files.
 
 ### Code Quality
 
