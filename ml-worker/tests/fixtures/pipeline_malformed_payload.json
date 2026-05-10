@@ -1,0 +1,15 @@
+{
+  "source_name": "fixture-malformed.png",
+  "ocr_text": "Class: SE IT-B\nMON\n08:45-09:45 DBMS",
+  "extraction_confidence": 0.42,
+  "parsing_options": "fallback",
+  "confidence_weights": "balanced",
+  "quality_options": {
+    "min_extraction_confidence": 0.75
+  },
+  "cells": {
+    "row": 1,
+    "col": 1,
+    "text": "DBMS"
+  }
+}

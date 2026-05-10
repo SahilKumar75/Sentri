@@ -185,6 +185,18 @@ Customize parsing behavior with tuning profiles:
 }
 ```
 
+### Quality Options
+
+```json
+{
+  "quality_options": {
+    "min_extraction_confidence": 0.75
+  }
+}
+```
+
+When `extractionConfidence` is below `min_extraction_confidence`, the worker still returns parsed entries and adds a `low_confidence` issue to `metadata.sourceNotes`.
+
 ## Architecture
 
 ```

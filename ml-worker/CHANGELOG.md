@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- Pipeline preprocessing for malformed option payloads.
+- Low-confidence issue reporting through `quality_options.min_extraction_confidence`.
+- Fixture regression tests for backend-ready worker output.
+- Operation-level metrics compatibility for existing metrics tests.
+
 ## [0.2.0] - 2026-04-30
 
 ### Added
