@@ -3,6 +3,7 @@
 Sentri is a zero-budget cross-platform student companion for Army Institute of Technology.
 
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 This repository is currently split into 3 working parts:
 
@@ -41,6 +42,9 @@ The app should stay simple and cheap to run:
 - Myspace AI logic: [docs/ai-logic-myspace.md](/Users/sahilkumarsingh/Desktop/SENTRI/docs/ai-logic-myspace.md)
 - Myspace indexing pipeline: [docs/myspace-indexing-pipeline.md](/Users/sahilkumarsingh/Desktop/SENTRI/docs/myspace-indexing-pipeline.md)
 - Contribution workflow: [CONTRIBUTING.md](/Users/sahilkumarsingh/Desktop/SENTRI/CONTRIBUTING.md)
+- Code of conduct: [CODE_OF_CONDUCT.md](/Users/sahilkumarsingh/Desktop/SENTRI/CODE_OF_CONDUCT.md)
+- Security policy: [SECURITY.md](/Users/sahilkumarsingh/Desktop/SENTRI/SECURITY.md)
+- Support policy: [SUPPORT.md](/Users/sahilkumarsingh/Desktop/SENTRI/SUPPORT.md)
 
 ### Performance Optimizations
 

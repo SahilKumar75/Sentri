@@ -2,7 +2,8 @@ name: Feature request
 description: Propose a new feature or product improvement for Sentri
 title: "[Feature] "
 labels:
-  - enhancement
+  - type:feature
+  - status:needs-triage
 body:
   - type: markdown
     attributes:
