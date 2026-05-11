@@ -13,3 +13,10 @@ ml-worker/__pycache__/
 ml-worker/tests/__pycache__/
 ml-worker/src/sentri_worker/__pycache__/
 ml-worker/sentri_worker/__pycache__/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
