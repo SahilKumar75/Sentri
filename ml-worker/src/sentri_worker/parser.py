@@ -6,7 +6,12 @@ from datetime import datetime
 from typing import Sequence
 
 from .models import OCRCell, ParseIssue, ParseResult, TimetableBatch, TimetableEntry
-from .tuning import TuningProfile
+from .tuning import (
+    DEFAULT_FACULTY_ALIASES,
+    DEFAULT_LOCATION_ALIASES,
+    DEFAULT_SUBJECT_ALIASES,
+    TuningProfile,
+)
 from sentri_worker.lib.lru_cache import lru_cache
 
 DAY_ALIASES = {
@@ -75,12 +80,7 @@ LOCATION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-SUBJECT_ALIASES = {
-    "DBM5": "DBMS",
-    "D8MS": "DBMS",
-    "PR0JECT MANAGEMENT": "PROJECT MANAGEMENT",
-    "TUT0RIAL": "TUTORIAL",
-}
+SUBJECT_ALIASES = DEFAULT_SUBJECT_ALIASES
 
 
 def normalize_whitespace(value: str) -> str:
@@ -380,6 +380,15 @@ def _parse_cell_text_impl(text: str, tuning_profile: TuningProfile | None):
     if tuning_profile is not None:
         faculty_code = tuning_profile.normalize_faculty_code(faculty_code)
         location = tuning_profile.normalize_location_label(location)
+    else:
+        if faculty_code is not None:
+            faculty_code = DEFAULT_FACULTY_ALIASES.get(faculty_code, faculty_code)
+        if location is not None:
+            compact_location = normalize_whitespace(location).upper().replace(" ", "")
+            location = DEFAULT_LOCATION_ALIASES.get(
+                location,
+                DEFAULT_LOCATION_ALIASES.get(compact_location, location),
+            )
 
     return subject, faculty_code, location, _cleanup_notes(notes, subject, faculty_code, location)
 
