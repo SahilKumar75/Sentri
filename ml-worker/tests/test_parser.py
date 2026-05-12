@@ -227,6 +227,29 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(location, "LAB-III")
         self.assertEqual(notes, ["Practice"])
 
+    def test_parse_cell_text_normalizes_default_ocr_subject_aliases(self) -> None:
+        subject, faculty_code, location, notes = parse_cell_text(
+            "MACH1NE LEARN1NG\nV1\nLABIII\nPractical"
+        )
+
+        self.assertEqual(subject, "MACHINE LEARNING")
+        self.assertEqual(faculty_code, "VI")
+        self.assertEqual(location, "LAB-III")
+        self.assertEqual(notes, ["Practical"])
+
+    def test_parse_cell_text_normalizes_multiple_ocr_subject_variants(self) -> None:
+        cases = {
+            "0PERATING SYSTEM5": "OPERATING SYSTEMS",
+            "C0MPUTER NETW0RKS": "COMPUTER NETWORKS",
+            "ARTIFIC1AL INTELLIGENCE": "ARTIFICIAL INTELLIGENCE",
+            "S0FTWARE ENGINEERING": "SOFTWARE ENGINEERING",
+        }
+
+        for raw_subject, expected_subject in cases.items():
+            with self.subTest(raw_subject=raw_subject):
+                subject, _, _, _ = parse_cell_text(raw_subject)
+                self.assertEqual(subject, expected_subject)
+
     def test_parse_cell_text_skips_noise_lines(self):
         # Should skip lines that are just punctuation or single chars
         subj, fac, loc, notes = parse_cell_text("DBMS\n-\n.\nA\nLH 20")
