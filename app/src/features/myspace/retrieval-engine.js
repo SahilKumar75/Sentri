@@ -1,19 +1,24 @@
 
 
 const SUBJECT_ALIASES = {
-  DBMS: ['database', 'db', 'normalization', 'sql'],
-  'P&S': ['math', 'statistics', 'probability', 'permutation', 'combination'],
-  OS: ['operating systems', 'paging', 'cpu', 'memory'],
-  CG: ['graphics', 'z buffer', 'transformation', 'rendering'],
-  PM: ['project', 'sprint', 'timeline'],
+  DBMS: ['database', 'db', 'normalization', 'sql', 'normal form', 'normal forms'],
+  'P&S': ['math', 'statistics', 'probability', 'permutation', 'combination', 'stats'],
+  OS: ['operating systems', 'operating system', 'paging', 'cpu', 'memory', 'process'],
+  CG: ['graphics', 'computer graphics', 'z buffer', 'transformation', 'rendering'],
+  PM: ['project', 'sprint', 'timeline', 'project management', 'submission'],
   Placement: ['interview', 'aptitude', 'company', 'job'],
 };
 
 const CONTEXT_ALIASES = {
+  assignment: ['homework', 'submission', 'task', 'practical file', 'writeup'],
   blackboard: ['board', 'chalkboard', 'class board'],
-  screenshot: ['screen', 'slide', 'capture'],
-  image: ['photo', 'picture'],
-  revision: ['study', 'prep', 'practice'],
+  image: ['photo', 'picture', 'gallery'],
+  lab: ['practical', 'experiment', 'lab manual', 'lab file'],
+  lecture: ['class', 'slides', 'slide', 'session'],
+  notes: ['note', 'study material', 'material', 'handout', 'summary'],
+  revision: ['study', 'prep', 'practice', 'exam prep', 'revise'],
+  screenshot: ['screen', 'slide', 'capture', 'screen grab'],
+  timetable: ['schedule', 'routine', 'weekly plan', 'class schedule'],
 };
 
 export function rankMyspaceItems(items, query, subject = 'All') {
