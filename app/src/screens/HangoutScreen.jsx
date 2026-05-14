@@ -506,10 +506,23 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
               </View>
             </Pressable>))}
           {rooms.length === 0 ? (<View style={styles.emptyRooms}>
-              <Text style={styles.emptyRoomsTitle}>No rooms yet</Text>
+              <View style={styles.emptyRoomsIcon}>
+                <Ionicons name="videocam-outline" size={22} color={theme.colors.accentStrong}/>
+              </View>
+              <Text style={styles.emptyRoomsTitle}>No active hangouts</Text>
               <Text style={styles.emptyRoomsBody}>
-                Create the first study room or join one from a Sentri link.
+                Start a study room, paste a room code, or keep this page open while a friend shares a Sentri link.
               </Text>
+              <View style={styles.emptyActionGrid}>
+                <Pressable style={styles.emptyActionButton} onPress={() => void handleCreateRoom()} disabled={loadingAction !== 'idle'}>
+                  <Ionicons name="add-circle" size={16} color="#FFFFFF"/>
+                  <Text style={styles.emptyActionText}>Create room</Text>
+                </Pressable>
+                <Pressable style={[styles.emptyActionButton, styles.emptyActionButtonGhost]} onPress={() => void handleJoinByCode()} disabled={loadingAction !== 'idle'}>
+                  <Ionicons name="enter-outline" size={16} color={theme.colors.accentStrong}/>
+                  <Text style={[styles.emptyActionText, styles.emptyActionTextGhost]}>Join by code</Text>
+                </Pressable>
+              </View>
             </View>) : null}
         </View>
 
@@ -1134,6 +1147,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 14,
     },
+    emptyRoomsIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 16,
+        backgroundColor: theme.colors.accentSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
     emptyRoomsTitle: {
         color: theme.colors.text,
         fontSize: 16,
@@ -1144,6 +1166,36 @@ const styles = StyleSheet.create({
         color: theme.colors.textSoft,
         fontSize: 13,
         lineHeight: 19,
+    },
+    emptyActionGrid: {
+        marginTop: 14,
+        flexDirection: 'row',
+        gap: 10,
+    },
+    emptyActionButton: {
+        flex: 1,
+        minHeight: 44,
+        borderRadius: 16,
+        backgroundColor: theme.colors.accent,
+        borderWidth: 1,
+        borderColor: theme.colors.accent,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingHorizontal: 10,
+    },
+    emptyActionButtonGhost: {
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.line,
+    },
+    emptyActionText: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    emptyActionTextGhost: {
+        color: theme.colors.accentStrong,
     },
     sectionHeader: {
         flexDirection: 'row',
