@@ -26,6 +26,9 @@ import SentriSheet from './src/screens/SentriSheet';
 
 const ALL_TABS = ['home', 'myspace', 'calorie', 'hangout'];
 
+// DEV: Set to true to bypass authentication
+const DEV_BYPASS_AUTH = true;
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -56,7 +59,19 @@ export default function App() {
   );
 
   useEffect(() => {
-    void restoreSavedSession();
+    if (DEV_BYPASS_AUTH) {
+      // DEV: Bypass authentication with mock user
+      setAuthenticatedUser({
+        firstName: 'Dev',
+        lastName: 'User',
+        phone: '+91 98765 43210',
+        email: 'dev@sentri.app',
+      });
+      setSessionToken('dev-mock-token');
+      setAuthInitializing(false);
+    } else {
+      void restoreSavedSession();
+    }
   }, []);
 
   useEffect(() => {
