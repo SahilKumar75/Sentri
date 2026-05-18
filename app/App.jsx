@@ -29,7 +29,7 @@ import SentriSheet from './src/screens/SentriSheet';
 const ALL_TABS = ['home', 'myspace', 'calorie', 'hangout'];
 
 // DEV: Set to true to bypass authentication
-const DEV_BYPASS_AUTH = true;
+const DEV_BYPASS_AUTH = false;
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -277,19 +277,21 @@ export default function App() {
   if (!authenticatedUser) {
     if (showOnboarding) {
       return (
-        <OnboardingScreen
-          onSignup={(method) => {
-            void handleOnboardingComplete();
-            if (method === 'email') {
-              setAuthMode('signup');
-            }
-            // For Apple/Google, would trigger respective auth flows here
-          }}
-          onLogin={() => {
-            void handleOnboardingComplete();
-            setAuthMode('login');
-          }}
-        />
+        <SafeAreaView style={styles.onboardingSafeArea}>
+          <OnboardingScreen
+            onSignup={(method) => {
+              void handleOnboardingComplete();
+              if (method === 'email') {
+                setAuthMode('signup');
+              }
+              // For Apple/Google, would trigger respective auth flows here
+            }}
+            onLogin={() => {
+              void handleOnboardingComplete();
+              setAuthMode('login');
+            }}
+          />
+        </SafeAreaView>
       );
     }
 
@@ -405,6 +407,10 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  onboardingSafeArea: {
+    flex: 1,
+    backgroundColor: '#1A73E8', // Match first onboarding screen color
   },
   loadingShell: {
     flex: 1,
