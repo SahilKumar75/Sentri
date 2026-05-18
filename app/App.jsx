@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, SafeAreaView, StyleSheet, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CapsuleTabBar, DrawerSheet } from './src/components/sentri-ui';
 import { theme } from './src/design/tokens';
@@ -18,6 +19,7 @@ import * as authApi from './src/lib/api';
 import { useMountedTabs } from './src/lib/use-mounted-tabs';
 import AccountSheet from './src/screens/AccountSheet';
 import AuthScreen from './src/screens/AuthScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 import CalorieScreen from './src/screens/CalorieScreen';
 import HangoutScreen from './src/screens/HangoutScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -43,6 +45,7 @@ export default function App() {
   const [incomingHangoutCode, setIncomingHangoutCode] = useState(null);
   const [hangoutMeetingMode, setHangoutMeetingMode] = useState(false);
   const [sentriSheetOpen, setSentriSheetOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   const mountedTabs = useMountedTabs(activeTab);
 
   const userName = authenticatedUser
@@ -72,6 +75,7 @@ export default function App() {
     } else {
       void restoreSavedSession();
     }
+    void checkOnboardingStatus();
   }, []);
 
   useEffect(() => {
@@ -139,6 +143,26 @@ export default function App() {
     const storedTab = await getStoredActiveTab();
     if (storedTab === 'home' || storedTab === 'myspace' || storedTab === 'calorie' || storedTab === 'hangout') {
       setActiveTab(storedTab);
+    }
+  };
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const hasSeenOnboarding = await AsyncStorage.getItem('@sentri:hasSeenOnboarding');
+      if (hasSeenOnboarding === 'true') {
+        setShowOnboarding(false);
+      }
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+    }
+  };
+
+  const handleOnboardingComplete = async () => {
+    try {
+      await AsyncStorage.setItem('@sentri:hasSeenOnboarding', 'true');
+      setShowOnboarding(false);
+    } catch (error) {
+      console.error('Error saving onboarding status:', error);
     }
   };
 
@@ -251,6 +275,24 @@ export default function App() {
   }
 
   if (!authenticatedUser) {
+    if (showOnboarding) {
+      return (
+        <OnboardingScreen
+          onSignup={(method) => {
+            void handleOnboardingComplete();
+            if (method === 'email') {
+              setAuthMode('signup');
+            }
+            // For Apple/Google, would trigger respective auth flows here
+          }}
+          onLogin={() => {
+            void handleOnboardingComplete();
+            setAuthMode('login');
+          }}
+        />
+      );
+    }
+
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="dark" />
