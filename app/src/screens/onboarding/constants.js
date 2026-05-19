@@ -13,6 +13,8 @@
  * - id: Unique identifier for the screen (0-3)
  * - text: The text content to display with typewriter animation
  * - backgroundColor: Solid color for the screen background (hex format)
+ * - textColor: Color for the typewriter text
+ * - dotColor: Color for the animated dot
  * 
  * The screens cycle in order: 0 → 1 → 2 → 3 → 0 (loop)
  */
@@ -20,22 +22,30 @@ export const ONBOARDING_SCREENS = [
   {
     id: 0,
     text: 'Sentri●',
-    backgroundColor: '#1A73E8', // Blue
+    backgroundColor: '#0066FF', // Bright Blue
+    textColor: '#FFFFFF',
+    dotColor: '#FFFFFF',
   },
   {
     id: 1,
-    text: 'Your student companion●',
-    backgroundColor: '#00BFA5', // Teal
+    text: 'ChatGPT●',
+    backgroundColor: '#00695C', // Dark Teal/Green
+    textColor: '#FFD700', // Gold
+    dotColor: '#FFD700',
   },
   {
     id: 2,
-    text: 'Timetables made easy●',
+    text: "Let's brainstorm●",
     backgroundColor: '#FFF8E1', // Cream
+    textColor: '#0066FF', // Blue
+    dotColor: '#0066FF',
   },
   {
     id: 3,
-    text: "Let's begin●",
-    backgroundColor: '#2E7D32', // Dark Green
+    text: "Let's go●",
+    backgroundColor: '#1B5E20', // Dark Green
+    textColor: '#E1BEE7', // Light Purple
+    dotColor: '#E1BEE7',
   },
 ];
 

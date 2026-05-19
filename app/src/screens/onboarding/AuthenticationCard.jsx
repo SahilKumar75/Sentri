@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../design/tokens';
 
 /**
@@ -7,6 +8,7 @@ import { theme } from '../../design/tokens';
  * 
  * Fixed card at the bottom of the onboarding screen with authentication options.
  * Displays buttons for Apple, Google, email signup, and a login link.
+ * Edge-to-edge design with rounded top corners only.
  * 
  * @param {Object} props
  * @param {Function} props.onApplePress - Callback when "Continue with Apple" is pressed
@@ -25,32 +27,44 @@ const AuthenticationCard = ({
       <View style={styles.card}>
         {/* Continue with Apple Button */}
         <Pressable
-          style={styles.appleButton}
+          style={({ pressed }) => [
+            styles.appleButton,
+            pressed && styles.buttonPressed,
+          ]}
           onPress={onApplePress}
           accessibilityRole="button"
           accessibilityLabel="Continue with Apple"
         >
-          <Text style={styles.appleButtonText}>🍎 Continue with Apple</Text>
+          <Ionicons name="logo-apple" size={20} color="#000000" style={styles.icon} />
+          <Text style={styles.appleButtonText}>Continue with Apple</Text>
         </Pressable>
 
         {/* Continue with Google Button */}
         <Pressable
-          style={styles.darkButton}
+          style={({ pressed }) => [
+            styles.darkButton,
+            pressed && styles.buttonPressed,
+          ]}
           onPress={onGooglePress}
           accessibilityRole="button"
           accessibilityLabel="Continue with Google"
         >
-          <Text style={styles.darkButtonText}>G Continue with Google</Text>
+          <Ionicons name="logo-google" size={20} color="#FFFFFF" style={styles.icon} />
+          <Text style={styles.darkButtonText}>Continue with Google</Text>
         </Pressable>
 
         {/* Sign up with email Button */}
         <Pressable
-          style={styles.darkButton}
+          style={({ pressed }) => [
+            styles.darkButton,
+            pressed && styles.buttonPressed,
+          ]}
           onPress={onEmailPress}
           accessibilityRole="button"
           accessibilityLabel="Sign up with email"
         >
-          <Text style={styles.darkButtonText}>✉️ Sign up with email</Text>
+          <Ionicons name="mail" size={20} color="#FFFFFF" style={styles.icon} />
+          <Text style={styles.darkButtonText}>Sign up with email</Text>
         </Pressable>
 
         {/* Log in Link */}
@@ -73,50 +87,56 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: theme.chrome.horizontalPadding, // 20px
-    paddingBottom: theme.spacing.md, // 16px
   },
   card: {
-    backgroundColor: theme.colors.surface, // White
-    borderRadius: 28, // Adjusted from theme.radius.xl (30px) to 28px
-    padding: theme.spacing.xl, // 24px
-    gap: theme.spacing.sm, // 12px
-    ...theme.shadow.strong,
+    backgroundColor: '#000000', // Black background like reference
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 40, // Extra padding for safe area
+    gap: 12,
   },
   appleButton: {
     height: 52,
-    borderRadius: theme.radius.md, // 18px
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: theme.colors.line,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   appleButtonText: {
-    fontSize: theme.typography.body, // 15px
-    fontWeight: '700',
-    color: theme.colors.text, // Black
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
   },
   darkButton: {
     height: 52,
-    borderRadius: theme.radius.md, // 18px
-    backgroundColor: theme.colors.surfaceStrong, // #111111
+    borderRadius: 12,
+    backgroundColor: '#1C1C1E', // Dark gray like reference
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   darkButtonText: {
-    fontSize: theme.typography.body, // 15px
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#FFFFFF',
+  },
+  icon: {
+    marginRight: 8,
+  },
+  buttonPressed: {
+    opacity: 0.7,
   },
   loginLink: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.xs, // 8px
+    paddingVertical: 12,
   },
   loginLinkText: {
-    fontSize: theme.typography.footnote, // 12px
-    fontWeight: '700',
-    color: theme.colors.accent,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 
