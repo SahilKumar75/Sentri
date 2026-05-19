@@ -33,15 +33,16 @@ const OnboardingScreen = ({ onSignup, onLogin }) => {
   const handleAnimationComplete = () => {
     if (!isAnimating) return;
 
-    // This is called when typing finishes, BEFORE text fades out
-    // Change screen index so background transitions while text fades
+    // This is called when typing finishes and dot starts returning to start
+    // Change screen index so background transitions while dot returns and text fades
     setCurrentScreenIndex((prevIndex) => (prevIndex + 1) % ONBOARDING_SCREENS.length);
     setIsAnimating(false);
     
-    // Wait for fade + pause, then show new text
+    // Wait for dot reset + fade + pause, then show new text
+    const totalWaitTime = ANIMATION_CONFIG.dotResetDuration + ANIMATION_CONFIG.textFadeOutDuration + ANIMATION_CONFIG.pauseAfterScreen;
     transitionTimeoutRef.current = setTimeout(() => {
       setIsAnimating(true);
-    }, ANIMATION_CONFIG.textFadeOutDuration + ANIMATION_CONFIG.pauseAfterScreen);
+    }, totalWaitTime);
   };
 
   // Handle authentication actions

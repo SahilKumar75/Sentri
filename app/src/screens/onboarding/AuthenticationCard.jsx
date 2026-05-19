@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../design/tokens';
@@ -52,11 +52,16 @@ const AuthenticationCard = ({
           accessibilityRole="button"
           accessibilityLabel="Continue with Google"
         >
-          <Ionicons name="logo-google" size={20} color="#FFFFFF" style={styles.icon} />
+          {/* Multicolor Google G logo */}
+          <Image 
+            source={require('../../../assets/google-logo.jpg-removebg-preview.png')} 
+            style={styles.googleLogo}
+            resizeMode="contain"
+          />
           <Text style={styles.darkButtonText}>Continue with Google</Text>
         </Pressable>
 
-        {/* Sign up with email Button */}
+        {/* Sign up Button */}
         <Pressable
           style={({ pressed }) => [
             styles.darkButton,
@@ -64,10 +69,9 @@ const AuthenticationCard = ({
           ]}
           onPress={onEmailPress}
           accessibilityRole="button"
-          accessibilityLabel="Sign up with email"
+          accessibilityLabel="Sign up"
         >
-          <Ionicons name="mail" size={20} color="#FFFFFF" style={styles.icon} />
-          <Text style={styles.darkButtonText}>Sign up with email</Text>
+          <Text style={styles.darkButtonText}>Sign up</Text>
         </Pressable>
 
         {/* Log in Link */}
@@ -84,7 +88,7 @@ const AuthenticationCard = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.Create({
   container: {
     position: 'absolute',
     bottom: 0,
@@ -92,56 +96,61 @@ const styles = StyleSheet.create({
     right: 0,
   },
   card: {
-    backgroundColor: '#000000', // Black background like reference
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    backgroundColor: '#1E1E1E', // Dark gray card
+    borderTopLeftRadius: 31, // Reduced by 15% (36 * 0.85 = 30.6)
+    borderTopRightRadius: 31,
+    paddingHorizontal: 17, // Reduced by 15% (20 * 0.85 = 17)
+    paddingTop: 20, // Reduced by 15% (24 * 0.85 = 20.4)
     // paddingBottom is dynamic based on safe area insets
-    gap: 12,
+    gap: 10, // Reduced by 15% (12 * 0.85 = 10.2)
   },
   appleButton: {
-    height: 52,
-    borderRadius: 12,
+    height: 44, // Reduced by 15% (52 * 0.85 = 44.2)
+    borderRadius: 10, // Reduced by 15% (12 * 0.85 = 10.2)
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   appleButtonText: {
-    fontSize: 16,
+    fontSize: 14, // Reduced by 15% (16 * 0.85 = 13.6)
     fontWeight: '600',
     color: '#000000',
   },
   darkButton: {
-    height: 52,
-    borderRadius: 12,
-    backgroundColor: '#1C1C1E', // Dark gray like reference
+    height: 44, // Reduced by 15% (52 * 0.85 = 44.2)
+    borderRadius: 10, // Reduced by 15% (12 * 0.85 = 10.2)
+    backgroundColor: '#2C2C2E', // Slightly lighter dark gray
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   darkButtonText: {
-    fontSize: 16,
+    fontSize: 14, // Reduced by 15% (16 * 0.85 = 13.6)
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  googleLogo: {
+    width: 27, // Reduced by 15% (32 * 0.85 = 27.2)
+    height: 27,
+    marginRight: 8, // Reduced by 15% (10 * 0.85 = 8.5)
+  },
   icon: {
-    marginRight: 8,
+    marginRight: 7, // Reduced by 15% (8 * 0.85 = 6.8)
   },
   buttonPressed: {
     opacity: 0.6,
   },
   loginLink: {
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12, // Reduced by 15% (14 * 0.85 = 11.9)
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.16)', // Thin white border
-    borderRadius: 12,
-    marginTop: 4,
+    borderRadius: 10, // Reduced by 15% (12 * 0.85 = 10.2)
+    marginTop: 3, // Reduced by 15% (4 * 0.85 = 3.4)
   },
   loginLinkText: {
-    fontSize: 15,
+    fontSize: 13, // Reduced by 15% (15 * 0.85 = 12.75)
     fontWeight: '600',
     color: '#FFFFFF',
   },
