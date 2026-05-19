@@ -86,6 +86,7 @@ const OnboardingScreen = ({ onSignup, onLogin }) => {
           dotColor={currentScreen.dotColor}
           onComplete={handleAnimationComplete}
           speed={ANIMATION_CONFIG.typewriterSpeed}
+          fadeOutDuration={ANIMATION_CONFIG.textFadeOutDuration}
         />
       )}
 

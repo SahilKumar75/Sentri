@@ -8,6 +8,7 @@ import AnimatedDot from './AnimatedDot';
  * 
  * Renders text character by character with a typewriter animation effect.
  * Includes an animated dot that moves with the text and disappears when the text includes "●".
+ * Features smooth fade-out transition when animation completes.
  * 
  * @param {Object} props
  * @param {string} props.text - The text to display with typewriter animation
@@ -15,11 +16,13 @@ import AnimatedDot from './AnimatedDot';
  * @param {string} props.dotColor - Color for the animated dot (default: white)
  * @param {Function} props.onComplete - Callback invoked when animation completes
  * @param {number} props.speed - Milliseconds per character (default: 80)
+ * @param {number} props.fadeOutDuration - Duration of fade out animation in ms (default: 400)
  */
-const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onComplete, speed = 80 }) => {
+const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onComplete, speed = 80, fadeOutDuration = 400 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const dotPosition = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current; // For fade out effect
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
   const onCompleteRef = useRef(onComplete);
@@ -38,6 +41,7 @@ const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onC
     setDisplayedText('');
     setCurrentIndex(0);
     dotPosition.setValue(0);
+    fadeAnim.setValue(1); // Reset fade animation
 
     let index = 0;
 
@@ -57,16 +61,24 @@ const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onC
           useNativeDriver: true,
         }).start();
       } else {
-        // Animation complete
+        // Animation complete - start fade out
         clearInterval(intervalRef.current);
-        if (onCompleteRef.current) {
-          onCompleteRef.current();
-        }
+        
+        // Fade out animation
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: fadeOutDuration,
+          useNativeDriver: true,
+        }).start(() => {
+          if (onCompleteRef.current) {
+            onCompleteRef.current();
+          }
+        });
       }
     }, speed);
 
     // Timeout fallback: force completion if animation doesn't finish
-    const timeoutDuration = text.length * speed + 1000;
+    const timeoutDuration = text.length * speed + fadeOutDuration + 1000;
     timeoutRef.current = setTimeout(() => {
       if (index < text.length) {
         console.warn('TypewriterText animation timeout, forcing completion');
@@ -88,15 +100,21 @@ const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onC
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [text, speed, dotPosition]);
+  }, [text, speed, dotPosition, fadeAnim, fadeOutDuration]);
 
   return (
-    <View style={[styles.container, { paddingTop: Math.max(insets.top, 20) }]}>
+    <Animated.View style={[
+      styles.container, 
+      { 
+        paddingTop: Math.max(insets.top, 20),
+        opacity: fadeAnim, // Apply fade animation
+      }
+    ]}>
       <View style={styles.textContainer}>
         <AnimatedDot position={dotPosition} visible={isDotVisible} color={dotColor} />
         <Text style={[styles.text, { color: textColor }]}>{displayedText}</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -106,6 +124,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    marginTop: -60, // Move text up a bit
   },
   textContainer: {
     position: 'relative',
@@ -114,7 +133,7 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: '800',
     lineHeight: 56,
-    textAlign: 'left',
+    textAlign: 'center', // Center align for multi-line text
   },
 });
 

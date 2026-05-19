@@ -130,11 +130,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   buttonPressed: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   loginLink: {
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.16)', // Thin white border
+    borderRadius: 12,
+    marginTop: 4,
   },
   loginLinkText: {
     fontSize: 15,
