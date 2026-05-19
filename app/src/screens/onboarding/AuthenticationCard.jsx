@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../design/tokens';
 
@@ -8,7 +9,7 @@ import { theme } from '../../design/tokens';
  * 
  * Fixed card at the bottom of the onboarding screen with authentication options.
  * Displays buttons for Apple, Google, email signup, and a login link.
- * Edge-to-edge design with rounded top corners only.
+ * Edge-to-edge design with rounded top corners only, extends to bottom of screen.
  * 
  * @param {Object} props
  * @param {Function} props.onApplePress - Callback when "Continue with Apple" is pressed
@@ -22,9 +23,11 @@ const AuthenticationCard = ({
   onEmailPress,
   onLoginPress,
 }) => {
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
+      <View style={[styles.card, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
         {/* Continue with Apple Button */}
         <Pressable
           style={({ pressed }) => [
@@ -94,7 +97,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 32,
     paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 40, // Extra padding for safe area
+    // paddingBottom is dynamic based on safe area insets
     gap: 12,
   },
   appleButton: {

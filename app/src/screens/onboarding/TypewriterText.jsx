@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AnimatedDot from './AnimatedDot';
 
 /**
@@ -22,6 +23,7 @@ const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onC
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
   const onCompleteRef = useRef(onComplete);
+  const insets = useSafeAreaInsets();
 
   // Keep onComplete ref updated
   useEffect(() => {
@@ -89,7 +91,7 @@ const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onC
   }, [text, speed, dotPosition]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: Math.max(insets.top, 20) }]}>
       <View style={styles.textContainer}>
         <AnimatedDot position={dotPosition} visible={isDotVisible} color={dotColor} />
         <Text style={[styles.text, { color: textColor }]}>{displayedText}</Text>

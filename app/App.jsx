@@ -304,7 +304,7 @@ export default function App() {
     if (showOnboarding) {
       return (
         <SafeAreaProvider>
-          <SafeAreaView style={styles.onboardingSafeArea} edges={['top', 'bottom']}>
+          <View style={styles.onboardingSafeArea}>
             <OnboardingScreen
               onSignup={(method) => {
                 void handleOnboardingComplete();
@@ -318,7 +318,7 @@ export default function App() {
                 setAuthMode('login');
               }}
             />
-          </SafeAreaView>
+          </View>
         </SafeAreaProvider>
       );
     }
