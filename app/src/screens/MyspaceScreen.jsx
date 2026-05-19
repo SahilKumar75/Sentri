@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, SafeAreaView, ScrollView, Share, StyleSheet, Text, TextInput, View, } from 'react-native';
+import { Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AvatarButton, SectionHeader } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import { buildCapturedItem, buildCapturePreview, createEmptyCaptureDraft } from '../features/myspace/capture-builder';

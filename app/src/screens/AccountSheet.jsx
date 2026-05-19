@@ -1,4 +1,5 @@
-import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { SectionHeader, SheetHeader, SurfaceCard } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 export default function AccountSheet({ visible, profile, viewMode, onClose, onLogout, }) {

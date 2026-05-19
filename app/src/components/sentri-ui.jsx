@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../design/tokens';
 export function AvatarButton({ label = 'SK', onPress, tone = 'light', }) {
     return (<Pressable onPress={onPress} style={[styles.avatarButton, tone === 'dark' ? styles.avatarButtonDark : styles.avatarButtonLight]} accessibilityRole="button" accessibilityLabel="Open profile and settings">

@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { startTransition, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, SafeAreaView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CapsuleTabBar, DrawerSheet } from './src/components/sentri-ui';
@@ -31,6 +32,12 @@ const ALL_TABS = ['home', 'myspace', 'calorie', 'hangout'];
 // DEV: Set to true to bypass authentication
 const DEV_BYPASS_AUTH = false;
 
+// DEV: Set to true to reset onboarding (see it again), then set back to false
+const DEV_RESET_ONBOARDING = true;
+
+// DEV: To reset onboarding and see it again, set DEV_RESET_ONBOARDING to true above,
+// reload the app, then set it back to false
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -45,7 +52,7 @@ export default function App() {
   const [incomingHangoutCode, setIncomingHangoutCode] = useState(null);
   const [hangoutMeetingMode, setHangoutMeetingMode] = useState(false);
   const [sentriSheetOpen, setSentriSheetOpen] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false); // Start with false, will be set by checkOnboardingStatus
   const mountedTabs = useMountedTabs(activeTab);
 
   const userName = authenticatedUser
@@ -62,20 +69,32 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (DEV_BYPASS_AUTH) {
-      // DEV: Bypass authentication with mock user
-      setAuthenticatedUser({
-        firstName: 'Dev',
-        lastName: 'User',
-        phone: '+91 98765 43210',
-        email: 'dev@sentri.app',
-      });
-      setSessionToken('dev-mock-token');
-      setAuthInitializing(false);
-    } else {
-      void restoreSavedSession();
-    }
-    void checkOnboardingStatus();
+    const initializeApp = async () => {
+      // DEV: Reset onboarding if flag is set
+      if (DEV_RESET_ONBOARDING) {
+        await AsyncStorage.removeItem('@sentri:hasSeenOnboarding');
+        console.log('🔄 Onboarding reset! Set DEV_RESET_ONBOARDING back to false.');
+      }
+      
+      // Check onboarding status first
+      await checkOnboardingStatus();
+      
+      if (DEV_BYPASS_AUTH) {
+        // DEV: Bypass authentication with mock user
+        setAuthenticatedUser({
+          firstName: 'Dev',
+          lastName: 'User',
+          phone: '+91 98765 43210',
+          email: 'dev@sentri.app',
+        });
+        setSessionToken('dev-mock-token');
+        setAuthInitializing(false);
+      } else {
+        await restoreSavedSession();
+      }
+    };
+    
+    void initializeApp();
   }, []);
 
   useEffect(() => {
@@ -151,9 +170,14 @@ export default function App() {
       const hasSeenOnboarding = await AsyncStorage.getItem('@sentri:hasSeenOnboarding');
       if (hasSeenOnboarding === 'true') {
         setShowOnboarding(false);
+      } else {
+        // First time user - show onboarding
+        setShowOnboarding(true);
       }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
+      // Default to showing onboarding on error
+      setShowOnboarding(true);
     }
   };
 
@@ -265,117 +289,125 @@ export default function App() {
 
   if (authInitializing) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="dark" />
-        <View style={styles.loadingShell}>
-          <ActivityIndicator size="large" color={theme.colors.accent} />
-        </View>
-      </SafeAreaView>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <StatusBar style="dark" />
+          <View style={styles.loadingShell}>
+            <ActivityIndicator size="large" color={theme.colors.accent} />
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
   if (!authenticatedUser) {
     if (showOnboarding) {
       return (
-        <SafeAreaView style={styles.onboardingSafeArea}>
-          <OnboardingScreen
-            onSignup={(method) => {
-              void handleOnboardingComplete();
-              if (method === 'email') {
-                setAuthMode('signup');
-              }
-              // For Apple/Google, would trigger respective auth flows here
-            }}
-            onLogin={() => {
-              void handleOnboardingComplete();
-              setAuthMode('login');
-            }}
-          />
-        </SafeAreaView>
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.onboardingSafeArea} edges={['top', 'bottom']}>
+            <OnboardingScreen
+              onSignup={(method) => {
+                void handleOnboardingComplete();
+                if (method === 'email') {
+                  setAuthMode('signup');
+                }
+                // For Apple/Google, would trigger respective auth flows here
+              }}
+              onLogin={() => {
+                void handleOnboardingComplete();
+                setAuthMode('login');
+              }}
+            />
+          </SafeAreaView>
+        </SafeAreaProvider>
       );
     }
 
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="dark" />
-        <AuthScreen
-          mode={authMode}
-          pendingSignup={pendingSignup}
-          statusMessage={authStatusMessage}
-          onModeChange={(mode) => {
-            setAuthMode(mode);
-            setPendingSignup(null);
-          }}
-          onSignup={handleSignup}
-          onVerifyOtp={handleVerifyOtp}
-          onLogin={handleLogin}
-        />
-      </SafeAreaView>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <StatusBar style="dark" />
+          <AuthScreen
+            mode={authMode}
+            pendingSignup={pendingSignup}
+            statusMessage={authStatusMessage}
+            onModeChange={(mode) => {
+              setAuthMode(mode);
+              setPendingSignup(null);
+            }}
+            onSignup={handleSignup}
+            onVerifyOtp={handleVerifyOtp}
+            onLogin={handleLogin}
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <StatusBar style="dark" />
 
-      <View style={styles.shell}>
-        {ALL_TABS.filter((tab) => mountedTabs.includes(tab)).map((tab) => (
-          <View
-            key={tab}
-            style={[
-              styles.screenLayer,
-              activeTab === tab ? styles.screenLayerVisible : styles.screenLayerHidden,
-            ]}
-            pointerEvents={activeTab === tab ? 'auto' : 'none'}
-          >
-            {renderActiveScreen(tab, screenProps, {
-              sessionToken,
-              userName,
-              incomingHangoutCode,
-              onConsumeHangoutCode: () => setIncomingHangoutCode(null),
-              onMeetingModeChange: setHangoutMeetingMode,
-            })}
-          </View>
-        ))}
-      </View>
+        <View style={styles.shell}>
+          {ALL_TABS.filter((tab) => mountedTabs.includes(tab)).map((tab) => (
+            <View
+              key={tab}
+              style={[
+                styles.screenLayer,
+                activeTab === tab ? styles.screenLayerVisible : styles.screenLayerHidden,
+              ]}
+              pointerEvents={activeTab === tab ? 'auto' : 'none'}
+            >
+              {renderActiveScreen(tab, screenProps, {
+                sessionToken,
+                userName,
+                incomingHangoutCode,
+                onConsumeHangoutCode: () => setIncomingHangoutCode(null),
+                onMeetingModeChange: setHangoutMeetingMode,
+              })}
+            </View>
+          ))}
+        </View>
 
-      {!hangoutMeetingMode ? (
-        <CapsuleTabBar
-          activeTab={activeTab}
-          onTabChange={(tab) => {
-            startTransition(() => setActiveTab(tab));
-          }}
-          onSentriPress={() => {
-            setSentriSheetOpen(true);
-          }}
-          tone="light"
+        {!hangoutMeetingMode ? (
+          <CapsuleTabBar
+            activeTab={activeTab}
+            onTabChange={(tab) => {
+              startTransition(() => setActiveTab(tab));
+            }}
+            onSentriPress={() => {
+              setSentriSheetOpen(true);
+            }}
+            tone="light"
+          />
+        ) : null}
+
+        <DrawerSheet
+          visible={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          userName={userName}
+          userSubtitle={userSubtitle}
+          onSelectItem={handleDrawerSelection}
         />
-      ) : null}
 
-      <DrawerSheet
-        visible={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        userName={userName}
-        userSubtitle={userSubtitle}
-        onSelectItem={handleDrawerSelection}
-      />
+        <AccountSheet
+          visible={accountOpen}
+          profile={authenticatedUser}
+          viewMode={accountView}
+          onClose={() => setAccountOpen(false)}
+          onLogout={() => {
+            void handleLogout();
+          }}
+        />
 
-      <AccountSheet
-        visible={accountOpen}
-        profile={authenticatedUser}
-        viewMode={accountView}
-        onClose={() => setAccountOpen(false)}
-        onLogout={() => {
-          void handleLogout();
-        }}
-      />
-
-      <SentriSheet
-        visible={sentriSheetOpen}
-        userName={userName}
-        onClose={() => setSentriSheetOpen(false)}
-      />
-    </SafeAreaView>
+        <SentriSheet
+          visible={sentriSheetOpen}
+          userName={userName}
+          onClose={() => setSentriSheetOpen(false)}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
