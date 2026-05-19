@@ -125,14 +125,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginTop: -120, // Move text higher to avoid card overlap
+    marginTop: -250, // Move text higher to avoid card overlap
   },
   textContainer: {
     position: 'relative',
   },
   text: {
-    fontSize: 48,
-    fontWeight: '800',
+    fontSize: 45,
+    fontWeight: '700',
     lineHeight: 56,
     textAlign: 'center', // Center align for multi-line text
   },
