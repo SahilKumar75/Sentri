@@ -23,6 +23,12 @@ const OnboardingScreen = ({ onSignup, onLogin }) => {
 
   const currentScreen = ONBOARDING_SCREENS[currentScreenIndex];
 
+  // Reset to first screen on mount
+  useEffect(() => {
+    setCurrentScreenIndex(0);
+    setIsAnimating(true);
+  }, []);
+
   // Handle animation completion
   const handleAnimationComplete = () => {
     if (!isAnimating) return;
@@ -76,6 +82,8 @@ const OnboardingScreen = ({ onSignup, onLogin }) => {
         <TypewriterText
           key={currentScreenIndex} // Force re-render on screen change
           text={currentScreen.text}
+          textColor={currentScreen.textColor}
+          dotColor={currentScreen.dotColor}
           onComplete={handleAnimationComplete}
           speed={ANIMATION_CONFIG.typewriterSpeed}
         />

@@ -5,13 +5,14 @@ import { StyleSheet, Animated, Text } from 'react-native';
  * AnimatedDot Component
  * 
  * Visual indicator that moves with the typewriter animation.
- * Displays a white dot (●) that animates horizontally as text is typed.
+ * Displays a colored dot (●) that animates horizontally as text is typed.
  * 
  * @param {Object} props
  * @param {Animated.Value} props.position - Animated value controlling horizontal position
  * @param {boolean} props.visible - Whether the dot should be visible
+ * @param {string} props.color - Color of the dot (default: white)
  */
-const AnimatedDot = ({ position, visible }) => {
+const AnimatedDot = ({ position, visible, color = '#FFFFFF' }) => {
   if (!visible) {
     return null;
   }
@@ -25,7 +26,7 @@ const AnimatedDot = ({ position, visible }) => {
         },
       ]}
     >
-      <Text style={styles.dot}>●</Text>
+      <Text style={[styles.dot, { color }]}>●</Text>
     </Animated.View>
   );
 };
@@ -36,7 +37,6 @@ const styles = StyleSheet.create({
   },
   dot: {
     fontSize: 48,
-    color: '#FFFFFF',
     fontWeight: '800',
   },
 });

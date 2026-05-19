@@ -10,15 +10,23 @@ import AnimatedDot from './AnimatedDot';
  * 
  * @param {Object} props
  * @param {string} props.text - The text to display with typewriter animation
+ * @param {string} props.textColor - Color for the text (default: white)
+ * @param {string} props.dotColor - Color for the animated dot (default: white)
  * @param {Function} props.onComplete - Callback invoked when animation completes
  * @param {number} props.speed - Milliseconds per character (default: 80)
  */
-const TypewriterText = ({ text, onComplete, speed = 80 }) => {
+const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onComplete, speed = 80 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const dotPosition = useRef(new Animated.Value(0)).current;
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
+  const onCompleteRef = useRef(onComplete);
+
+  // Keep onComplete ref updated
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   // Check if dot should be visible (hide when text includes "●")
   const isDotVisible = !displayedText.includes('●') && currentIndex < text.length;
@@ -29,43 +37,42 @@ const TypewriterText = ({ text, onComplete, speed = 80 }) => {
     setCurrentIndex(0);
     dotPosition.setValue(0);
 
+    let index = 0;
+
     // Start typewriter animation
     intervalRef.current = setInterval(() => {
-      setCurrentIndex((prevIndex) => {
-        if (prevIndex < text.length) {
-          const nextIndex = prevIndex + 1;
-          const nextText = text.substring(0, nextIndex);
-          setDisplayedText(nextText);
+      index += 1;
+      
+      if (index <= text.length) {
+        const nextText = text.substring(0, index);
+        setDisplayedText(nextText);
+        setCurrentIndex(index);
 
-          // Animate dot position (approximate: 28px per character)
-          Animated.timing(dotPosition, {
-            toValue: nextIndex * 28,
-            duration: speed,
-            useNativeDriver: true,
-          }).start();
-
-          return nextIndex;
-        } else {
-          // Animation complete
-          clearInterval(intervalRef.current);
-          if (onComplete) {
-            onComplete();
-          }
-          return prevIndex;
+        // Animate dot position (approximate: 28px per character)
+        Animated.timing(dotPosition, {
+          toValue: index * 28,
+          duration: speed,
+          useNativeDriver: true,
+        }).start();
+      } else {
+        // Animation complete
+        clearInterval(intervalRef.current);
+        if (onCompleteRef.current) {
+          onCompleteRef.current();
         }
-      });
+      }
     }, speed);
 
     // Timeout fallback: force completion if animation doesn't finish
-    const timeoutDuration = text.length * speed + 500;
+    const timeoutDuration = text.length * speed + 1000;
     timeoutRef.current = setTimeout(() => {
-      if (currentIndex < text.length) {
+      if (index < text.length) {
         console.warn('TypewriterText animation timeout, forcing completion');
         setDisplayedText(text);
         setCurrentIndex(text.length);
         clearInterval(intervalRef.current);
-        if (onComplete) {
-          onComplete();
+        if (onCompleteRef.current) {
+          onCompleteRef.current();
         }
       }
     }, timeoutDuration);
@@ -79,13 +86,13 @@ const TypewriterText = ({ text, onComplete, speed = 80 }) => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [text, speed, onComplete]);
+  }, [text, speed, dotPosition]);
 
   return (
     <View style={styles.container}>
       <View style={styles.textContainer}>
-        <AnimatedDot position={dotPosition} visible={isDotVisible} />
-        <Text style={styles.text}>{displayedText}</Text>
+        <AnimatedDot position={dotPosition} visible={isDotVisible} color={dotColor} />
+        <Text style={[styles.text, { color: textColor }]}>{displayedText}</Text>
       </View>
     </View>
   );
@@ -104,7 +111,6 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 48,
     fontWeight: '800',
-    color: '#FFFFFF',
     lineHeight: 56,
     textAlign: 'left',
   },
