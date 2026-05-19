@@ -64,16 +64,17 @@ const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onC
         // Animation complete - start fade out
         clearInterval(intervalRef.current);
         
+        // Call onComplete BEFORE fade starts so background can transition with text
+        if (onCompleteRef.current) {
+          onCompleteRef.current();
+        }
+        
         // Fade out animation
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: fadeOutDuration,
           useNativeDriver: true,
-        }).start(() => {
-          if (onCompleteRef.current) {
-            onCompleteRef.current();
-          }
-        });
+        }).start();
       }
     }, speed);
 
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginTop: -60, // Move text up a bit
+    marginTop: -120, // Move text higher to avoid card overlap
   },
   textContainer: {
     position: 'relative',
