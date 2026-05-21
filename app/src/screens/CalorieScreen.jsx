@@ -315,6 +315,16 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
                 </Pressable>))}
             </View>
 
+            {meals.length === 0 ? (
+              <View style={styles.emptyStateCardDark}>
+                <Ionicons name="restaurant-outline" size={32} color={theme.colors.darkTextSoft} style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyStateTitleDark}>No meals logged yet</Text>
+                <Text style={styles.emptyStateBodyDark}>
+                  Use the quick log or tap a preset above to track your first meal.
+                </Text>
+              </View>
+            ) : null}
+
             {meals.map((meal) => (<View key={`${meal.label}-${meal.time}`} style={styles.listRowDark}>
                 <View style={styles.listCopy}>
                   <Text style={styles.listTitleDark}>{meal.label}</Text>
@@ -370,6 +380,16 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
                   <Text style={styles.presetChipText}>{preset.label}</Text>
                 </Pressable>))}
             </View>
+
+            {burns.length === 0 ? (
+              <View style={styles.emptyStateCardDark}>
+                <Ionicons name="flame-outline" size={32} color={theme.colors.darkTextSoft} style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyStateTitleDark}>No burns logged yet</Text>
+                <Text style={styles.emptyStateBodyDark}>
+                  Track your gym session or walk to subtract calories from today's net.
+                </Text>
+              </View>
+            ) : null}
 
             {burns.map((entry) => (<View key={`${entry.label}-${entry.meta}`} style={styles.listRowDark}>
                 <View style={styles.listCopy}>
@@ -797,6 +817,29 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.darkBackground,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    emptyStateCardDark: {
+        alignItems: 'center',
+        paddingVertical: 32,
+        marginTop: 16,
+        borderRadius: 24,
+        backgroundColor: theme.colors.darkSurfaceAlt,
+        borderWidth: 1,
+        borderColor: theme.colors.darkLine,
+        borderStyle: 'dashed',
+    },
+    emptyStateTitleDark: {
+        color: theme.colors.darkText,
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    emptyStateBodyDark: {
+        color: theme.colors.darkTextSoft,
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 6,
+        maxWidth: 240,
+        lineHeight: 20,
     },
     ringLargeText: {
         color: theme.colors.darkText,

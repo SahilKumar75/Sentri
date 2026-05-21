@@ -16,7 +16,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.sentri.app",
       "usesAppleSignIn": true,
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.sentri.app",
@@ -32,10 +35,13 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "extra": {
+      "eas": {
+        "projectId": "84654787-e802-4585-9dcf-172e336085e6"
+      }
+    },
     "plugins": [
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
-      "@react-native-google-signin/google-signin"
+      "expo-secure-store"
     ]
   }
 }

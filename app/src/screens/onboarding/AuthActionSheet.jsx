@@ -80,7 +80,7 @@ const AuthActionSheet = ({
 
   const authSheetPanResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
         if (countryPickerOpenRef.current) return false;
         return gestureState.dy > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       },

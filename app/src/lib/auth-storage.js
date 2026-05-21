@@ -1,20 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PERSISTENT_KEYS } from './persistent-keys';
 
+import * as SecureStore from 'expo-secure-store';
+
 const SESSION_TOKEN_KEY = PERSISTENT_KEYS.sessionToken;
 const SESSION_USER_KEY = PERSISTENT_KEYS.sessionUser;
 const ACTIVE_TAB_KEY = PERSISTENT_KEYS.activeTab;
 
 export async function getStoredSessionToken() {
-  return AsyncStorage.getItem(SESSION_TOKEN_KEY);
+  return SecureStore.getItemAsync(SESSION_TOKEN_KEY);
 }
 
 export async function storeSessionToken(token) {
-  await AsyncStorage.setItem(SESSION_TOKEN_KEY, token);
+  await SecureStore.setItemAsync(SESSION_TOKEN_KEY, token);
 }
 
 export async function clearStoredSessionToken() {
-  await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+  await SecureStore.deleteItemAsync(SESSION_TOKEN_KEY);
 }
 
 export async function getStoredSessionUser() {

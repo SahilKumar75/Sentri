@@ -150,9 +150,9 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
 
               {pinnedItems.length ? (<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pinnedRow}>
                   {pinnedItems.map((item) => (<PinnedCard key={item.id} item={item} onPress={() => setSelectedItem(item)}/>))}
-                </ScrollView>) : (<EmptySection title={queryActive ? 'No pinned match yet' : 'No pinned items yet'} body={queryActive
+                </ScrollView>) : <EmptySection iconName="pin-outline" title={queryActive ? 'No pinned match yet' : 'No pinned items yet'} body={queryActive
                     ? 'This query matched other saved items, but nothing pinned for now.'
-                    : 'Pin your most useful notes, screenshots, and links here so they stay one tap away.'}/>)}
+                    : 'Pin your most useful notes, screenshots, and links here so they stay one tap away.'}/>}
             </View>
 
             {recentTodayItems.length ? (<View style={styles.section}>
@@ -172,15 +172,16 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
                   <View style={styles.column}>
                     {columns[1].map((item) => (<NoteCard key={item.id} item={item} query={query} match={matchMap.get(item.id) ?? null} onPress={() => setSelectedItem(item)}/>))}
                   </View>
-                </View>) : (<EmptySection title={queryActive ? 'No other results for this search' : 'Start saving to build your space'} body={queryActive
+                </View>) : <EmptySection iconName="albums-outline" title={queryActive ? 'No other results for this search' : 'Start saving to build your space'} body={queryActive
                     ? pinnedItems.length
                         ? 'Pinned still has matches. Try another keyword, OCR phrase, upload date, or source.'
                         : 'Try the subject name, a board keyword, a date label, or an OCR phrase from the image.'
-                    : 'Use Add to drop in a screenshot, link, note, file, or board photo and Sentri will organize it.'} actionLabel="Add" onAction={() => setAddSheetOpen(true)}/>)}
+                    : 'Use Add to drop in a screenshot, link, note, file, or board photo and Sentri will organize it.'} actionLabel="Add" onAction={() => setAddSheetOpen(true)}/>}
             </View>
-          </>) : (<View style={styles.emptySearchCard}>
-            <Text style={styles.emptySearchTitle}>No match for {query.trim()}</Text>
-            <Text style={styles.emptySearchBody}>
+          </>) : (<View style={[styles.emptySearchCard, { alignItems: 'center', paddingVertical: 40 }]}>
+            <Ionicons name="search-outline" size={42} color={theme.colors.textMuted} style={{ marginBottom: 16 }} />
+            <Text style={[styles.emptySearchTitle, { textAlign: 'center' }]}>No match for {query.trim()}</Text>
+            <Text style={[styles.emptySearchBody, { textAlign: 'center', maxWidth: 280 }]}>
               Try the subject name, a word from the board photo, the upload date, or an OCR phrase from the image.
             </Text>
             <View style={styles.emptySearchActions}>
@@ -391,11 +392,12 @@ function MetaPill({ label }) {
       <Text style={styles.metaPillText}>{label}</Text>
     </View>);
 }
-function EmptySection({ title, body, actionLabel, onAction, }) {
-    return (<View style={styles.emptyCard}>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyBody}>{body}</Text>
-      {actionLabel && onAction ? (<Pressable style={styles.emptyAction} onPress={onAction}>
+function EmptySection({ title, body, actionLabel, onAction, iconName = 'folder-open-outline' }) {
+    return (<View style={[styles.emptyCard, { alignItems: 'center', paddingVertical: 32 }]}>
+      <Ionicons name={iconName} size={36} color={theme.colors.textMuted} style={{ marginBottom: 16 }} />
+      <Text style={[styles.emptyTitle, { textAlign: 'center' }]}>{title}</Text>
+      <Text style={[styles.emptyBody, { textAlign: 'center', maxWidth: 280 }]}>{body}</Text>
+      {actionLabel && onAction ? (<Pressable style={[styles.emptyAction, { alignSelf: 'center', marginTop: 20 }]} onPress={onAction}>
           <Text style={styles.emptyActionText}>{actionLabel}</Text>
         </Pressable>) : null}
     </View>);

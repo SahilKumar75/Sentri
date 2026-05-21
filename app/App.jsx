@@ -17,7 +17,6 @@ import {
   storeSessionUser,
 } from './src/lib/auth-storage';
 import * as authApi from './src/lib/api';
-import { signInWithGoogle, signInWithApple } from './src/lib/firebase';
 import { useMountedTabs } from './src/lib/use-mounted-tabs';
 import AccountSheet from './src/screens/AccountSheet';
 import AuthScreen from './src/screens/AuthScreen';
@@ -259,39 +258,6 @@ export default function App() {
     return result;
   };
 
-  const handleGoogleAuth = async () => {
-    try {
-      setAuthStatusMessage('Signing in with Google...');
-      const userCredential = await signInWithGoogle();
-      const idToken = await userCredential.user.getIdToken();
-      
-      // TODO: Send ID token to backend to create/retrieve user profile and start session
-      console.log('Google Auth successful, token:', idToken);
-      setAuthStatusMessage('Google sign-in successful. Connecting to server...');
-      
-      // For now, mock a login response until backend is fully hooked up
-      /*
-      setSessionToken(idToken);
-      setAuthenticatedUser({ id: userCredential.user.uid, email: userCredential.user.email, firstName: 'Google', lastName: 'User' });
-      */
-    } catch (error) {
-      setAuthStatusMessage(error.message || 'Google sign in failed');
-    }
-  };
-
-  const handleAppleAuth = async () => {
-    try {
-      setAuthStatusMessage('Signing in with Apple...');
-      const userCredential = await signInWithApple();
-      const idToken = await userCredential.user.getIdToken();
-
-      console.log('Apple Auth successful, token:', idToken);
-      setAuthStatusMessage('Apple sign-in successful. Connecting to server...');
-    } catch (error) {
-      setAuthStatusMessage(error.message || 'Apple sign in failed');
-    }
-  };
-
   const handleLogout = async () => {
     if (sessionToken) {
       await authApi.logout(sessionToken);
@@ -372,8 +338,6 @@ export default function App() {
             onSignup={handleSignup}
             onVerifyOtp={handleVerifyOtp}
             onLogin={handleLogin}
-            onGoogleAuth={handleGoogleAuth}
-            onAppleAuth={handleAppleAuth}
           />
         </SafeAreaView>
       </SafeAreaProvider>

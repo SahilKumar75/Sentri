@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AvatarButton, SectionHeader, SurfaceCard } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import { buildMonthRows, buildWeekDates, dayKeyForDate, formatParserBadge, formatShortDateTime, formatUploadHistoryTitle, formatLongDate, formatMonthShort, formatMonthYear, formatWeekdayShort, getEntriesForDate, getRefreshInsight, getScheduleInsight, isSameDate, } from '../features/home/timetable-intelligence';
@@ -339,9 +340,10 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }) {
                     <Text style={styles.scheduleType}>{entry.type}</Text>
                   </Pressable>))}
               </View>
-            </View>) : (<View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Nothing planned for this day</Text>
-              <Text style={styles.emptyBody}>
+            </View>) : (<View style={[styles.emptyCard, { alignItems: 'center', paddingVertical: 32 }]}>
+              <Ionicons name="calendar-outline" size={36} color={theme.colors.textMuted} style={{ marginBottom: 16 }} />
+              <Text style={[styles.emptyTitle, { textAlign: 'center' }]}>Nothing planned for this day</Text>
+              <Text style={[styles.emptyBody, { textAlign: 'center', maxWidth: 280 }]}>
                 Tap another date in the week strip or switch to month view to open a different day.
               </Text>
             </View>)}
@@ -437,9 +439,13 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }) {
                     {selectedEntries[0].room} • {selectedEntries[0].teacher}
                   </Text>
                 </View>
-              </View>) : (<Text style={styles.monthPreviewEmpty}>
-                Tap any highlighted date above to open the day timeline view.
-              </Text>)}
+              </View>) : (<View style={[styles.emptyCard, { alignItems: 'center', marginTop: 16 }]}>
+                <Ionicons name="folder-open-outline" size={28} color={theme.colors.textMuted} style={{ marginBottom: 12 }} />
+                <Text style={[styles.emptyTitle, { textAlign: 'center', fontSize: 16 }]}>No items on this day</Text>
+                <Text style={[styles.monthPreviewEmpty, { textAlign: 'center', marginTop: 4 }]}>
+                  Tap any highlighted date above to open the day timeline view.
+                </Text>
+              </View>)}
           </View>
         </View>) : null}
 

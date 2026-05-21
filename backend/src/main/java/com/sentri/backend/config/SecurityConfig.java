@@ -12,23 +12,23 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final FirebaseAuthenticationFilter firebaseAuthenticationFilter;
+    private final SessionAuthenticationFilter sessionAuthenticationFilter;
 
-    public SecurityConfig(FirebaseAuthenticationFilter firebaseAuthenticationFilter) {
-        this.firebaseAuthenticationFilter = firebaseAuthenticationFilter;
+    public SecurityConfig(SessionAuthenticationFilter sessionAuthenticationFilter) {
+        this.sessionAuthenticationFilter = sessionAuthenticationFilter;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Disable CSRF since we are using tokens
+            .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll() // Allow unauthenticated access to auth endpoints
+                .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/verify-otp").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(firebaseAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
