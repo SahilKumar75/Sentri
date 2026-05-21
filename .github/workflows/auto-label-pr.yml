@@ -1,0 +1,65 @@
+name: Auto-label PR
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-label:
+    name: Apply area and type labels
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Parse title and apply labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const title    = pr.title;
+            const prNumber = pr.number;
+            const owner    = context.repo.owner;
+            const repo     = context.repo.repo;
+
+            const titleRegex = /^(feat|fix|docs|chore|refactor|test|style|perf)\((app|backend|ml-worker|repo)\): .{10,}$/;
+            const match = titleRegex.exec(title);
+
+            // If the title doesn't match the convention, skip labeling silently.
+            // The pr-validator workflow handles invalid PRs.
+            if (!match) {
+              console.log("Title does not match convention — skipping auto-label.");
+              return;
+            }
+
+            const type  = match[1];  // e.g. "feat"
+            const scope = match[2];  // e.g. "app"
+
+            const scopeToArea = {
+              "app":       "area:app",
+              "backend":   "area:backend",
+              "ml-worker": "area:ml-worker",
+              "repo":      "area:repo",
+            };
+
+            const labelsToApply = [
+              `type:${type}`,
+              scopeToArea[scope],
+            ].filter(Boolean);
+
+            for (const name of labelsToApply) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner, repo,
+                  issue_number: prNumber,
+                  labels: [name],
+                });
+                console.log(`✅ Applied label: ${name}`);
+              } catch (e) {
+                // Label may not exist in the repo yet (e.g., setup-labels not run)
+                core.warning(`Could not apply label "${name}": ${e.message}`);
+              }
+            }

@@ -1,27 +1,15 @@
-## Summary
+## What changed
+<!-- Describe what you changed and which files/modules are affected -->
 
--
+## Why
+<!-- Explain the motivation. Link to the issue: closes #N -->
 
-## Linked Issue
+## How to test
+<!-- Step-by-step instructions for a reviewer to verify your change works -->
 
-Closes #
-
-## What Changed
-
--
-
-## Verification
-
-- [ ] `cd app && npx expo export --platform web --output-dir /tmp/sentri-web-export`
-- [ ] `cd backend && mvn test`
-- [ ] `cd ml-worker && pytest`
-- [ ] Other:
-
-## Review Notes
-
-- Areas to check:
-- Data, API, or ML worker contract changes:
-
-## Risks And Follow-Up
-
--
+## Checklist
+- [ ] My branch follows the naming convention: `type/scope/description`
+- [ ] My PR title follows the convention: `type(scope): description`
+- [ ] I have linked an issue above (closes #N)
+- [ ] I have tested my changes locally
+- [ ] I have not introduced new lint errors

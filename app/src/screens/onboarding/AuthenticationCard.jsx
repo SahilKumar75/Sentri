@@ -27,21 +27,7 @@ const AuthenticationCard = ({
 
   return (
     <View style={styles.container}>
-      <View style={[styles.card, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
-        {/* Continue with Apple Button */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.appleButton,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={onApplePress}
-          accessibilityRole="button"
-          accessibilityLabel="Continue with Apple"
-        >
-          <Ionicons name="logo-apple" size={20} color="#000000" style={styles.icon} />
-          <Text style={styles.appleButtonText}>Continue with Apple</Text>
-        </Pressable>
-
+      <View style={[styles.card, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
         {/* Continue with Google Button */}
         <Pressable
           style={({ pressed }) => [
@@ -59,6 +45,20 @@ const AuthenticationCard = ({
             resizeMode="contain"
           />
           <Text style={styles.darkButtonText}>Continue with Google</Text>
+        </Pressable>
+
+        {/* Continue with Apple Button */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.appleButton,
+            pressed && styles.buttonPressed,
+          ]}
+          onPress={onApplePress}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Apple"
+        >
+          <Ionicons name="logo-apple" size={20} color="#000000" style={styles.icon} />
+          <Text style={styles.appleButtonText}>Continue with Apple</Text>
         </Pressable>
 
         {/* Sign up Button */}
@@ -88,7 +88,7 @@ const AuthenticationCard = ({
   );
 };
 
-const styles = StyleSheet.Create({
+const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 0,
@@ -97,36 +97,41 @@ const styles = StyleSheet.Create({
   },
   card: {
     backgroundColor: '#1E1E1E', // Dark gray card
-    borderTopLeftRadius: 31, // Reduced by 15% (36 * 0.85 = 30.6)
-    borderTopRightRadius: 31,
+    borderTopLeftRadius: 34, // Reduced by 15% (36 * 0.85 = 30.6)
+    borderTopRightRadius: 34,
     paddingHorizontal: 17, // Reduced by 15% (20 * 0.85 = 17)
-    paddingTop: 20, // Reduced by 15% (24 * 0.85 = 20.4)
+    paddingTop: 18, // Reduced top padding for less height
     // paddingBottom is dynamic based on safe area insets
-    gap: 10, // Reduced by 15% (12 * 0.85 = 10.2)
+    gap: 8, // Reduced gap between buttons
+    alignItems: 'center', // Center buttons horizontally
   },
   appleButton: {
     height: 44, // Reduced by 15% (52 * 0.85 = 44.2)
-    borderRadius: 10, // Reduced by 15% (12 * 0.85 = 10.2)
+    borderRadius: 14, // Reduced by 15% (12 * 0.85 = 10.2)
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%', // Reduced width
+    maxWidth: 340, // Maximum width constraint
   },
   appleButtonText: {
-    fontSize: 14, // Reduced by 15% (16 * 0.85 = 13.6)
+    fontSize: 16, // Reduced by 15% (16 * 0.85 = 13.6)
     fontWeight: '600',
     color: '#000000',
   },
   darkButton: {
     height: 44, // Reduced by 15% (52 * 0.85 = 44.2)
-    borderRadius: 10, // Reduced by 15% (12 * 0.85 = 10.2)
+    borderRadius: 14, // Reduced by 15% (12 * 0.85 = 10.2)
     backgroundColor: '#2C2C2E', // Slightly lighter dark gray
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%', // Reduced width
+    maxWidth: 340, // Maximum width constraint
   },
   darkButtonText: {
-    fontSize: 14, // Reduced by 15% (16 * 0.85 = 13.6)
+    fontSize: 16, // Reduced by 15% (16 * 0.85 = 13.6)
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -146,11 +151,13 @@ const styles = StyleSheet.Create({
     paddingVertical: 12, // Reduced by 15% (14 * 0.85 = 11.9)
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.16)', // Thin white border
-    borderRadius: 10, // Reduced by 15% (12 * 0.85 = 10.2)
-    marginTop: 3, // Reduced by 15% (4 * 0.85 = 3.4)
+    borderRadius: 14, // Reduced by 15% (12 * 0.85 = 10.2)
+    marginTop: 0, // Removed margin to reduce height
+    width: '100%', // Reduced width
+    maxWidth: 340, // Maximum width constraint
   },
   loginLinkText: {
-    fontSize: 13, // Reduced by 15% (15 * 0.85 = 12.75)
+    fontSize: 16, // Reduced by 15% (15 * 0.85 = 12.75)
     fontWeight: '600',
     color: '#FFFFFF',
   },

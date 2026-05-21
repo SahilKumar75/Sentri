@@ -1,0 +1,40 @@
+labels:
+  - name: invalid-pr
+    color: "d73a4a"
+    description: "PR does not follow contribution guidelines"
+
+  - name: ready-for-review
+    color: "0075ca"
+    description: "PR has passed all automated checks and is ready for human review"
+
+  - name: area:app
+    color: "e4e669"
+    description: "Changes to the Expo React Native frontend"
+
+  - name: area:backend
+    color: "1d76db"
+    description: "Changes to the Spring Boot backend"
+
+  - name: area:ml-worker
+    color: "5319e7"
+    description: "Changes to the Python OCR/ML worker"
+
+  - name: area:repo
+    color: "0e8a16"
+    description: "Repo-level changes: docs, CI, config"
+
+  - name: type:feat
+    color: "a2eeef"
+    description: "New feature"
+
+  - name: type:fix
+    color: "d93f0b"
+    description: "Bug fix"
+
+  - name: type:docs
+    color: "c5def5"
+    description: "Documentation only"
+
+  - name: type:chore
+    color: "e4e4e4"
+    description: "Maintenance, dependency updates, config"

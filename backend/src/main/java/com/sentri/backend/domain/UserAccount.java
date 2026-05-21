@@ -19,10 +19,14 @@ import java.time.LocalDate;
         indexes = {
                 @Index(name = "idx_user_accounts_phone_normalized", columnList = "phoneNormalized"),
                 @Index(name = "idx_user_accounts_email_normalized", columnList = "emailNormalized"),
-                @Index(name = "idx_user_accounts_last_login_at", columnList = "lastLoginAt")
+                @Index(name = "idx_user_accounts_last_login_at", columnList = "lastLoginAt"),
+                @Index(name = "idx_user_accounts_firebase_uid", columnList = "firebaseUid", unique = true)
         }
 )
 public class UserAccount {
+
+    @Column(unique = true)
+    private String firebaseUid;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -53,7 +57,6 @@ public class UserAccount {
     @Column(unique = true)
     private String emailNormalized;
 
-    @Column(nullable = false)
     private String passwordHash;
 
     @Column(nullable = false)
@@ -70,6 +73,14 @@ public class UserAccount {
 
     public Long getId() {
         return id;
+    }
+
+    public String getFirebaseUid() {
+        return firebaseUid;
+    }
+
+    public void setFirebaseUid(String firebaseUid) {
+        this.firebaseUid = firebaseUid;
     }
 
     public Instant getCreatedAt() {

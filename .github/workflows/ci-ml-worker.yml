@@ -1,0 +1,55 @@
+name: CI — ML Worker
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "ml-worker/**"
+
+jobs:
+  ml-lint:
+    name: ml-lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: ml-worker
+        run: python -m pip install -e ".[dev]"
+
+      - name: Run flake8
+        working-directory: ml-worker
+        run: flake8 .
+
+      - name: Run black (check mode)
+        working-directory: ml-worker
+        run: black --check .
+
+  ml-test:
+    name: ml-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: ml-worker
+        run: python -m pip install -e ".[dev]"
+
+      - name: Run pytest with coverage
+        working-directory: ml-worker
+        run: pytest --cov=ml_worker --cov-report=xml

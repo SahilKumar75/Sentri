@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleShee
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../design/tokens';
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeChange, onSignup, onVerifyOtp, onLogin, }) {
+export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeChange, onSignup, onVerifyOtp, onLogin, onGoogleAuth, onAppleAuth }) {
     const [contactMethod, setContactMethod] = useState('phone');
     const [signupForm, setSignupForm] = useState({
         firstName: '',
@@ -101,6 +101,8 @@ export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeC
                 {submitting ? 'Please wait' : contactMethod === 'phone' ? 'Send OTP' : 'Create account'}
               </Text>
             </Pressable>
+
+            <SocialButtons onGoogleAuth={onGoogleAuth} onAppleAuth={onAppleAuth} submitting={submitting} />
           </View>) : null}
 
         {mode === 'login' ? (<View style={styles.card}>
@@ -115,6 +117,8 @@ export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeC
             }}>
               <Text style={styles.primaryButtonText}>{submitting ? 'Please wait' : 'Login'}</Text>
             </Pressable>
+
+            <SocialButtons onGoogleAuth={onGoogleAuth} onAppleAuth={onAppleAuth} submitting={submitting} />
           </View>) : null}
 
         {mode === 'otp' && pendingSignup ? (<View style={styles.card}>
@@ -236,6 +240,26 @@ function Stepper({ label, value, onMinus, onPlus, }) {
         </Pressable>
       </View>
     </View>);
+}
+
+function SocialButtons({ onGoogleAuth, onAppleAuth, submitting }) {
+    return (
+      <View style={styles.socialContainer}>
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+        <Pressable style={[styles.socialButton, submitting && styles.primaryButtonDisabled]} disabled={submitting} onPress={onGoogleAuth}>
+          <Text style={styles.socialButtonText}>Continue with Google</Text>
+        </Pressable>
+        {Platform.OS === 'ios' ? (
+          <Pressable style={[styles.socialButton, submitting && styles.primaryButtonDisabled]} disabled={submitting} onPress={onAppleAuth}>
+            <Text style={styles.socialButtonText}>Continue with Apple</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    );
 }
 const styles = StyleSheet.create({
     screen: {
@@ -407,6 +431,40 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 15,
         fontWeight: '800',
+    },
+    socialContainer: {
+        marginTop: 8,
+        gap: 12,
+    },
+    divider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 4,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: theme.colors.line,
+    },
+    dividerText: {
+        color: theme.colors.textMuted,
+        paddingHorizontal: 12,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    socialButton: {
+        borderRadius: 18,
+        backgroundColor: theme.colors.surfaceAlt,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderWidth: 1,
+        borderColor: theme.colors.line,
+    },
+    socialButtonText: {
+        color: theme.colors.text,
+        fontSize: 15,
+        fontWeight: '700',
     },
     secondaryButton: {
         borderRadius: 18,

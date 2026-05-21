@@ -1,113 +1,97 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import ColoredBackground from './onboarding/ColoredBackground';
 import TypewriterText from './onboarding/TypewriterText';
 import AuthenticationCard from './onboarding/AuthenticationCard';
+import AuthActionSheet from './onboarding/AuthActionSheet';
 import { ONBOARDING_SCREENS, ANIMATION_CONFIG } from './onboarding/constants';
 
-/**
- * OnboardingScreen Component
- * 
- * Main container for the animated onboarding experience.
- * Cycles through multiple screens with typewriter animation and color transitions.
- * 
- * @param {Object} props
- * @param {Function} props.onSignup - Callback when user selects a signup method
- * @param {Function} props.onLogin - Callback when user selects login
- */
+const ONBOARDING_TEXTS = ONBOARDING_SCREENS.map(s => s.text);
+
+
 const OnboardingScreen = ({ onSignup, onLogin }) => {
   const [currentScreenIndex, setCurrentScreenIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(true);
-  const transitionTimeoutRef = useRef(null);
+  const [authSheetMode, setAuthSheetMode] = useState(null);
+  const authSheetOpen = authSheetMode !== null;
 
-  const currentScreen = ONBOARDING_SCREENS[currentScreenIndex];
-
-  // Reset to first screen on mount
-  useEffect(() => {
-    setCurrentScreenIndex(0);
-    setIsAnimating(true);
-  }, []);
-
-  // Handle animation completion
-  const handleAnimationComplete = () => {
-    if (!isAnimating) return;
-
-    // This is called when typing finishes and dot starts returning to start
-    // Change screen index so background transitions while dot returns and text fades
-    setCurrentScreenIndex((prevIndex) => (prevIndex + 1) % ONBOARDING_SCREENS.length);
-    setIsAnimating(false);
-    
-    // Wait for dot reset + fade + pause, then show new text
-    const totalWaitTime = ANIMATION_CONFIG.dotResetDuration + ANIMATION_CONFIG.textFadeOutDuration + ANIMATION_CONFIG.pauseAfterScreen;
-    transitionTimeoutRef.current = setTimeout(() => {
-      setIsAnimating(true);
-    }, totalWaitTime);
+  const handleWordChange = (index) => {
+    // Called each time TypewriterText moves to the next word
+    setCurrentScreenIndex(index % ONBOARDING_SCREENS.length);
   };
 
-  // Handle authentication actions
   const handleAuthAction = (action, method) => {
-    // Stop animation loop
-    setIsAnimating(false);
-    if (transitionTimeoutRef.current) {
-      clearTimeout(transitionTimeoutRef.current);
-    }
-
-    // Invoke appropriate callback
-    if (action === 'signup') {
-      onSignup(method);
-    } else if (action === 'login') {
-      onLogin();
-    }
+    if (action === 'signup') onSignup(method);
+    else if (action === 'login') onLogin();
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
-      }
-    };
-  }, []);
+  const openAuthSheet = (mode) => {
+    setAuthSheetMode(mode);
+  };
+
+  const closeAuthSheet = () => {
+    setAuthSheetMode(null);
+  };
+
+  const handleSheetSignup = (method) => {
+    closeAuthSheet();
+    handleAuthAction('signup', method);
+  };
+
+  const handleSheetEmail = () => {
+    closeAuthSheet();
+    if (authSheetMode === 'login') {
+      handleAuthAction('login');
+    } else {
+      handleAuthAction('signup', 'email');
+    }
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
-      {/* Animated background color */}
+
       <ColoredBackground
-        color={currentScreen.backgroundColor}
+        color={ONBOARDING_SCREENS[currentScreenIndex].backgroundColor}
         transitionDuration={ANIMATION_CONFIG.colorTransitionDuration}
       />
 
-      {/* Typewriter text animation */}
-      {isAnimating && (
-        <TypewriterText
-          key={currentScreenIndex} // Force re-render on screen change
-          text={currentScreen.text}
-          textColor={currentScreen.textColor}
-          dotColor={currentScreen.dotColor}
-          onComplete={handleAnimationComplete}
-          speed={ANIMATION_CONFIG.typewriterSpeed}
-          fadeOutDuration={ANIMATION_CONFIG.textFadeOutDuration}
-        />
-      )}
+      {/* Single instance, never unmounts */}
+      <TypewriterText
+        texts={ONBOARDING_TEXTS}
+        textColor={ONBOARDING_SCREENS[currentScreenIndex].textColor}
+        dotColor={ONBOARDING_SCREENS[currentScreenIndex].dotColor}
+        onWordChange={handleWordChange}
+        speed={ANIMATION_CONFIG.typewriterSpeed}
+        eraseSpeed={40}
+        pauseBeforeErase={800}
+        pauseBeforeNext={0}
+        loop={true}
+        paused={authSheetOpen}
+      />
 
-      {/* Fixed authentication card */}
       <AuthenticationCard
-        onApplePress={() => handleAuthAction('signup', 'apple')}
-        onGooglePress={() => handleAuthAction('signup', 'google')}
-        onEmailPress={() => handleAuthAction('signup', 'email')}
-        onLoginPress={() => handleAuthAction('login')}
+        onApplePress={() => handleSheetSignup('apple')}
+        onGooglePress={() => handleSheetSignup('google')}
+        onEmailPress={() => openAuthSheet('signup')}
+        onLoginPress={() => openAuthSheet('login')}
+      />
+
+      <AuthActionSheet
+        visible={authSheetOpen}
+        mode={authSheetMode}
+        onClose={closeAuthSheet}
+        onApplePress={() => handleSheetSignup('apple')}
+        onGooglePress={() => handleSheetSignup('google')}
+        onEmailPress={handleSheetEmail}
+        onPhonePress={() => handleSheetSignup('phone')}
       />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
 });
 
 export default OnboardingScreen;

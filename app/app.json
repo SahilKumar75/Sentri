@@ -13,9 +13,14 @@
       "backgroundColor": "#F7F2EA"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sentri.app",
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
+      "package": "com.sentri.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#F7F2EA",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,6 +31,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin"
+    ]
   }
 }

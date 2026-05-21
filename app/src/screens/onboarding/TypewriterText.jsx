@@ -3,97 +3,136 @@ import { StyleSheet, View, Text, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/**
- * TypewriterText Component
- * 
- * Simple typewriter effect: text appears character by character with dot at the end
- * Dot stays with text, no complex animations that move off screen
- */
-const TypewriterText = ({ text, textColor = '#FFFFFF', dotColor = '#FFFFFF', onComplete, speed = 80, fadeOutDuration = 400 }) => {
+const TypewriterText = ({
+  texts,
+  text,
+  textColor = '#FFFFFF',
+  dotColor = '#FFFFFF',
+  onComplete,
+  onWordChange,   // NEW: fires with index each time a new word starts
+  speed = 80,
+  eraseSpeed = 40,
+  pauseBeforeErase = 800,
+  pauseBeforeNext = 0,
+  fadeOutDuration = 400,
+  loop = false,
+  paused = false,
+}) => {
   const [displayedText, setDisplayedText] = useState('');
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
   const onCompleteRef = useRef(onComplete);
+  const onWordChangeRef = useRef(onWordChange);
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-  }, [onComplete]);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { onWordChangeRef.current = onWordChange; }, [onWordChange]);
 
-  // Check if we should show the dot (hide when text includes "●")
-  const shouldShowDot = !displayedText.includes('●');
+  const clearTimers = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  };
 
   useEffect(() => {
-    // Reset
-    setDisplayedText('');
+    if (paused) {
+      clearTimers();
+      return undefined;
+    }
+
+    const wordList = texts?.length > 0 ? texts : text ? [text] : [];
+    if (wordList.length === 0) return;
+
+    let currentWordIndex = 0;
+    let cancelled = false;
+
     fadeAnim.setValue(1);
+    setDisplayedText('');
 
-    let index = 0;
+    const typeWord = (word, wordIndex) => {
+      if (cancelled) return;
+      let index = 0;
+      setDisplayedText('');
 
-    // Start typewriter animation
-    intervalRef.current = setInterval(() => {
-      index += 1;
-      
-      if (index <= text.length) {
-        const nextText = text.substring(0, index);
-        setDisplayedText(nextText);
+      // Notify parent which word is now active
+      if (onWordChangeRef.current) onWordChangeRef.current(wordIndex);
 
-        // Haptic feedback on each character
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      } else {
-        // Typing complete
-        clearInterval(intervalRef.current);
-        
-        // Brief pause, then call onComplete and fade out
-        setTimeout(() => {
-          if (onCompleteRef.current) {
-            onCompleteRef.current();
-          }
-          
-          // Fade out
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: fadeOutDuration,
-            useNativeDriver: true,
-          }).start();
-        }, 300);
-      }
-    }, speed);
-
-    // Timeout fallback
-    const timeoutDuration = text.length * speed + fadeOutDuration + 2000;
-    timeoutRef.current = setTimeout(() => {
-      if (index < text.length) {
-        console.warn('TypewriterText animation timeout, forcing completion');
-        clearInterval(intervalRef.current);
-        if (onCompleteRef.current) {
-          onCompleteRef.current();
+      intervalRef.current = setInterval(() => {
+        if (cancelled) { clearInterval(intervalRef.current); return; }
+        index += 1;
+        if (index <= word.length) {
+          setDisplayedText(word.substring(0, index));
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        } else {
+          clearInterval(intervalRef.current);
+          timeoutRef.current = setTimeout(() => {
+            if (cancelled) return;
+            eraseWord(word);
+          }, pauseBeforeErase);
         }
-      }
-    }, timeoutDuration);
+      }, speed);
+    };
+
+    const eraseWord = (word) => {
+      if (cancelled) return;
+      let eraseIndex = word.length;
+
+      intervalRef.current = setInterval(() => {
+        if (cancelled) { clearInterval(intervalRef.current); return; }
+        eraseIndex -= 1;
+        if (eraseIndex >= 0) {
+          setDisplayedText(word.substring(0, eraseIndex));
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        } else {
+          clearInterval(intervalRef.current);
+          currentWordIndex += 1;
+          const hasMore = loop ? true : currentWordIndex < wordList.length;
+
+          if (hasMore) {
+            const nextIndex = loop
+              ? currentWordIndex % wordList.length
+              : currentWordIndex;
+
+            timeoutRef.current = setTimeout(() => {
+              if (cancelled) return;
+              typeWord(wordList[nextIndex], nextIndex);
+            }, pauseBeforeNext);
+          } else {
+            if (onCompleteRef.current) onCompleteRef.current();
+            Animated.timing(fadeAnim, {
+              toValue: 0,
+              duration: fadeOutDuration,
+              useNativeDriver: true,
+            }).start();
+          }
+        }
+      }, eraseSpeed);
+    };
+
+    typeWord(wordList[0], 0);
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      cancelled = true;
+      clearTimers();
     };
-  }, [text, speed, fadeAnim, fadeOutDuration]);
+  }, [texts, text, paused]);
 
   return (
-    <Animated.View style={[
-      styles.container, 
-      { 
-        paddingTop: Math.max(insets.top, 20),
-        opacity: fadeAnim,
-      }
-    ]}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          paddingTop: Math.max(insets.top, 20),
+          opacity: fadeAnim,
+        },
+      ]}
+    >
       <View style={styles.textRow}>
         <Text style={[styles.text, { color: textColor }]}>
           {displayedText}
         </Text>
-        {shouldShowDot && (
-          <Text style={[styles.dot, { color: dotColor }]}>●</Text>
-        )}
+        {/* Dot always rendered, never conditionally mounted */}
+        <Text style={[styles.dot, { color: dotColor }]}>●</Text>
       </View>
     </Animated.View>
   );
@@ -111,8 +150,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flexWrap: 'wrap', // Allow text to wrap if too long
-    maxWidth: '100%', // Stay within screen bounds
+    flexWrap: 'wrap',
+    maxWidth: '100%',
   },
   text: {
     fontSize: 32,

@@ -5,3 +5,6 @@ target/
 .classpath
 .project
 .settings/
+
+# Firebase Service Account Key
+firebase-service-account.json
