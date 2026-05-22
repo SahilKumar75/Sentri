@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
   Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -63,6 +64,7 @@ const AuthActionSheet = ({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [authMethod, setAuthMethod] = useState('email');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const countryPickerOpenRef = useRef(false);
   const [countryQuery, setCountryQuery] = useState('');
@@ -268,7 +270,15 @@ const AuthActionSheet = ({
     if (authMethod === 'phone') {
       onPhonePress({ country: selectedCountry, phoneNumber: phoneNumber.trim() });
     } else {
-      onEmailPress(email.trim());
+      if (mode !== 'login') {
+        setIsSubmitting(true);
+        setTimeout(() => {
+          setIsSubmitting(false);
+          onEmailPress(email.trim());
+        }, 600);
+      } else {
+        onEmailPress(email.trim());
+      }
     }
   };
 
@@ -417,12 +427,16 @@ const AuthActionSheet = ({
           )}
 
           <Pressable
-            onPress={handleEmailPress}
+            onPress={isSubmitting ? undefined : handleEmailPress}
             accessibilityRole="button"
             accessibilityLabel={`${actionLabel} with email`}
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.primaryButton, pressed && !isSubmitting && styles.pressed]}
           >
-            <Text style={styles.primaryButtonText}>{actionLabel}</Text>
+            {isSubmitting ? (
+              <ActivityIndicator color="#000000" />
+            ) : (
+              <Text style={styles.primaryButtonText}>{actionLabel}</Text>
+            )}
           </Pressable>
 
           <View style={styles.dividerRow}>

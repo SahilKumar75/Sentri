@@ -79,7 +79,7 @@ public class AuthServiceImpl implements AuthService {
                 : userAccountRepository.findByEmailNormalized(email);
 
         UserAccount user = resolveSignupUser(byPhone, byEmail, contactMethod);
-        applySignupFields(user, firstName, lastName, dob, phone, phoneNormalized, email, password);
+        applySignupFields(user, firstName, lastName, dob, phone, phoneNormalized, email, password, request);
 
         if (contactMethod.equals("phone")) {
             String otpCode = generateOtp();
@@ -230,7 +230,8 @@ public class AuthServiceImpl implements AuthService {
             String phone,
             String phoneNormalized,
             String email,
-            String password
+            String password,
+            AuthSignupRequest request
     ) {
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -240,6 +241,9 @@ public class AuthServiceImpl implements AuthService {
         user.setEmail(email);
         user.setEmailNormalized(email);
         user.setPasswordHash(passwordEncoder.encode(password));
+        user.setCurrentYear(cleanOptionalText(request.currentYear()));
+        user.setBranch(cleanOptionalText(request.branch()));
+        user.setSemester(cleanOptionalText(request.semester()));
     }
 
     private Optional<UserAccount> findUserByIdentifier(String identifier) {

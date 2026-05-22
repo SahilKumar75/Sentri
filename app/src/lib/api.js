@@ -9,6 +9,9 @@ export async function signup(payload) {
     email: payload.profile.email,
     password: payload.profile.password,
     contactMethod: payload.contactMethod,
+    currentYear: payload.profile.currentYear,
+    branch: payload.profile.branch,
+    semester: payload.profile.semester,
   });
 }
 

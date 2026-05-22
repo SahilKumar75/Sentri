@@ -10,6 +10,9 @@ public record AuthSignupRequest(
         String phone,
         String email,
         @NotBlank @Size(min = 6, max = 120) String password,
-        @NotBlank String contactMethod
+        @NotBlank String contactMethod,
+        String currentYear,
+        String branch,
+        String semester
 ) {
 }

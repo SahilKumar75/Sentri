@@ -21,6 +21,7 @@ import { useMountedTabs } from './src/lib/use-mounted-tabs';
 import AccountSheet from './src/screens/AccountSheet';
 import AuthScreen from './src/screens/AuthScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import SignupWizardScreen from './src/screens/SignupWizardScreen';
 import CalorieScreen from './src/screens/CalorieScreen';
 import HangoutScreen from './src/screens/HangoutScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -53,6 +54,7 @@ export default function App() {
   const [hangoutMeetingMode, setHangoutMeetingMode] = useState(false);
   const [sentriSheetOpen, setSentriSheetOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false); // Start with false, will be set by checkOnboardingStatus
+  const [signupWizardEmail, setSignupWizardEmail] = useState('');
   const mountedTabs = useMountedTabs(activeTab);
 
   const userName = authenticatedUser
@@ -301,24 +303,41 @@ export default function App() {
   }
 
   if (!authenticatedUser) {
-    if (showOnboarding) {
+    if (showOnboarding && authMode !== 'signupWizard') {
       return (
         <SafeAreaProvider>
           <View style={styles.onboardingSafeArea}>
             <OnboardingScreen
-              onSignup={(method) => {
+              onSignup={(method, emailText) => {
                 void handleOnboardingComplete();
-                if (method === 'email' || method === 'phone') {
+                if (method === 'email') {
+                  setSignupWizardEmail(emailText);
+                  setAuthMode('signupWizard');
+                } else {
                   setAuthMode('signup');
                 }
-                // For Apple/Google, would trigger respective auth flows here
               }}
-              onLogin={() => {
+              onLogin={(emailText) => {
                 void handleOnboardingComplete();
                 setAuthMode('login');
               }}
             />
           </View>
+        </SafeAreaProvider>
+      );
+    }
+
+    if (authMode === 'signupWizard') {
+      return (
+        <SafeAreaProvider>
+          <SignupWizardScreen
+            email={signupWizardEmail}
+            onBack={() => {
+              setShowOnboarding(true);
+              setAuthMode('signup');
+            }}
+            onSubmit={handleSignup}
+          />
         </SafeAreaProvider>
       );
     }

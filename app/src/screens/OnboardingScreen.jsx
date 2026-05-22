@@ -20,9 +20,9 @@ const OnboardingScreen = ({ onSignup, onLogin }) => {
     setCurrentScreenIndex(index % ONBOARDING_SCREENS.length);
   };
 
-  const handleAuthAction = (action, method) => {
-    if (action === 'signup') onSignup(method);
-    else if (action === 'login') onLogin();
+  const handleAuthAction = (action, method, extraData) => {
+    if (action === 'signup') onSignup(method, extraData);
+    else if (action === 'login') onLogin(extraData);
   };
 
   const openAuthSheet = (mode) => {
@@ -38,12 +38,12 @@ const OnboardingScreen = ({ onSignup, onLogin }) => {
     handleAuthAction('signup', method);
   };
 
-  const handleSheetEmail = () => {
+  const handleSheetEmail = (emailText) => {
     closeAuthSheet();
     if (authSheetMode === 'login') {
-      handleAuthAction('login');
+      handleAuthAction('login', 'email', emailText);
     } else {
-      handleAuthAction('signup', 'email');
+      handleAuthAction('signup', 'email', emailText);
     }
   };
 
@@ -83,7 +83,7 @@ const OnboardingScreen = ({ onSignup, onLogin }) => {
         onClose={closeAuthSheet}
         onApplePress={() => handleSheetSignup('apple')}
         onGooglePress={() => handleSheetSignup('google')}
-        onEmailPress={handleSheetEmail}
+        onEmailPress={(emailText) => handleSheetEmail(emailText)}
         onPhonePress={() => handleSheetSignup('phone')}
       />
     </View>

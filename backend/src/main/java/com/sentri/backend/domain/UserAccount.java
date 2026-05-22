@@ -59,6 +59,12 @@ public class UserAccount {
     @Column(nullable = false)
     private Boolean verifiedPhone = Boolean.FALSE;
 
+    private String currentYear;
+
+    private String branch;
+
+    private String semester;
+
     private String pendingOtpCode;
 
     private Instant pendingOtpRequestedAt;
@@ -150,6 +156,30 @@ public class UserAccount {
 
     public void setVerifiedPhone(Boolean verifiedPhone) {
         this.verifiedPhone = verifiedPhone;
+    }
+
+    public String getCurrentYear() {
+        return currentYear;
+    }
+
+    public void setCurrentYear(String currentYear) {
+        this.currentYear = currentYear;
+    }
+
+    public String getBranch() {
+        return branch;
+    }
+
+    public void setBranch(String branch) {
+        this.branch = branch;
+    }
+
+    public String getSemester() {
+        return semester;
+    }
+
+    public void setSemester(String semester) {
+        this.semester = semester;
     }
 
     public String getPendingOtpCode() {
