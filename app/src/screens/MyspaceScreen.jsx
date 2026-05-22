@@ -3,6 +3,9 @@ import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AvatarButton, SectionHeader } from '../components/sentri-ui';
+import { SearchBar } from '../components/SearchBar';
+import { FilterChip } from '../components/FilterChip';
+import { Toast } from '../components/Toast';
 import { theme } from '../design/tokens';
 import { buildCapturedItem, buildCapturePreview, createEmptyCaptureDraft } from '../features/myspace/capture-builder';
 import { buildSearchSuggestions, normalizeSearchQuery, pushRecentSearch } from '../features/myspace/search-history';
@@ -21,6 +24,8 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
     const { value: items, setValue: setItems } = usePersistedState(PERSISTENT_KEYS.myspaceItems, savedItems);
     const { value: recentSearches, setValue: setRecentSearches } = usePersistedState(PERSISTENT_KEYS.myspaceRecentSearches, []);
     const [query, setQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState('All');
+    const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
     const [addSheetOpen, setAddSheetOpen] = useState(false);
     const [composerOpen, setComposerOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
@@ -29,7 +34,7 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
     const deferredQuery = useDeferredValue(query);
     const normalizedQuery = query.trim();
     const searching = normalizedQuery.length > 0 && deferredQuery.trim() !== normalizedQuery;
-    const rankedMatches = useMemo(() => rankMyspaceItems(items, deferredQuery, 'All'), [deferredQuery, items]);
+    const rankedMatches = useMemo(() => rankMyspaceItems(items, deferredQuery, activeFilter), [deferredQuery, items, activeFilter]);
     const filteredItems = rankedMatches.map((match) => match.item);
     const matchMap = useMemo(() => new Map(rankedMatches.map((match) => [match.item.id, match])), [rankedMatches]);
     const pinnedItems = filteredItems.filter((item) => item.pinned);
@@ -63,13 +68,12 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
         </View>
 
         <View style={styles.searchCard}>
-          <View style={styles.searchShell}>
-            <Ionicons name="search" size={18} color={theme.colors.textMuted}/>
-            <TextInput value={query} onChangeText={setQuery} placeholder="Search blackboard, DBMS, math, date..." placeholderTextColor={theme.colors.textMuted} style={styles.searchInput} returnKeyType="search"/>
-            {query ? (<Pressable onPress={() => setQuery('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={18} color={theme.colors.textMuted}/>
-              </Pressable>) : null}
-          </View>
+          <SearchBar 
+            value={query} 
+            onChangeText={setQuery} 
+            placeholder="Search blackboard, DBMS, math, date..." 
+            onClear={() => setQuery('')} 
+          />
 
           <View style={styles.searchFootRow}>
             <Text style={styles.searchHint}>Search by OCR, subject, source, date, or the thing you remember first.</Text>
@@ -79,11 +83,16 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
             </Pressable>
           </View>
 
-          <View style={styles.pillRow}>
-            <MetaPill label="OCR text"/>
-            <MetaPill label="Dates"/>
-            <MetaPill label="Subjects"/>
-          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 8 }}>
+            {['All', 'Photo', 'Note', 'Link', 'File'].map((type) => (
+              <FilterChip 
+                key={type}
+                label={type} 
+                active={activeFilter === type} 
+                onPress={() => setActiveFilter(type)} 
+              />
+            ))}
+          </ScrollView>
         </View>
 
         {searching ? (<View style={styles.searchStateCard}>
@@ -138,6 +147,7 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
                 setSelectedItem(createdItem);
                 setStagedCapture(null);
                 setCaptureDraft(null);
+                setToast({ visible: true, message: 'Saved to Myspace', type: 'success' });
             }}>
                 <Text style={styles.previewActionFilledText}>Save to Myspace</Text>
               </Pressable>
@@ -226,11 +236,13 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
                     }
                     : entry));
                 setSelectedItem((current) => (current ? { ...current, pinned: !current.pinned } : current));
+                setToast({ visible: true, message: item.pinned ? 'Unpinned' : 'Pinned to Myspace', type: 'success' });
                 return;
             }
             if (action === 'Delete') {
                 setItems((current) => current.filter((entry) => entry.id !== item.id));
                 setSelectedItem(null);
+                setToast({ visible: true, message: 'Item deleted', type: 'success' });
                 return;
             }
             await Share.share({
@@ -239,6 +251,12 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
             });
             setSelectedItem(null);
         }}/>
+      <Toast 
+        visible={toast.visible} 
+        message={toast.message} 
+        type={toast.type} 
+        onHide={() => setToast(prev => ({ ...prev, visible: false }))} 
+      />
     </SafeAreaView>);
 }
 function PinnedCard({ item, onPress }) {

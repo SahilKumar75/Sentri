@@ -2,6 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View, } from 'react-native';
 import { AvatarButton, SectionHeader } from '../components/sentri-ui';
+import { SearchBar } from '../components/SearchBar';
+import { FilterChip } from '../components/FilterChip';
+import { Input } from '../components/Input';
+import { ErrorState } from '../components/ErrorState';
+import { Toast } from '../components/Toast';
 import { theme } from '../design/tokens';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
 import { usePersistedState } from '../lib/use-persisted-state';
@@ -26,8 +31,12 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
     const [roomName, setRoomName] = useState('DBMS Revision Room');
     const [roomType, setRoomType] = useState('Study');
     const [joinInput, setJoinInput] = useState('');
-    const [statusMessage, setStatusMessage] = useState('Create a room or paste a room link to join one.');
-    const [statusTone, setStatusTone] = useState('neutral');
+    const [joinInputError, setJoinInputError] = useState('');
+    const [roomNameError, setRoomNameError] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState('All');
+    const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
+    const [roomFetchError, setRoomFetchError] = useState(null);
     const [loadingAction, setLoadingAction] = useState('idle');
     const [meetingOpen, setMeetingOpen] = useState(false);
     const [meetingPanel, setMeetingPanel] = useState('none');
@@ -102,6 +111,22 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         return activeRoom.ownerDisplayName.trim().toLowerCase() === userName.trim().toLowerCase();
     }, [activeRoom, userName]);
     const canShareScreen = isHost || meetingSettings.allowGuestScreenShare;
+    
+    const filteredRooms = useMemo(() => {
+      let result = rooms || [];
+      if (activeFilter !== 'All') {
+        result = result.filter(room => room.roomType === activeFilter);
+      }
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        result = result.filter(room => 
+          room.roomName.toLowerCase().includes(query) ||
+          room.ownerDisplayName.toLowerCase().includes(query) ||
+          room.roomCode.toLowerCase().includes(query)
+        );
+      }
+      return result;
+    }, [rooms, searchQuery, activeFilter]);
     useEffect(() => {
         if (!hydrated) {
             return;
@@ -127,18 +152,14 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
     }, [activeRoom, hydrated, joinInput, roomName, roomType, setPersistedState]);
     async function refreshRooms() {
         setLoadingAction('refreshing');
+        setRoomFetchError(null);
         const result = await listRooms();
         setLoadingAction('idle');
         if (result.ok) {
             setRooms(result.rooms);
-            setStatusTone('info');
-            setStatusMessage(result.rooms.length
-                ? `${result.rooms.length} live room${result.rooms.length === 1 ? '' : 's'} ready to browse.`
-                : 'No live rooms yet. Create the first one or join from a Sentri link.');
             return;
         }
-        setStatusTone('error');
-        setStatusMessage(result.message);
+        setRoomFetchError(result.message);
     }
     function seedMeetingRoom(room) {
         const participants = buildSeedParticipants(room, userName);
@@ -157,9 +178,13 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         setReactionBurst(null);
     }
     async function handleCreateRoom() {
+        setRoomNameError('');
+        if (!roomName.trim()) {
+            setRoomNameError('Room name is required.');
+            return;
+        }
         if (!sessionToken) {
-            setStatusTone('error');
-            setStatusMessage('Login first so Sentri can create a room under your account.');
+            setToast({ visible: true, message: 'Login first so Sentri can create a room under your account.', type: 'error' });
             return;
         }
         setLoadingAction('creating');
@@ -169,22 +194,20 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         });
         setLoadingAction('idle');
         if (!result.ok) {
-            setStatusTone('error');
-            setStatusMessage(result.message);
+            setToast({ visible: true, message: result.message, type: 'error' });
             return;
         }
         setActiveRoom(result.room);
         setJoinInput(result.room.joinLink);
         seedMeetingRoom(result.room);
-        setStatusTone('success');
-        setStatusMessage(`Room ${result.room.roomCode} is live and ready to share.`);
+        setToast({ visible: true, message: `Room ${result.room.roomCode} is live.`, type: 'success' });
         await refreshRooms();
     }
     async function handleJoinByCode(rawValue, fromIncomingLink = false) {
+        setJoinInputError('');
         const code = extractRoomCode(rawValue ?? joinInput);
         if (!code) {
-            setStatusTone('error');
-            setStatusMessage('Paste a Sentri room link or room code first.');
+            setJoinInputError('Valid room link or code is required.');
             if (fromIncomingLink) {
                 onConsumeIncomingRoomCode();
             }
@@ -194,8 +217,7 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         const result = await joinRoom(code, userName);
         setLoadingAction('idle');
         if (!result.ok) {
-            setStatusTone('error');
-            setStatusMessage(result.message);
+            setToast({ visible: true, message: result.message, type: 'error' });
             if (fromIncomingLink) {
                 onConsumeIncomingRoomCode();
             }
@@ -204,8 +226,7 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         setActiveRoom(result.room);
         setJoinInput(result.room.roomCode);
         seedMeetingRoom(result.room);
-        setStatusTone('success');
-        setStatusMessage(`Joined ${result.room.roomName}.`);
+        setToast({ visible: true, message: `Joined ${result.room.roomName}.`, type: 'success' });
         await refreshRooms();
         if (fromIncomingLink) {
             onConsumeIncomingRoomCode();
@@ -383,8 +404,8 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Create room</Text>
-          <TextInput style={styles.input} value={roomName} onChangeText={setRoomName} placeholder="Room name" placeholderTextColor={theme.colors.textMuted}/>
-          <View style={styles.typeRow}>
+          <Input value={roomName} onChangeText={setRoomName} placeholder="Room name" error={roomNameError} />
+          <View style={[styles.typeRow, { marginTop: 8 }]}>
             {['Study', 'Watch', 'Call'].map((type) => {
                 const active = roomType === type;
                 return (<Pressable key={type} onPress={() => setRoomType(type)} style={[styles.typeChip, active && styles.typeChipActive]}>
@@ -403,32 +424,12 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Join room</Text>
-          <TextInput style={styles.input} value={joinInput} onChangeText={setJoinInput} placeholder="Paste room code or sentri://hangout/ABCD1234" placeholderTextColor={theme.colors.textMuted} autoCapitalize="characters" autoCorrect={false}/>
-          <Pressable style={[styles.actionButton, styles.actionButtonGhost, loadingAction !== 'idle' && styles.disabledButton]} onPress={() => void handleJoinByCode()} disabled={loadingAction !== 'idle'}>
+          <Input value={joinInput} onChangeText={setJoinInput} placeholder="Paste room code or sentri://hangout/ABCD1234" autoCapitalize="characters" autoCorrect={false} error={joinInputError} />
+          <Pressable style={[styles.actionButton, styles.actionButtonGhost, loadingAction !== 'idle' && styles.disabledButton, { marginTop: 8 }]} onPress={() => void handleJoinByCode()} disabled={loadingAction !== 'idle'}>
             <Text style={styles.actionGhostText}>
               {loadingAction === 'joining' ? 'Joining room' : 'Join room'}
             </Text>
           </Pressable>
-        </View>
-
-        <View style={[
-                styles.statusBanner,
-                statusTone === 'success' && styles.statusBannerSuccess,
-                statusTone === 'error' && styles.statusBannerError,
-                statusTone === 'info' && styles.statusBannerInfo,
-            ]}>
-          <Ionicons name={statusTone === 'success'
-                ? 'checkmark-circle'
-                : statusTone === 'error'
-                    ? 'alert-circle'
-                    : statusTone === 'info'
-                        ? 'information-circle'
-                        : 'radio-button-on'} size={16} color={statusTone === 'error'
-                ? '#B3261E'
-                : statusTone === 'success'
-                    ? theme.colors.accentStrong
-                    : theme.colors.text}/>
-          <Text style={styles.statusBannerText}>{statusMessage}</Text>
         </View>
 
         {activeRoom ? (<View style={styles.linkCard}>
@@ -484,13 +485,26 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
           <SectionHeader title="Live rooms" right={<Pressable onPress={() => void refreshRooms()}>
                 <Text style={styles.sectionMeta}>{loadingAction === 'refreshing' ? 'Refreshing…' : 'Refresh'}</Text>
               </Pressable>}/>
-          {loadingAction === 'refreshing' && rooms.length === 0 ? (<View style={styles.emptyRooms}>
+          
+          <View style={{ marginBottom: 16 }}>
+            <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Search rooms..." onClear={() => setSearchQuery('')} />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 8 }}>
+              {['All', 'Study', 'Watch', 'Call'].map(type => (
+                <FilterChip key={type} label={type} active={activeFilter === type} onPress={() => setActiveFilter(type)} />
+              ))}
+            </ScrollView>
+          </View>
+          
+          {roomFetchError ? (
+            <ErrorState title="Couldn't load rooms" message={roomFetchError} actionLabel="Retry" onActionPress={refreshRooms} type="error" />
+          ) : loadingAction === 'refreshing' && rooms.length === 0 ? (<View style={styles.emptyRooms}>
               <Text style={styles.emptyRoomsTitle}>Refreshing room list</Text>
               <Text style={styles.emptyRoomsBody}>
                 Sentri is checking for live study rooms and shared hangouts right now.
               </Text>
             </View>) : null}
-          {rooms.map((room) => (<Pressable key={room.roomCode} style={styles.roomCard} onPress={() => void handleOpenRoom(room.roomCode)}>
+            
+          {!roomFetchError && filteredRooms.map((room) => (<Pressable key={room.roomCode} style={styles.roomCard} onPress={() => void handleOpenRoom(room.roomCode)}>
               <View style={styles.roomBadge}>
                 <Text style={styles.roomBadgeText}>{room.roomName.charAt(0).toUpperCase()}</Text>
               </View>
@@ -505,7 +519,14 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
                 <Text style={styles.roomLinkLabel}>{room.roomCode}</Text>
               </View>
             </Pressable>))}
-          {rooms.length === 0 ? (<View style={styles.emptyRooms}>
+            
+          {!roomFetchError && filteredRooms.length === 0 && rooms.length > 0 ? (
+            <View style={styles.emptyRooms}>
+              <Text style={styles.emptyRoomsTitle}>No rooms match your filter</Text>
+            </View>
+          ) : null}
+          
+          {!roomFetchError && rooms.length === 0 ? (<View style={styles.emptyRooms}>
               <View style={styles.emptyRoomsIcon}>
                 <Ionicons name="videocam-outline" size={22} color={theme.colors.accentStrong}/>
               </View>
@@ -544,6 +565,7 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
               </Pressable>
             </View>))}
         </View>
+        <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast(prev => ({ ...prev, visible: false }))} />
       </ScrollView>);
     }
     function renderMeeting() {

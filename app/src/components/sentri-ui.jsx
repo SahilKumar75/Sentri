@@ -344,6 +344,10 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.surfaceAlt,
         paddingHorizontal: 14,
         paddingVertical: 10,
+        minHeight: 44,
+        minWidth: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     sheetHeaderButtonText: {
         color: theme.colors.text,

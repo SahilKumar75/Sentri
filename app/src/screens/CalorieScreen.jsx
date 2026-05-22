@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AvatarButton } from '../components/sentri-ui';
+import { SearchBar } from '../components/SearchBar';
+import { Toast } from '../components/Toast';
 import { theme } from '../design/tokens';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
 import { usePersistedState } from '../lib/use-persisted-state';
@@ -55,10 +57,19 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
     const [statusMessage, setStatusMessage] = useState('Finish your setup to unlock today tracking.');
     const [mealDraftLabel, setMealDraftLabel] = useState('');
     const [mealDraftCalories, setMealDraftCalories] = useState('');
+    const [mealDraftError, setMealDraftError] = useState('');
     const [burnDraftLabel, setBurnDraftLabel] = useState('');
     const [burnDraftCalories, setBurnDraftCalories] = useState('');
+    const [burnDraftError, setBurnDraftError] = useState('');
+    const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
+    const [mealSearchQuery, setMealSearchQuery] = useState('');
     const dailyTarget = useMemo(() => estimateDailyTarget(setup), [setup]);
     const macroTargets = useMemo(() => estimateMacros(setup, dailyTarget), [setup, dailyTarget]);
+    const filteredMeals = useMemo(() => {
+        if (!mealSearchQuery.trim()) return meals;
+        const q = mealSearchQuery.toLowerCase();
+        return meals.filter(m => m.label.toLowerCase().includes(q) || m.note.toLowerCase().includes(q));
+    }, [meals, mealSearchQuery]);
     const consumed = meals.reduce((sum, meal) => sum + meal.kcal, 0);
     const burned = burns.reduce((sum, entry) => sum + entry.kcal, 0);
     const netCalories = consumed - burned;
@@ -208,11 +219,11 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
 
           <Pressable style={[styles.primaryButton, !canBuildPlan && styles.primaryButtonDisabled]} onPress={() => {
                 if (!canBuildPlan) {
-                    setStatusMessage('Fill age, height, weight, goal weight, timeline, and ideal body type first.');
+                    setToast({ visible: true, message: 'Fill age, height, weight, goal weight, timeline, and ideal body type first.', type: 'error' });
                     return;
                 }
                 setSetupComplete(true);
-                setStatusMessage(`Plan ready. Your target is ${dailyTarget} kcal with ${macroTargets.protein}g protein and ${setup.cheatFrequency.toLowerCase()} cheat rhythm.`);
+                setToast({ visible: true, message: `Plan ready. Target is ${dailyTarget} kcal.`, type: 'success' });
             }}>
             <Text style={styles.primaryButtonText}>Build my plan</Text>
           </Pressable>
@@ -256,14 +267,10 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
               <View style={styles.headerActions}>
                 <Pressable style={styles.secondaryButton} onPress={() => {
                 setMeals(baseMeals);
-                setBurns(baseBurns);
-                setStatusMessage('Today tracking reset to the default hostel meal and burn baseline.');
-            }}>
                   <Text style={styles.secondaryButtonText}>Reset day</Text>
                 </Pressable>
                 <Pressable style={styles.secondaryButton} onPress={() => {
                 setSetupComplete(false);
-                setStatusMessage('Update your body details to rebuild the plan.');
             }}>
                   <Text style={styles.secondaryButtonText}>Edit plan</Text>
                 </Pressable>
@@ -285,13 +292,16 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
 
             <Text style={styles.fieldLabelDark}>Meal label</Text>
             <View style={styles.composerRow}>
-              <TextInput value={mealDraftLabel} onChangeText={setMealDraftLabel} placeholder="Mess lunch, snack, dinner..." placeholderTextColor={theme.colors.darkTextSoft} style={styles.composerInput}/>
-              <TextInput value={mealDraftCalories} onChangeText={setMealDraftCalories} placeholder="kcal" placeholderTextColor={theme.colors.darkTextSoft} keyboardType="number-pad" style={[styles.composerInput, styles.composerInputSmall]}/>
+              <View style={{ flex: 1 }}>
+                <TextInput value={mealDraftLabel} onChangeText={(v) => { setMealDraftLabel(v); setMealDraftError(''); }} placeholder="Mess lunch, snack, dinner..." placeholderTextColor={theme.colors.darkTextSoft} style={[styles.composerInput, mealDraftError && { borderColor: '#B3261E' }]}/>
+              </View>
+              <TextInput value={mealDraftCalories} onChangeText={(v) => { setMealDraftCalories(v); setMealDraftError(''); }} placeholder="kcal" placeholderTextColor={theme.colors.darkTextSoft} keyboardType="number-pad" style={[styles.composerInput, styles.composerInputSmall, mealDraftError && { borderColor: '#B3261E' }]}/>
               <Pressable style={styles.composerButton} onPress={() => {
+                setMealDraftError('');
                 const kcal = Number(mealDraftCalories) || 0;
                 const label = mealDraftLabel.trim() || 'Manual meal';
                 if (!kcal) {
-                    setStatusMessage('Add a meal calorie value first.');
+                    setMealDraftError('Req');
                     return;
                 }
                 setMeals((current) => [
@@ -300,16 +310,17 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
                 ]);
                 setMealDraftLabel('');
                 setMealDraftCalories('');
-                setStatusMessage(`Added ${label} (${kcal} kcal).`);
+                setToast({ visible: true, message: `Added ${label} (${kcal} kcal).`, type: 'success' });
             }}>
                 <Text style={styles.composerButtonText}>Add meal</Text>
               </Pressable>
             </View>
+            {mealDraftError ? <Text style={{ color: '#B3261E', fontSize: 12, marginTop: 4, marginLeft: 4 }}>Calorie value is required</Text> : null}
 
             <View style={styles.presetRow}>
               {mealPresets.map((preset) => (<Pressable key={preset.label} style={styles.presetChip} onPress={() => {
                     setMeals((current) => [...current, preset]);
-                    setStatusMessage(`Added ${preset.label}.`);
+                    setToast({ visible: true, message: `Added ${preset.label}.`, type: 'success' });
                 }}>
                   <Text style={styles.presetChipText}>{preset.label}</Text>
                 </Pressable>))}
@@ -325,7 +336,13 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
               </View>
             ) : null}
 
-            {meals.map((meal) => (<View key={`${meal.label}-${meal.time}`} style={styles.listRowDark}>
+            {meals.length > 0 && (
+              <View style={{ marginTop: 16, marginBottom: 8 }}>
+                <SearchBar value={mealSearchQuery} onChangeText={setMealSearchQuery} placeholder="Search meals..." onClear={() => setMealSearchQuery('')} />
+              </View>
+            )}
+
+            {filteredMeals.map((meal, idx) => (<View key={`${meal.label}-${meal.time}-${idx}`} style={styles.listRowDark}>
                 <View style={styles.listCopy}>
                   <Text style={styles.listTitleDark}>{meal.label}</Text>
                   <Text style={styles.listMetaDark}>
@@ -336,7 +353,7 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
                   <Text style={styles.listValueDark}>{meal.kcal}</Text>
                   <Pressable style={styles.removeButton} onPress={() => {
                     setMeals((current) => current.filter((entry) => !(entry.label === meal.label && entry.time === meal.time)));
-                    setStatusMessage(`Removed ${meal.label} from today.`);
+                    setToast({ visible: true, message: `Removed ${meal.label}.`, type: 'success' });
                 }}>
                     <Ionicons name="trash-outline" size={15} color={theme.colors.darkTextSoft}/>
                   </Pressable>
@@ -351,13 +368,16 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
             </View>
 
             <View style={styles.composerRow}>
-              <TextInput value={burnDraftLabel} onChangeText={setBurnDraftLabel} placeholder="Gym, walk, run..." placeholderTextColor={theme.colors.darkTextSoft} style={styles.composerInput}/>
-              <TextInput value={burnDraftCalories} onChangeText={setBurnDraftCalories} placeholder="kcal" placeholderTextColor={theme.colors.darkTextSoft} keyboardType="number-pad" style={[styles.composerInput, styles.composerInputSmall]}/>
+              <View style={{ flex: 1 }}>
+                <TextInput value={burnDraftLabel} onChangeText={(v) => { setBurnDraftLabel(v); setBurnDraftError(''); }} placeholder="Gym, walk, run..." placeholderTextColor={theme.colors.darkTextSoft} style={[styles.composerInput, burnDraftError && { borderColor: '#B3261E' }]}/>
+              </View>
+              <TextInput value={burnDraftCalories} onChangeText={(v) => { setBurnDraftCalories(v); setBurnDraftError(''); }} placeholder="kcal" placeholderTextColor={theme.colors.darkTextSoft} keyboardType="number-pad" style={[styles.composerInput, styles.composerInputSmall, burnDraftError && { borderColor: '#B3261E' }]}/>
               <Pressable style={styles.composerButton} onPress={() => {
+                setBurnDraftError('');
                 const kcal = Number(burnDraftCalories) || 0;
                 const label = burnDraftLabel.trim() || 'Manual burn';
                 if (!kcal) {
-                    setStatusMessage('Add a burn calorie value first.');
+                    setBurnDraftError('Req');
                     return;
                 }
                 setBurns((current) => [
@@ -366,16 +386,17 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
                 ]);
                 setBurnDraftLabel('');
                 setBurnDraftCalories('');
-                setStatusMessage(`Logged ${label} (${kcal} kcal).`);
+                setToast({ visible: true, message: `Logged ${label} (${kcal} kcal).`, type: 'success' });
             }}>
                 <Text style={styles.composerButtonText}>Log burn</Text>
               </Pressable>
             </View>
+            {burnDraftError ? <Text style={{ color: '#B3261E', fontSize: 12, marginTop: 4, marginLeft: 4 }}>Calorie value is required</Text> : null}
 
             <View style={styles.presetRow}>
               {burnPresets.map((preset) => (<Pressable key={preset.label} style={styles.presetChip} onPress={() => {
                     setBurns((current) => [...current, preset]);
-                    setStatusMessage(`Added ${preset.label}.`);
+                    setToast({ visible: true, message: `Added ${preset.label}.`, type: 'success' });
                 }}>
                   <Text style={styles.presetChipText}>{preset.label}</Text>
                 </Pressable>))}
@@ -391,7 +412,7 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
               </View>
             ) : null}
 
-            {burns.map((entry) => (<View key={`${entry.label}-${entry.meta}`} style={styles.listRowDark}>
+            {burns.map((entry, idx) => (<View key={`${entry.label}-${entry.meta}-${idx}`} style={styles.listRowDark}>
                 <View style={styles.listCopy}>
                   <Text style={styles.listTitleDark}>{entry.label}</Text>
                   <Text style={styles.listMetaDark}>{entry.meta}</Text>
@@ -400,7 +421,7 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
                   <Text style={styles.listValueDark}>{entry.kcal}</Text>
                   <Pressable style={styles.removeButton} onPress={() => {
                     setBurns((current) => current.filter((item) => !(item.label === entry.label && item.meta === entry.meta)));
-                    setStatusMessage(`Removed ${entry.label} burn log.`);
+                    setToast({ visible: true, message: `Removed ${entry.label}.`, type: 'success' });
                 }}>
                     <Ionicons name="trash-outline" size={15} color={theme.colors.darkTextSoft}/>
                   </Pressable>
@@ -420,7 +441,6 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
               <Text style={styles.sectionTitleDark}>Plan snapshot</Text>
               <Pressable style={styles.secondaryButtonDark} onPress={() => {
                 setSetupComplete(false);
-                setStatusMessage('Update your setup to recalculate the target.');
             }}>
                 <Text style={styles.secondaryButtonTextDark}>Update</Text>
               </Pressable>
@@ -435,6 +455,7 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
             </View>
           </View>
         </>)}
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast(prev => ({ ...prev, visible: false }))} />
     </ScrollView>);
 }
 function updateSetup(setSetup, key, value) {

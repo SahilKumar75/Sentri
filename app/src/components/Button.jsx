@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   button_sm: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    minHeight: 36,
+    minHeight: 44,
   },
   button_md: {
     paddingHorizontal: 16,

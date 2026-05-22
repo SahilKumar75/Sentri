@@ -142,6 +142,10 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 4,
     marginLeft: 8,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorText: {
     fontSize: 13,

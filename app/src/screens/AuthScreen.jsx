@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Toast } from '../components/Toast';
 import { theme } from '../design/tokens';
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeChange, onSignup, onVerifyOtp, onLogin }) {
@@ -23,6 +24,8 @@ export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeC
     const [pickerDay, setPickerDay] = useState(23);
     const [pickerMonth, setPickerMonth] = useState(2);
     const [pickerYear, setPickerYear] = useState(2005);
+    const [signupErrors, setSignupErrors] = useState({});
+    const [loginErrors, setLoginErrors] = useState({});
     const activeMessage = localMessage ?? statusMessage;
     const helperLabel = useMemo(() => 'Create your Sentri account to unlock timetable, Myspace, calorie, and hangout.', []);
     const selectedDobLabel = `${String(pickerDay).padStart(2, '0')} ${monthNames[pickerMonth]} ${pickerYear}`;
@@ -32,6 +35,7 @@ export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeC
     }, [mode, pendingSignup?.otpCode]);
     const updateSignupField = (key, value) => {
         setSignupForm((current) => ({ ...current, [key]: value }));
+        setSignupErrors((current) => ({ ...current, [key]: null }));
     };
     const changeMode = (nextMode) => {
         setLocalMessage(null);
@@ -50,10 +54,6 @@ export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeC
         <Text style={styles.title}>Secure your student space.</Text>
         <Text style={styles.subtitle}>{helperLabel}</Text>
 
-        {activeMessage ? (<View style={styles.statusBanner}>
-            <Text style={styles.statusText}>{activeMessage}</Text>
-          </View>) : null}
-
         {mode !== 'otp' ? (<View style={styles.modeSwitch}>
             <ModeButton label="Sign up" active={mode === 'signup'} onPress={() => changeMode('signup')}/>
             <ModeButton label="Login" active={mode === 'login'} onPress={() => changeMode('login')}/>
@@ -63,17 +63,18 @@ export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeC
             <Text style={styles.cardTitle}>Create account</Text>
 
             <View style={styles.row}>
-              <Field label="First name" value={signupForm.firstName} onChangeText={(value) => updateSignupField('firstName', value)} placeholder="Sahil"/>
-              <Field label="Last name" value={signupForm.lastName} onChangeText={(value) => updateSignupField('lastName', value)} placeholder="Kumar"/>
+              <Field label="First name" value={signupForm.firstName} onChangeText={(value) => updateSignupField('firstName', value)} placeholder="Sahil" error={signupErrors.firstName}/>
+              <Field label="Last name" value={signupForm.lastName} onChangeText={(value) => updateSignupField('lastName', value)} placeholder="Kumar" error={signupErrors.lastName}/>
             </View>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Date of birth</Text>
-              <Pressable style={styles.dateField} onPress={openDobPicker}>
+              <Pressable style={[styles.dateField, signupErrors.dob && { borderColor: '#B3261E' }]} onPress={openDobPicker}>
                 <Text style={[styles.dateFieldText, !signupForm.dob && styles.dateFieldPlaceholder]}>
                   {signupForm.dob || 'Pick your date of birth'}
                 </Text>
               </Pressable>
+              {signupErrors.dob ? <Text style={{ color: '#B3261E', fontSize: 12 }}>{signupErrors.dob}</Text> : null}
             </View>
 
             <View style={styles.inlineChooser}>
@@ -87,11 +88,23 @@ export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeC
             }}/>
             </View>
 
-            {contactMethod === 'phone' ? (<Field label="Phone number" value={signupForm.phone ?? ''} onChangeText={(value) => updateSignupField('phone', value)} placeholder="+91 98765 43210" keyboardType="phone-pad" autoCapitalize="none"/>) : (<Field label="Email" value={signupForm.email ?? ''} onChangeText={(value) => updateSignupField('email', value)} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none"/>)}
+            {contactMethod === 'phone' ? (<Field label="Phone number" value={signupForm.phone ?? ''} onChangeText={(value) => updateSignupField('phone', value)} placeholder="+91 98765 43210" keyboardType="phone-pad" autoCapitalize="none" error={signupErrors.phone}/>) : (<Field label="Email" value={signupForm.email ?? ''} onChangeText={(value) => updateSignupField('email', value)} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" error={signupErrors.email}/>)}
 
-            <Field label="Password" value={signupForm.password ?? ''} onChangeText={(value) => updateSignupField('password', value)} placeholder="Choose a password" secureTextEntry autoCapitalize="none"/>
+            <Field label="Password" value={signupForm.password ?? ''} onChangeText={(value) => updateSignupField('password', value)} placeholder="Choose a password" secureTextEntry autoCapitalize="none" error={signupErrors.password}/>
 
             <Pressable style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]} disabled={submitting} onPress={async () => {
+                setSignupErrors({});
+                let errors = {};
+                if (!signupForm.firstName) errors.firstName = 'First name is required';
+                if (!signupForm.lastName) errors.lastName = 'Last name is required';
+                if (!signupForm.dob) errors.dob = 'DOB is required';
+                if (contactMethod === 'phone' && !signupForm.phone) errors.phone = 'Phone is required';
+                if (contactMethod === 'email' && !signupForm.email) errors.email = 'Email is required';
+                if (!signupForm.password) errors.password = 'Password is required';
+                if (Object.keys(errors).length > 0) {
+                    setSignupErrors(errors);
+                    return;
+                }
                 setSubmitting(true);
                 const result = await onSignup({ profile: signupForm, contactMethod });
                 setSubmitting(false);
@@ -106,9 +119,17 @@ export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeC
 
         {mode === 'login' ? (<View style={styles.card}>
             <Text style={styles.cardTitle}>Login</Text>
-            <Field label="Phone or email" value={loginIdentifier} onChangeText={setLoginIdentifier} placeholder="+91 98765 43210 or you@example.com" autoCapitalize="none"/>
-            <Field label="Password" value={loginPassword} onChangeText={setLoginPassword} placeholder="Enter password" secureTextEntry autoCapitalize="none"/>
+            <Field label="Phone or email" value={loginIdentifier} onChangeText={(v) => { setLoginIdentifier(v); setLoginErrors({...loginErrors, identifier: null}); }} placeholder="+91 98765 43210 or you@example.com" autoCapitalize="none" error={loginErrors.identifier}/>
+            <Field label="Password" value={loginPassword} onChangeText={(v) => { setLoginPassword(v); setLoginErrors({...loginErrors, password: null}); }} placeholder="Enter password" secureTextEntry autoCapitalize="none" error={loginErrors.password}/>
             <Pressable style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]} disabled={submitting} onPress={async () => {
+                setLoginErrors({});
+                let errors = {};
+                if (!loginIdentifier) errors.identifier = 'Required';
+                if (!loginPassword) errors.password = 'Required';
+                if (Object.keys(errors).length > 0) {
+                    setLoginErrors(errors);
+                    return;
+                }
                 setSubmitting(true);
                 const result = await onLogin({ identifier: loginIdentifier, password: loginPassword });
                 setSubmitting(false);
@@ -139,6 +160,8 @@ export default function AuthScreen({ mode, pendingSignup, statusMessage, onModeC
             </Pressable>
           </View>) : null}
       </ScrollView>
+
+      <Toast visible={!!activeMessage} message={activeMessage || ''} type="info" onHide={() => { setLocalMessage(null); }} />
 
       <Modal visible={dobPickerOpen} transparent animationType="slide" onRequestClose={() => setDobPickerOpen(false)}>
         <View style={styles.modalBackdrop}>
@@ -209,10 +232,11 @@ function parseDob(dob) {
 function daysInMonth(year, monthIndex) {
     return new Date(year, monthIndex + 1, 0).getDate();
 }
-function Field({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType, autoCapitalize = 'words', }) {
+function Field({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType, autoCapitalize = 'words', error }) {
     return (<View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={theme.colors.textMuted} style={styles.fieldInput} secureTextEntry={secureTextEntry} keyboardType={keyboardType} autoCapitalize={autoCapitalize}/>
+      <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={theme.colors.textMuted} style={[styles.fieldInput, error && { borderColor: '#B3261E' }]} secureTextEntry={secureTextEntry} keyboardType={keyboardType} autoCapitalize={autoCapitalize}/>
+      {error ? <Text style={{ color: '#B3261E', fontSize: 12 }}>{error}</Text> : null}
     </View>);
 }
 function ModeButton({ label, active, onPress }) {

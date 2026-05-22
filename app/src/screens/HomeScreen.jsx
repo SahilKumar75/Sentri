@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { AvatarButton, SectionHeader, SurfaceCard } from '../components/sentri-ui';
 import { theme } from '../design/tokens';
 import { buildMonthRows, buildWeekDates, dayKeyForDate, formatParserBadge, formatShortDateTime, formatUploadHistoryTitle, formatLongDate, formatMonthShort, formatMonthYear, formatWeekdayShort, getEntriesForDate, getRefreshInsight, getScheduleInsight, isSameDate, } from '../features/home/timetable-intelligence';
+import { SearchBar } from '../components/SearchBar';
+import { ErrorState } from '../components/ErrorState';
 import { PERSISTENT_KEYS } from '../lib/persistent-keys';
 import { getTimetableBatchStatus, listTimetableUploadHistory, uploadTimetableScreenshot } from '../lib/timetable-api';
 import { usePersistedState } from '../lib/use-persisted-state';
@@ -22,7 +24,20 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }) {
     const weekDays = useMemo(() => buildWeekDates(focusedDate), [focusedDate]);
     const monthRows = useMemo(() => buildMonthRows(focusedDate), [focusedDate]);
     const selectedDayKey = dayKeyForDate(focusedDate);
-    const selectedEntries = getEntriesForDate(focusedDate);
+    const rawSelectedEntries = getEntriesForDate(focusedDate);
+    
+    const [searchQuery, setSearchQuery] = useState('');
+    const selectedEntries = useMemo(() => {
+      if (!searchQuery.trim()) return rawSelectedEntries;
+      const lowerQuery = searchQuery.toLowerCase();
+      return rawSelectedEntries.filter(
+        (entry) =>
+          entry.title.toLowerCase().includes(lowerQuery) ||
+          entry.room.toLowerCase().includes(lowerQuery) ||
+          entry.teacher.toLowerCase().includes(lowerQuery)
+      );
+    }, [rawSelectedEntries, searchQuery]);
+    
     const hoveredClass = selectedEntries.find((entry) => entry.id === hoveredClassId) ?? null;
     const isFocusedToday = isSameDate(focusedDate, todayAnchor);
     const summaryState = getScheduleInsight(selectedEntries, focusedDate, todayAnchor);
@@ -268,11 +283,23 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }) {
         </Pressable>
       </View>
 
-      {uploadMessage ? (<View style={[styles.uploadNotice, uploadState === 'error' && styles.uploadNoticeError]}>
-          <Text style={[styles.uploadNoticeText, uploadState === 'error' && styles.uploadNoticeTextError]}>
+      {uploadState === 'error' && uploadMessage ? (
+        <View style={{ marginTop: 14, backgroundColor: theme.colors.surface, borderRadius: 24, overflow: 'hidden' }}>
+          <ErrorState 
+            title="Upload Failed" 
+            message={uploadMessage} 
+            actionLabel="Try again" 
+            onActionPress={openUploadSheet} 
+            type="error" 
+          />
+        </View>
+      ) : uploadState !== 'error' && uploadMessage ? (
+        <View style={styles.uploadNotice}>
+          <Text style={styles.uploadNoticeText}>
             {uploadMessage}
           </Text>
-        </View>) : null}
+        </View>
+      ) : null}
 
       {recentUploads.length ? (<SurfaceCard>
           <SectionHeader title="Recent uploads" meta={`${recentUploads.length} tracked`}/>
@@ -320,6 +347,14 @@ export default function HomeScreen({ onOpenDrawer, avatarLabel }) {
             })}
           </ScrollView>
 
+          <View style={{ marginBottom: 16 }}>
+            <SearchBar 
+              value={searchQuery} 
+              onChangeText={setSearchQuery} 
+              placeholder="Search classes, teachers, rooms..."
+              onClear={() => setSearchQuery('')}
+            />
+          </View>
           <SectionHeader title={timelineTitle} meta={selectedEntries.length ? `${selectedEntries.length} items` : 'No items'}/>
 
           {selectedEntries.length ? (<View style={styles.scheduleCard}>
