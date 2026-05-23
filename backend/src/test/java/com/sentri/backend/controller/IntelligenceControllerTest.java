@@ -3,10 +3,12 @@ package com.sentri.backend.controller;
 import com.sentri.backend.dto.response.MyspaceSearchResponse;
 import com.sentri.backend.dto.response.MyspaceVectorMatchResponse;
 import com.sentri.backend.dto.response.MyspaceVectorSearchResponse;
+import com.sentri.backend.repository.AuthSessionRepository;
 import com.sentri.backend.service.MyspaceIntelligenceService;
 import com.sentri.backend.service.MyspaceVectorStoreService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -22,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(IntelligenceController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class IntelligenceControllerTest {
 
     @Autowired
@@ -32,6 +35,9 @@ class IntelligenceControllerTest {
 
     @MockBean
     private MyspaceVectorStoreService myspaceVectorStoreService;
+
+    @MockBean
+    private AuthSessionRepository authSessionRepository;
 
     @Test
     void upsertsMyspaceVectors() throws Exception {

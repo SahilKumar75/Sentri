@@ -7,7 +7,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "node scripts/check-jsx.mjs"
+    "lint": "node scripts/check-jsx.mjs",
+    "typecheck": "tsc --noEmit",
+    "build:web": "expo export --platform web --output-dir dist-web"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

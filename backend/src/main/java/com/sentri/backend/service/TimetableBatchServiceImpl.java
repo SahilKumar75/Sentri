@@ -116,6 +116,16 @@ public class TimetableBatchServiceImpl implements TimetableBatchService {
         return toDetailResponse(saved);
     }
 
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = {"timetableBatchSummaries", "timetableBatchDetails"}, allEntries = true)
+    public void deleteBatch(Long batchId) {
+        if (!timetableBatchRepository.existsById(batchId)) {
+            throw new ResourceNotFoundException("Timetable batch " + batchId + " was not found");
+        }
+        timetableBatchRepository.deleteById(batchId);
+    }
+
     private void applyMetadata(TimetableBatch batch, TimetableBatchMetadataRequest metadata) {
         if (metadata == null) {
             return;

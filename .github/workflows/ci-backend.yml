@@ -1,35 +1,48 @@
-name: CI — Backend
+name: CI Backend
 
 on:
   pull_request:
     branches:
       - main
     paths:
+      - ".github/workflows/ci-backend.yml"
       - "backend/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ci-backend.yml"
+      - "backend/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-backend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  backend-build-test:
-    name: backend-build-test
+  backend:
+    name: backend
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: backend
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           java-version: "17"
-          distribution: "temurin"
+          distribution: temurin
+          cache: maven
+          cache-dependency-path: backend/pom.xml
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('backend/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-
-      - name: Build and test with Maven
-        working-directory: backend
-        run: mvn verify
+      - name: Verify backend
+        run: mvn -B verify

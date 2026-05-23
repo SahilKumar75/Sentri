@@ -64,6 +64,15 @@ class TimetableBatchServiceTest {
     }
 
     @Test
+    void deletesBatch() {
+        TimetableBatchDetailResponse created = timetableBatchService.createPlaceholderBatch(null);
+
+        timetableBatchService.deleteBatch(created.id());
+
+        assertThat(timetableBatchRepository.findById(created.id())).isEmpty();
+    }
+
+    @Test
     void savesParsedTimetableAndReplacesEntries() {
         TimetableBatchDetailResponse created = timetableBatchService.createPlaceholderBatch(null);
 

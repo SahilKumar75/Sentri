@@ -37,7 +37,10 @@ class AuthServiceTest {
                 "+91 98765 43210",
                 null,
                 "secret123",
-                "phone"
+                "phone",
+                "SE",
+                "IT",
+                "II"
         ));
 
         assertThat(signup.requiresOtp()).isTrue();
@@ -69,7 +72,10 @@ class AuthServiceTest {
                 null,
                 "aditi@example.com",
                 "secret123",
-                "email"
+                "email",
+                "SE",
+                "IT",
+                "II"
         ));
 
         assertThat(signup.requiresOtp()).isFalse();

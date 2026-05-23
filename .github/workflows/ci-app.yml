@@ -1,16 +1,36 @@
-name: CI — App
+name: CI App
 
 on:
   pull_request:
     branches:
       - main
     paths:
+      - ".github/workflows/ci-app.yml"
       - "app/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ci-app.yml"
+      - "app/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-app-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  app-lint:
-    name: app-lint
+  app:
+    name: app
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: app
 
     steps:
       - name: Check out repository
@@ -20,36 +40,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: npm
           cache-dependency-path: app/package-lock.json
 
       - name: Install dependencies
-        working-directory: app
         run: npm ci
 
-      - name: Run ESLint
-        working-directory: app
+      - name: Check JavaScript syntax
         run: npm run lint
 
-  app-type-check:
-    name: app-type-check
-    runs-on: ubuntu-latest
+      - name: Run TypeScript compiler
+        run: npm run typecheck
 
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: app/package-lock.json
-
-      - name: Install dependencies
-        working-directory: app
-        run: npm ci
-
-      - name: TypeScript type check
-        working-directory: app
-        run: npx tsc --noEmit
+      - name: Build web bundle
+        run: npm run build:web

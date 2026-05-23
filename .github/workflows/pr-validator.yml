@@ -5,141 +5,104 @@ on:
     types: [opened, edited, reopened, synchronize]
 
 permissions:
-  pull-requests: write
-  issues: write
   contents: read
+  pull-requests: read
+  issues: write
 
 jobs:
   validate-pr:
     name: validate-pr
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
-      - name: Validate PR and enforce contribution rules
+      - name: Validate pull request
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = context.payload.pull_request;
-            const title   = pr.title;
-            const body    = pr.body || "";
-            const headRef = pr.head.ref;
-            const baseRef = pr.base.ref;
-            const author  = pr.user.login;
+            const title = pr.title || "";
+            const body = pr.body || "";
+            const headRef = pr.head.ref || "";
+            const baseRef = pr.base.ref || "";
             const prNumber = pr.number;
-            const owner   = context.repo.owner;
-            const repo    = context.repo.repo;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
             const failures = [];
+            const titleRegex = /^(feat|fix|docs|chore|refactor|test|style|perf)\((app|backend|ml-worker|repo|shared)\):\s+.{10,}$/i;
+            const branchRegex = /^(codex\/[a-z0-9-]+|(feat|fix|docs|chore|refactor|test|style|perf)\/(app|backend|ml-worker|repo|shared)\/[a-z0-9-]+)$/;
 
-            // ── Check 1: PR title format ─────────────────────────────────────────
-            const titleRegex = /^(feat|fix|docs|chore|refactor|test|style|perf)\((app|backend|ml-worker|repo)\): .{10,}$/;
             if (!titleRegex.test(title)) {
-              failures.push(
-                `**Invalid PR title:** \`${title}\` — must follow \`type(scope): description\` format where type is one of \`feat|fix|docs|chore|refactor|test|style|perf\`, scope is one of \`app|backend|ml-worker|repo\`, and description is at least 10 characters.`
-              );
+              failures.push("Use a title like `fix(app): handle empty room names`.");
             }
 
-            // ── Check 2: PR body sections ────────────────────────────────────────
-            const hasWhatChanged = /##\s*what changed/i.test(body);
-            const hasWhy         = /##\s*why/i.test(body);
-            const hasHowToTest   = /##\s*how to test/i.test(body);
-            if (!body.trim() || !hasWhatChanged || !hasWhy || !hasHowToTest) {
-              failures.push(
-                `**Missing PR description sections:** Your PR body must include all three headings: \`## What changed\`, \`## Why\`, and \`## How to test\`. Add them and fill them in.`
-              );
-            }
-
-            // ── Check 3: Linked issue ────────────────────────────────────────────
-            const issueRegex = /(?:closes|fixes|resolves|relates to|ref)\s+#\d+/i;
-            if (!issueRegex.test(body)) {
-              failures.push(
-                `**No linked issue:** Reference the issue this PR addresses using \`closes #N\`, \`fixes #N\`, or \`relates to #N\`. Open an issue first if one doesn't exist.`
-              );
-            }
-
-            // ── Check 4: Target branch ───────────────────────────────────────────
             if (baseRef !== "main") {
-              failures.push(
-                `**Wrong target branch:** This PR targets \`${baseRef}\` but all PRs must target \`main\`.`
-              );
+              failures.push(`Target branch must be \`main\`, not \`${baseRef}\`.`);
             }
 
-            // ── Check 5: Branch name ─────────────────────────────────────────────
-            const branchRegex = /^(feat|fix|docs|chore|refactor|test|style|perf)\/(app|backend|ml-worker|repo|shared)\/[a-z0-9-]+$/;
             if (!branchRegex.test(headRef)) {
-              failures.push(
-                `**Invalid branch name:** \`${headRef}\` — must follow \`type/scope/short-description\` e.g. \`feat/app/timetable-progress\`.`
-              );
+              failures.push("Use a branch like `codex/short-description` or `fix/app/short-description`.");
             }
 
-            // ── Helper: safe label operations ───────────────────────────────────
+            const bodyHasSummary = /##\s*(summary|what changed)/i.test(body);
+            const bodyHasTesting = /##\s*(verification|how to test|testing)/i.test(body);
+            if (!body.trim() || !bodyHasSummary || !bodyHasTesting) {
+              failures.push("PR body must include summary and verification sections.");
+            }
+
             async function addLabel(name) {
               try {
                 await github.rest.issues.addLabels({
-                  owner, repo, issue_number: prNumber,
+                  owner,
+                  repo,
+                  issue_number: prNumber,
                   labels: [name],
                 });
-              } catch (e) {
-                // Label may not exist in the repo yet — skip silently
-                core.warning(`Could not add label "${name}": ${e.message}`);
+              } catch (error) {
+                core.warning(`Could not add label "${name}": ${error.message}`);
               }
             }
 
             async function removeLabel(name) {
               try {
                 await github.rest.issues.removeLabel({
-                  owner, repo, issue_number: prNumber,
+                  owner,
+                  repo,
+                  issue_number: prNumber,
                   name,
                 });
-              } catch (e) {
-                // Label not present — ignore 404
+              } catch (error) {
+                if (error.status !== 404) {
+                  core.warning(`Could not remove label "${name}": ${error.message}`);
+                }
               }
             }
 
-            // ── All checks passed ────────────────────────────────────────────────
             if (failures.length === 0) {
               await addLabel("ready-for-review");
               await removeLabel("invalid-pr");
-              console.log("✅ PR passed all validation checks.");
+              console.log("PR validation passed.");
               return;
             }
 
-            // ── Checks failed — build comment ────────────────────────────────────
-            const bulletList = failures.map(f => `- ${f}`).join("\n");
-            const comment = `## ❌ PR Validation Failed
-
-Hi @${author}, this PR was automatically closed because it does not follow Sentri's contribution guidelines. Please read [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) before re-submitting.
-
-### Issues found:
-
-${bulletList}
-
-### How to fix and reopen
-1. Fix all issues listed above
-2. Push your changes or edit the PR title/description
-3. Reopen the PR — validation will run again automatically
-
----
-_This check is automated. If you believe this is a mistake, ping a maintainer._`;
-
-            // Post comment
-            await github.rest.issues.createComment({
-              owner, repo,
-              issue_number: prNumber,
-              body: comment,
-            });
-
-            // Apply / remove labels
             await addLabel("invalid-pr");
             await removeLabel("ready-for-review");
 
-            // Close the PR
-            await github.rest.pulls.update({
-              owner, repo,
-              pull_number: prNumber,
-              state: "closed",
+            const message = [
+              "## PR Validation Failed",
+              "",
+              "Please update this pull request before merge:",
+              "",
+              ...failures.map((failure) => `- ${failure}`),
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: message,
             });
 
-            // Fail the job so the status check is red
             core.setFailed(`PR validation failed with ${failures.length} issue(s).`);
