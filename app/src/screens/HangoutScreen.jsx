@@ -35,6 +35,8 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
     const [roomNameError, setRoomNameError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+    const [statusMessage, setStatusMessage] = useState('');
+    const [statusTone, setStatusTone] = useState('info');
     const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
     const [roomFetchError, setRoomFetchError] = useState(null);
     const [loadingAction, setLoadingAction] = useState('idle');
@@ -111,6 +113,11 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         return activeRoom.ownerDisplayName.trim().toLowerCase() === userName.trim().toLowerCase();
     }, [activeRoom, userName]);
     const canShareScreen = isHost || meetingSettings.allowGuestScreenShare;
+
+    function showStatus(message, tone = 'info') {
+        setStatusTone(tone);
+        setStatusMessage(message);
+    }
     
     const filteredRooms = useMemo(() => {
       let result = rooms || [];
@@ -200,6 +207,7 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         setActiveRoom(result.room);
         setJoinInput(result.room.joinLink);
         seedMeetingRoom(result.room);
+        showStatus(`${result.room.roomName} is ready to join.`, 'success');
         setToast({ visible: true, message: `Room ${result.room.roomCode} is live.`, type: 'success' });
         await refreshRooms();
     }
@@ -226,6 +234,7 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         setActiveRoom(result.room);
         setJoinInput(result.room.roomCode);
         seedMeetingRoom(result.room);
+        showStatus(`${result.room.roomName} is ready to join.`, 'success');
         setToast({ visible: true, message: `Joined ${result.room.roomName}.`, type: 'success' });
         await refreshRooms();
         if (fromIncomingLink) {
@@ -237,20 +246,17 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         const result = await getRoom(roomCode);
         setLoadingAction('idle');
         if (!result.ok) {
-            setStatusTone('error');
-            setStatusMessage(result.message);
+            showStatus(result.message, 'error');
             return;
         }
         setActiveRoom(result.room);
         setJoinInput(result.room.roomCode);
         seedMeetingRoom(result.room);
-        setStatusTone('info');
-        setStatusMessage(`${result.room.roomName} is ready.`);
+        showStatus(`${result.room.roomName} is ready.`, 'info');
     }
     async function handleShareRoom(friendName) {
         if (!activeRoom) {
-            setStatusTone('error');
-            setStatusMessage('Create or join a room before sharing it.');
+            showStatus('Create or join a room before sharing it.', 'error');
             return;
         }
         const message = friendName
@@ -262,21 +268,18 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
             message,
         });
         setLoadingAction('idle');
-        setStatusTone('success');
-        setStatusMessage(friendName ? `Share sheet opened for ${friendName}.` : 'Share sheet opened.');
+        showStatus(friendName ? `Share sheet opened for ${friendName}.` : 'Share sheet opened.', 'success');
     }
     function handleEnterMeeting() {
         if (!activeRoom) {
-            setStatusTone('error');
-            setStatusMessage('Open a room first.');
+            showStatus('Open a room first.', 'error');
             return;
         }
         if (!meetingParticipants.length) {
             seedMeetingRoom(activeRoom);
         }
         setMeetingOpen(true);
-        setStatusTone('info');
-        setStatusMessage(`Inside ${activeRoom.roomName}.`);
+        showStatus(`Inside ${activeRoom.roomName}.`, 'info');
     }
     function handleLeaveMeeting() {
         setMeetingOpen(false);
@@ -284,8 +287,7 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         setShareScreenOn(false);
         setRecordingOn(false);
         setFocusedParticipantId(meetingParticipants[1]?.id ?? meetingParticipants[0]?.id ?? null);
-        setStatusTone('info');
-        setStatusMessage(activeRoom ? `Left ${activeRoom.roomName}. Room is still active.` : 'Left the meeting.');
+        showStatus(activeRoom ? `Left ${activeRoom.roomName}. Room is still active.` : 'Left the meeting.', 'info');
     }
     function updateSelfParticipant(updater) {
         setMeetingParticipants((current) => current.map((participant, index) => (index === 0 ? updater(participant) : participant)));
@@ -446,6 +448,15 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
               {activeRoom.roomType} • {activeRoom.ownerDisplayName} • {activeRoom.participantCount} in room
             </Text>
             <Text style={styles.joinLinkText}>{activeRoom.joinLink}</Text>
+            {statusMessage ? (<View style={[
+                styles.statusBanner,
+                statusTone === 'success' && styles.statusBannerSuccess,
+                statusTone === 'error' && styles.statusBannerError,
+                statusTone === 'info' && styles.statusBannerInfo,
+            ]}>
+              <Ionicons name={statusTone === 'error' ? 'warning' : statusTone === 'success' ? 'checkmark-circle' : 'information-circle'} size={18} color={statusTone === 'error' ? '#B3261E' : theme.colors.accentStrong}/>
+              <Text style={styles.statusBannerText}>{statusMessage}</Text>
+            </View>) : null}
             <View style={styles.previewCard}>
               <View style={styles.previewVisual}>
                 <Text style={styles.previewInitials}>{getInitials(userName)}</Text>
@@ -629,8 +640,8 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
                 <Text style={styles.captionText}>Prof. Deshmukh: Let&apos;s revise normalization before we solve the next DBMS problem.</Text>
               </View>) : null}
 
-            {reactionBurst ? (<View style={styles.reactionBubble}>
-                <Text style={styles.reactionEmoji}>{reactionBurst.icon}</Text>
+          {reactionBurst ? (<View style={styles.reactionBubble}>
+                <Ionicons name={reactionBurst.icon} size={24} color="#FFFFFF"/>
                 <Text style={styles.reactionLabel}>{reactionBurst.label}</Text>
               </View>) : null}
           </View>
@@ -661,12 +672,12 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
 
         <View style={styles.reactionRow}>
           {[
-                { icon: '👏', label: 'Clap' },
-                { icon: '🔥', label: 'Fire' },
-                { icon: '👍', label: 'Thumbs up' },
-                { icon: '🙌', label: 'Celebrate' },
+                { icon: 'hand-left', label: 'Raise hand' },
+                { icon: 'checkmark-circle', label: 'Agree' },
+                { icon: 'help-circle', label: 'Question' },
+                { icon: 'bulb', label: 'Idea' },
             ].map((reaction) => (<Pressable key={reaction.label} style={styles.reactionChip} onPress={() => sendReaction(reaction.icon, reaction.label)}>
-              <Text style={styles.reactionChipEmoji}>{reaction.icon}</Text>
+              <Ionicons name={reaction.icon} size={16} color={theme.colors.darkText}/>
               <Text style={styles.reactionChipText}>{reaction.label}</Text>
             </Pressable>))}
         </View>
@@ -838,12 +849,15 @@ function MeetingPanelSheet({ visible, panel, participants, messages, activityFee
             </ScrollView>) : null}
 
           {panel === 'settings' ? (<ScrollView style={styles.panelScroll} showsVerticalScrollIndicator={false}>
+              {!isHost ? (<View style={styles.guestNotice}>
+                  <Text style={styles.guestNoticeText}>Only the host can change room-wide settings.</Text>
+                </View>) : null}
               <SettingsRow label="Noise cancellation" value={settings.noiseCancellation} onValueChange={(value) => onUpdateSettings({ ...settings, noiseCancellation: value })}/>
               <SettingsRow label="Low light mode" value={settings.lowLightMode} onValueChange={(value) => onUpdateSettings({ ...settings, lowLightMode: value })}/>
               <SettingsRow label="Mirror self view" value={settings.mirrorSelfView} onValueChange={(value) => onUpdateSettings({ ...settings, mirrorSelfView: value })}/>
-              <SettingsRow label="Allow in-call chat" value={settings.allowChat} onValueChange={(value) => onUpdateSettings({ ...settings, allowChat: value })}/>
-              <SettingsRow label="Allow guest screen share" value={settings.allowGuestScreenShare} onValueChange={(value) => onUpdateSettings({ ...settings, allowGuestScreenShare: value })}/>
-              <SettingsRow label="Waiting room" value={settings.waitingRoomEnabled} onValueChange={(value) => onUpdateSettings({ ...settings, waitingRoomEnabled: value })}/>
+              <SettingsRow label="Allow in-call chat" value={settings.allowChat} disabled={!isHost} onValueChange={(value) => onUpdateSettings({ ...settings, allowChat: value })}/>
+              <SettingsRow label="Allow guest screen share" value={settings.allowGuestScreenShare} disabled={!isHost} onValueChange={(value) => onUpdateSettings({ ...settings, allowGuestScreenShare: value })}/>
+              <SettingsRow label="Waiting room" value={settings.waitingRoomEnabled} disabled={!isHost} onValueChange={(value) => onUpdateSettings({ ...settings, waitingRoomEnabled: value })}/>
 
               <Text style={styles.settingsLabel}>Layout</Text>
               <View style={styles.settingsChipRow}>
@@ -881,10 +895,10 @@ function MeetingPanelSheet({ visible, panel, participants, messages, activityFee
       </View>
     </Modal>);
 }
-function SettingsRow({ label, value, onValueChange, }) {
-    return (<View style={styles.settingsRow}>
+function SettingsRow({ label, value, disabled = false, onValueChange, }) {
+    return (<View style={[styles.settingsRow, disabled && styles.settingsRowDisabled]}>
       <Text style={styles.settingsText}>{label}</Text>
-      <Switch value={value} onValueChange={onValueChange} trackColor={{ false: '#DADCE0', true: theme.colors.accentSoft }} thumbColor={value ? theme.colors.accentStrong : '#FFFFFF'}/>
+      <Switch value={value} disabled={disabled} onValueChange={onValueChange} trackColor={{ false: '#DADCE0', true: theme.colors.accentSoft }} thumbColor={value ? theme.colors.accentStrong : '#FFFFFF'}/>
     </View>);
 }
 const panelTitleMap = {
@@ -1922,6 +1936,9 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.line,
+    },
+    settingsRowDisabled: {
+        opacity: 0.55,
     },
     settingsText: {
         color: theme.colors.text,
