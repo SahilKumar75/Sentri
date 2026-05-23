@@ -266,7 +266,8 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
               <Text style={styles.sectionTitleDark}>Macro targets</Text>
               <View style={styles.headerActions}>
                 <Pressable style={styles.secondaryButton} onPress={() => {
-                setMeals(baseMeals);
+                    setMeals(baseMeals);
+                }}>
                   <Text style={styles.secondaryButtonText}>Reset day</Text>
                 </Pressable>
                 <Pressable style={styles.secondaryButton} onPress={() => {
