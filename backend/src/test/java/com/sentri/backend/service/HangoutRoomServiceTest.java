@@ -34,7 +34,10 @@ class HangoutRoomServiceTest {
                 "+91 98765 43210",
                 null,
                 "secret123",
-                "phone"
+                "phone",
+                "SE",
+                "IT",
+                "II"
         ));
 
         AuthResultResponse verified = authService.verifyOtp(new AuthVerifyOtpRequest(
