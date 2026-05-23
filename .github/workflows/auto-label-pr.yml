@@ -1,65 +1,71 @@
-name: Auto-label PR
+name: Auto Label PR
 
 on:
   pull_request:
-    types: [opened, edited, synchronize]
+    types: [opened, edited, synchronize, reopened]
 
 permissions:
-  pull-requests: write
+  contents: read
+  pull-requests: read
   issues: write
 
 jobs:
   auto-label:
-    name: Apply area and type labels
+    name: auto-label
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
-      - name: Parse title and apply labels
+      - name: Apply labels
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = context.payload.pull_request;
-            const title    = pr.title;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
             const prNumber = pr.number;
-            const owner    = context.repo.owner;
-            const repo     = context.repo.repo;
+            const title = pr.title || "";
 
-            const titleRegex = /^(feat|fix|docs|chore|refactor|test|style|perf)\((app|backend|ml-worker|repo)\): .{10,}$/;
-            const match = titleRegex.exec(title);
+            const typeMatch = /^(feat|fix|docs|chore|refactor|test|style|perf)\((app|backend|ml-worker|repo|shared)\):\s+.{10,}$/i.exec(title);
+            const labels = new Set();
 
-            // If the title doesn't match the convention, skip labeling silently.
-            // The pr-validator workflow handles invalid PRs.
-            if (!match) {
-              console.log("Title does not match convention — skipping auto-label.");
-              return;
+            if (typeMatch) {
+              labels.add(`type:${typeMatch[1].toLowerCase()}`);
+              const scope = typeMatch[2].toLowerCase();
+              labels.add(scope === "shared" ? "area:repo" : `area:${scope}`);
             }
 
-            const type  = match[1];  // e.g. "feat"
-            const scope = match[2];  // e.g. "app"
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
 
-            const scopeToArea = {
-              "app":       "area:app",
-              "backend":   "area:backend",
-              "ml-worker": "area:ml-worker",
-              "repo":      "area:repo",
-            };
+            for (const file of files) {
+              if (file.filename.startsWith("app/")) labels.add("area:app");
+              if (file.filename.startsWith("backend/")) labels.add("area:backend");
+              if (file.filename.startsWith("ml-worker/")) labels.add("area:ml-worker");
+              if (
+                file.filename.startsWith(".github/") ||
+                file.filename === "README.md" ||
+                file.filename.startsWith("docs/")
+              ) {
+                labels.add("area:repo");
+              }
+            }
 
-            const labelsToApply = [
-              `type:${type}`,
-              scopeToArea[scope],
-            ].filter(Boolean);
-
-            for (const name of labelsToApply) {
+            for (const name of labels) {
               try {
                 await github.rest.issues.addLabels({
-                  owner, repo,
+                  owner,
+                  repo,
                   issue_number: prNumber,
                   labels: [name],
                 });
-                console.log(`✅ Applied label: ${name}`);
-              } catch (e) {
-                // Label may not exist in the repo yet (e.g., setup-labels not run)
-                core.warning(`Could not apply label "${name}": ${e.message}`);
+                console.log(`Applied label: ${name}`);
+              } catch (error) {
+                core.warning(`Could not apply label "${name}": ${error.message}`);
               }
             }

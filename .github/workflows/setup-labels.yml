@@ -8,40 +8,46 @@ permissions:
 
 jobs:
   setup-labels:
-    name: Create repo labels
+    name: setup-labels
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
-      - name: Create all Sentri labels
+      - name: Create labels
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const labels = [
-              { name: "invalid-pr",        color: "d73a4a", description: "PR does not follow contribution guidelines" },
-              { name: "ready-for-review",  color: "0075ca", description: "PR has passed all automated checks and is ready for human review" },
-              { name: "area:app",          color: "e4e669", description: "Changes to the Expo React Native frontend" },
-              { name: "area:backend",      color: "1d76db", description: "Changes to the Spring Boot backend" },
-              { name: "area:ml-worker",    color: "5319e7", description: "Changes to the Python OCR/ML worker" },
-              { name: "area:repo",         color: "0e8a16", description: "Repo-level changes: docs, CI, config" },
-              { name: "type:feat",         color: "a2eeef", description: "New feature" },
-              { name: "type:fix",          color: "d93f0b", description: "Bug fix" },
-              { name: "type:docs",         color: "c5def5", description: "Documentation only" },
-              { name: "type:chore",        color: "e4e4e4", description: "Maintenance, dependency updates, config" },
+              { name: "invalid-pr", color: "d73a4a", description: "PR needs contribution fixes" },
+              { name: "ready-for-review", color: "0075ca", description: "PR has passed repository validation" },
+              { name: "area:app", color: "e4e669", description: "Expo React Native app changes" },
+              { name: "area:backend", color: "1d76db", description: "Spring Boot backend changes" },
+              { name: "area:ml-worker", color: "5319e7", description: "Python worker changes" },
+              { name: "area:repo", color: "0e8a16", description: "Repository, docs, or CI changes" },
+              { name: "type:feat", color: "a2eeef", description: "Feature change" },
+              { name: "type:fix", color: "d93f0b", description: "Bug fix" },
+              { name: "type:docs", color: "c5def5", description: "Documentation change" },
+              { name: "type:chore", color: "e4e4e4", description: "Maintenance change" },
+              { name: "type:refactor", color: "fbca04", description: "Refactor change" },
+              { name: "type:test", color: "0e8a16", description: "Test change" },
+              { name: "type:style", color: "bfd4f2", description: "Style change" },
+              { name: "type:perf", color: "5319e7", description: "Performance change" },
             ];
 
             const owner = context.repo.owner;
-            const repo  = context.repo.repo;
+            const repo = context.repo.repo;
 
             for (const label of labels) {
               try {
-                await github.rest.issues.createLabel({ owner, repo, ...label });
-                console.log(`✅ Created: ${label.name}`);
-              } catch (e) {
-                if (e.status === 422) {
-                  console.log(`⏭️  Already exists, skipping: ${label.name}`);
-                } else {
-                  core.warning(`⚠️  Failed to create "${label.name}": ${e.message}`);
+                await github.rest.issues.getLabel({ owner, repo, name: label.name });
+                await github.rest.issues.updateLabel({ owner, repo, name: label.name, ...label });
+                console.log(`Updated label: ${label.name}`);
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
                 }
+                await github.rest.issues.createLabel({ owner, repo, ...label });
+                console.log(`Created label: ${label.name}`);
               }
             }
