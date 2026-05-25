@@ -124,6 +124,9 @@ make test-cov
 
 # Run specific test
 pytest tests/test_parser.py -v
+
+# Run without OCR tests (if Tesseract is missing)
+pytest -m "not ocr"
 ```
 
 GitHub Actions runs `pytest` on Python 3.11 and 3.12 whenever a pull request changes worker files.
@@ -158,7 +161,9 @@ python scripts/validate_fixtures.py tests/fixtures/
 
 ### Tuning Profiles
 
-Customize parsing behavior with tuning profiles:
+Customize parsing behavior with tuning profiles. This is particularly useful for normalizing OCR errors (like "DBM5" to "DBMS") and mapping raw text to canonical faculty codes and locations.
+
+Create a `tuning.json` file:
 
 ```json
 {
@@ -166,14 +171,31 @@ Customize parsing behavior with tuning profiles:
     "subject_vocabulary": ["DBMS", "PROJECT MANAGEMENT", "COMPUTER NETWORKS"],
     "subject_aliases": {
       "DBM5": "DBMS",
-      "PROJ MGMT": "PROJECT MANAGEMENT"
+      "PROJ MGMT": "PROJECT MANAGEMENT",
+      "C0MP NETW0RKS": "COMPUTER NETWORKS"
     },
     "faculty_aliases": {
-      "M A": "MA"
+      "M A": "MA",
+      "5M": "SM"
+    },
+    "location_aliases": {
+      "Lab-lI!": "Lab-III"
     },
     "min_match_score": 0.83
   }
 }
+```
+
+Run the worker with the tuning file:
+
+```bash
+sentri-worker --image path/to/timetable.png --tuning tuning.json
+```
+
+To test tuning changes during development, you can run evaluate tests:
+
+```bash
+pytest tests/test_tuning_evaluate.py
 ```
 
 ### OCR Options
@@ -251,6 +273,28 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - 📖 [Documentation](docs/)
 - 🐛 [Issue Tracker](https://github.com/yourusername/sentri/issues)
 - 💬 [Discussions](https://github.com/yourusername/sentri/discussions)
+
+## Troubleshooting
+
+### OCR Setup Issues
+
+**Tesseract is missing:**
+The ML worker is designed to run even if Tesseract is not installed on your system. If Tesseract is missing:
+- You cannot process raw images (`--image`).
+- You can still process JSON payloads containing `ocr_text` (`--input`).
+- You can still process raw text strings directly (`--text`).
+
+**pytest fails on OCR tests:**
+If you run `pytest` without Tesseract installed, some tests in `test_ocr.py` will fail. You can skip them by running:
+```bash
+pytest -m "not ocr"
+```
+
+### Python Environment Issues
+
+- Ensure you are using Python 3.11+.
+- If modules are not found, make sure you ran `pip install -e .` from the `ml-worker` directory.
+- For linting/formatting issues, run `make install-dev` to ensure all development dependencies are present.
 
 ## Changelog
 

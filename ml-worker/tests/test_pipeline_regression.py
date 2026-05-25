@@ -45,3 +45,19 @@ def test_pipeline_ignores_invalid_confidence_threshold() -> None:
     assert "issue:pipeline_warning:Ignored min_extraction_confidence because it is not numeric." in _source_notes(
         result
     )
+
+
+def test_pipeline_fixture_handles_noisy_ocr(load_fixture) -> None:
+    result = SentriWorker().process(load_fixture("pipeline_noisy_ocr.json"))
+    source_notes = _source_notes(result)
+
+    # Extraction confidence is below the quality_options threshold of 0.75
+    assert "issue:low_confidence:Extraction confidence 0.65 is below threshold 0.75." in source_notes
+
+    assert result["entries"][0]["dayOfWeek"] == "MON"
+    assert result["entries"][0]["subjectName"] == "DBMS"
+    assert result["entries"][0]["facultyCode"] == "MA"
+    
+    assert result["entries"][1]["dayOfWeek"] == "TUE"
+    assert result["entries"][1]["subjectName"] == "C0MP NETW0RKS" # Unless it's also matched automatically
+    assert result["entries"][1]["facultyCode"] == "5M"
