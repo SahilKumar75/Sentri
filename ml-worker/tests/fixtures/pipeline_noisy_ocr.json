@@ -1,0 +1,47 @@
+{
+  "source_name": "noisy_timetable.png",
+  "ocr_text": "Class: SE IT-B\nAcademic Year - 2025-26 - SEM II\nVenue: LH 20",
+  "extraction_confidence": 0.65,
+  "quality_options": {
+    "min_extraction_confidence": 0.75
+  },
+  "cells": [
+    {
+      "row": 0,
+      "col": 0,
+      "text": "TIME/DAY"
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "text": "8.45-10.45"
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "text": "10.45-12.45"
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "text": "MON"
+    },
+    {
+      "row": 1,
+      "col": 1,
+      "text": "DBM5\n(MA)\nLab-lI!",
+      "confidence": 0.60
+    },
+    {
+      "row": 2,
+      "col": 0,
+      "text": "TUE"
+    },
+    {
+      "row": 2,
+      "col": 2,
+      "text": "C0MP NETW0RKS\n(5M)\nL8 20",
+      "confidence": 0.65
+    }
+  ]
+}
