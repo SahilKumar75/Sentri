@@ -16,12 +16,30 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '../design/tokens';
 
 const TOTAL_STEPS = 3;
+const CURRENT_YEAR_OPTIONS = [
+  { label: 'First year', value: 'first' },
+  { label: 'Second year', value: 'second' },
+  { label: 'Third year', value: 'third' },
+  { label: 'Fourth year', value: 'fourth' },
+];
+const BRANCH_OPTIONS = [
+  { label: 'CS', value: 'CS' },
+  { label: 'IT', value: 'IT' },
+  { label: 'ENTC', value: 'ENTC' },
+  { label: 'Mechanical', value: 'Mechanical' },
+  { label: 'ARE', value: 'ARE' },
+];
+const SEMESTER_OPTIONS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'].map((semester) => ({
+  label: semester,
+  value: semester,
+}));
 
 export default function SignupWizardScreen({ email, onBack, onSubmit }) {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [activeSelect, setActiveSelect] = useState(null);
   const [dateOfBirth, setDateOfBirth] = useState(new Date(2000, 0, 1));
 
   const [form, setForm] = useState({
@@ -55,6 +73,7 @@ export default function SignupWizardScreen({ email, onBack, onSubmit }) {
 
   const handleNext = () => {
     setLocalError(null);
+    setActiveSelect(null);
 
     if (step === 1) {
       if (!form.firstName || !form.lastName || !form.dob || !form.password) {
@@ -224,27 +243,34 @@ export default function SignupWizardScreen({ email, onBack, onSubmit }) {
             <View style={styles.stepContainer}>
               <Text style={styles.stepTitle}>College details</Text>
 
-              <WizardField
-                label="Current Year"
+              <SelectField
+                label="Current year"
                 value={form.currentYear}
-                onChangeText={(val) => updateField('currentYear', val)}
-                placeholder="e.g. 1, 2, 3, 4"
-                keyboardType="number-pad"
+                placeholder="Select year"
+                options={CURRENT_YEAR_OPTIONS}
+                open={activeSelect === 'currentYear'}
+                onToggle={() => setActiveSelect(activeSelect === 'currentYear' ? null : 'currentYear')}
+                onSelect={(val) => updateField('currentYear', val)}
               />
 
-              <WizardField
+              <SelectField
                 label="Branch"
                 value={form.branch}
-                onChangeText={(val) => updateField('branch', val)}
-                placeholder="e.g. Computer Science"
+                placeholder="Select branch"
+                options={BRANCH_OPTIONS}
+                open={activeSelect === 'branch'}
+                onToggle={() => setActiveSelect(activeSelect === 'branch' ? null : 'branch')}
+                onSelect={(val) => updateField('branch', val)}
               />
 
-              <WizardField
+              <SelectField
                 label="Semester"
                 value={form.semester}
-                onChangeText={(val) => updateField('semester', val)}
-                placeholder="e.g. 3, 4, 5"
-                keyboardType="number-pad"
+                placeholder="Select semester"
+                options={SEMESTER_OPTIONS}
+                open={activeSelect === 'semester'}
+                onToggle={() => setActiveSelect(activeSelect === 'semester' ? null : 'semester')}
+                onSelect={(val) => updateField('semester', val)}
               />
             </View>
           )}
@@ -321,6 +347,50 @@ function WizardField({ label, value, onChangeText, placeholder, secureTextEntry,
         autoCapitalize="none"
       />
       {helperText ? <Text style={styles.helperText}>{helperText}</Text> : null}
+    </View>
+  );
+}
+
+function SelectField({ label, value, placeholder, options, open, onToggle, onSelect }) {
+  const selectedOption = options.find((option) => option.value === value);
+
+  return (
+    <View style={styles.fieldContainer}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Pressable style={styles.selectButton} onPress={onToggle}>
+        <Text style={selectedOption ? styles.selectText : styles.placeholderText}>
+          {selectedOption?.label || placeholder}
+        </Text>
+        <Ionicons
+          name={open ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color="#8A8A8A"
+        />
+      </Pressable>
+
+      {open ? (
+        <View style={styles.selectMenu}>
+          {options.map((option, index) => {
+            const selected = option.value === value;
+
+            return (
+              <Pressable
+                key={option.value}
+                style={[styles.selectOption, index > 0 && styles.selectOptionDivider]}
+                onPress={() => {
+                  onSelect(option.value);
+                  onToggle();
+                }}
+              >
+                <View style={styles.selectCheckSlot}>
+                  {selected ? <Ionicons name="checkmark" size={20} color="#000" /> : null}
+                </View>
+                <Text style={styles.selectOptionText}>{option.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -410,6 +480,53 @@ const styles = StyleSheet.create({
   inputDisabled: {
     backgroundColor: '#F5F5F5',
     color: '#606060',
+  },
+  selectButton: {
+    minHeight: 50,
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    backgroundColor: '#F8F8F8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  selectText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000',
+  },
+  selectMenu: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#D8D8D8',
+    borderRadius: 14,
+    backgroundColor: '#F8F8F8',
+    overflow: 'hidden',
+  },
+  selectOption: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  selectOptionDivider: {
+    borderTopWidth: 1,
+    borderTopColor: '#D8D8D8',
+  },
+  selectCheckSlot: {
+    width: 28,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  selectOptionText: {
+    flex: 1,
+    fontSize: 18,
+    color: '#111',
   },
   dateInput: {
     justifyContent: 'center',
