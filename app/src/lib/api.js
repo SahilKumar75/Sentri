@@ -23,6 +23,10 @@ export async function login(payload) {
   return postAuth('/auth/login', payload);
 }
 
+export async function devLogin(email) {
+  return postAuth('/auth/dev-login', { email });
+}
+
 export async function restoreSession(sessionToken) {
   try {
     const response = await requestJson('/auth/session', {

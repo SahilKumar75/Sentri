@@ -40,6 +40,11 @@ public class AuthController {
         return authService.login(request);
     }
 
+    @PostMapping("/dev-login")
+    public AuthResultResponse devLogin(@RequestBody java.util.Map<String, String> request) {
+        return authService.devLogin(request.get("email"));
+    }
+
     @GetMapping("/session")
     public AuthResultResponse session(@RequestHeader(name = "Authorization", required = false) String authorization) {
         return authService.restoreSession(extractBearerToken(authorization));

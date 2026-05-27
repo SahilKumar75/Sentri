@@ -13,6 +13,8 @@ public interface AuthService {
 
     AuthResultResponse login(AuthLoginRequest request);
 
+    AuthResultResponse devLogin(String email);
+
     AuthResultResponse restoreSession(String sessionToken);
 
     void logout(String sessionToken);

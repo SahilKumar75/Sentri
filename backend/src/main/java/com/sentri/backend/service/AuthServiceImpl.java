@@ -181,6 +181,31 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
+    public AuthResultResponse devLogin(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
+            throw new BadRequestException("Email is required");
+        }
+
+        UserAccount user = userAccountRepository.findByEmailNormalized(normalizedEmail)
+                .orElseThrow(() -> new BadRequestException("Email not found"));
+
+        user.setLastLoginAt(Instant.now());
+        UserAccount saved = userAccountRepository.saveAndFlush(user);
+        AuthSession session = createSession(saved);
+
+        return new AuthResultResponse(
+                "Welcome back, " + saved.getFirstName() + ".",
+                false,
+                null,
+                null,
+                session.getSessionToken(),
+                toUserProfile(saved)
+        );
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public AuthResultResponse restoreSession(String sessionToken) {
         AuthSession session = authSessionRepository.findBySessionToken(requireSessionToken(sessionToken))

@@ -19,7 +19,6 @@ import {
 import * as authApi from './src/lib/api';
 import { useMountedTabs } from './src/lib/use-mounted-tabs';
 import AccountSheet from './src/screens/AccountSheet';
-import AuthScreen from './src/screens/AuthScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import SignupWizardScreen from './src/screens/SignupWizardScreen';
 import CalorieScreen from './src/screens/CalorieScreen';
@@ -168,28 +167,12 @@ export default function App() {
   };
 
   const checkOnboardingStatus = async () => {
-    try {
-      const hasSeenOnboarding = await AsyncStorage.getItem('@sentri:hasSeenOnboarding');
-      if (hasSeenOnboarding === 'true') {
-        setShowOnboarding(false);
-      } else {
-        // First time user - show onboarding
-        setShowOnboarding(true);
-      }
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
-      // Default to showing onboarding on error
-      setShowOnboarding(true);
-    }
+    // Obsolete: OnboardingScreen is now the main auth screen.
+    setShowOnboarding(true);
   };
 
   const handleOnboardingComplete = async () => {
-    try {
-      await AsyncStorage.setItem('@sentri:hasSeenOnboarding', 'true');
-      setShowOnboarding(false);
-    } catch (error) {
-      console.error('Error saving onboarding status:', error);
-    }
+    // Obsolete: We never hide the main auth screen unless logged in or in wizard.
   };
 
   const handleSignup = async ({ profile, contactMethod }) => {
@@ -201,13 +184,14 @@ export default function App() {
     }
 
     if (result.requiresOtp && result.pendingUserId) {
-      setPendingSignup({
-        pendingUserId: result.pendingUserId,
-        contactMethod,
-        phone: profile.phone?.trim(),
-        otpCode: result.otpCode,
-      });
-      setAuthMode('otp');
+      // For now, OTP mode will just log them in to bypass missing AuthScreen OTP UI
+      if (result.sessionToken && result.user) {
+        await storeSessionToken(result.sessionToken);
+        await storeSessionUser(result.user);
+        setSessionToken(result.sessionToken);
+        setAuthenticatedUser(result.user);
+        setPendingSignup(null);
+      }
       return result;
     }
 
@@ -260,6 +244,25 @@ export default function App() {
     return result;
   };
 
+  const handleDevAutoLogin = async (emailText, fallbackMode) => {
+    const result = await authApi.devLogin(emailText);
+    
+    if (result.ok && result.sessionToken && result.user) {
+      setAuthStatusMessage(result.message);
+      await storeSessionToken(result.sessionToken);
+      await storeSessionUser(result.user);
+      setSessionToken(result.sessionToken);
+      setAuthenticatedUser(result.user);
+      setPendingSignup(null);
+    } else {
+      // If dev auto-login fails (user not found), proceed to the normal flow
+      if (fallbackMode === 'signupWizard') {
+        setSignupWizardEmail(emailText);
+      }
+      setAuthMode(fallbackMode);
+    }
+  };
+
   const handleLogout = async () => {
     if (sessionToken) {
       await authApi.logout(sessionToken);
@@ -267,6 +270,7 @@ export default function App() {
 
     await clearStoredSessionToken();
     await clearStoredSessionUser();
+    await AsyncStorage.removeItem('@sentri:hasSeenOnboarding');
     setSessionToken(null);
     setAuthenticatedUser(null);
     setPendingSignup(null);
@@ -275,7 +279,7 @@ export default function App() {
     setSentriSheetOpen(false);
     setActiveTab('home');
     setHangoutMeetingMode(false);
-    setAuthMode('login');
+    setAuthMode('signup');
     setAuthStatusMessage('You are logged out. Login again to continue.');
   };
 
@@ -303,37 +307,12 @@ export default function App() {
   }
 
   if (!authenticatedUser) {
-    if (showOnboarding && authMode !== 'signupWizard') {
-      return (
-        <SafeAreaProvider>
-          <View style={styles.onboardingSafeArea}>
-            <OnboardingScreen
-              onSignup={(method, emailText) => {
-                void handleOnboardingComplete();
-                if (method === 'email') {
-                  setSignupWizardEmail(emailText);
-                  setAuthMode('signupWizard');
-                } else {
-                  setAuthMode('signup');
-                }
-              }}
-              onLogin={(emailText) => {
-                void handleOnboardingComplete();
-                setAuthMode('login');
-              }}
-            />
-          </View>
-        </SafeAreaProvider>
-      );
-    }
-
     if (authMode === 'signupWizard') {
       return (
         <SafeAreaProvider>
           <SignupWizardScreen
             email={signupWizardEmail}
             onBack={() => {
-              setShowOnboarding(true);
               setAuthMode('signup');
             }}
             onSubmit={handleSignup}
@@ -344,21 +323,36 @@ export default function App() {
 
     return (
       <SafeAreaProvider>
-        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-          <StatusBar style="dark" />
-          <AuthScreen
-            mode={authMode}
-            pendingSignup={pendingSignup}
-            statusMessage={authStatusMessage}
-            onModeChange={(mode) => {
-              setAuthMode(mode);
-              setPendingSignup(null);
+        <View style={styles.onboardingSafeArea}>
+          <OnboardingScreen
+            onSignup={(method, emailText) => {
+              if (method === 'email' && emailText) {
+                void handleDevAutoLogin(emailText, 'signupWizard');
+              } else {
+                // Mock Apple/Google login for dev
+                setAuthenticatedUser({
+                  firstName: 'Dev',
+                  lastName: 'Apple/Google',
+                  email: 'dev@sentri.app',
+                });
+                setSessionToken('dev-mock-token');
+              }
             }}
-            onSignup={handleSignup}
-            onVerifyOtp={handleVerifyOtp}
-            onLogin={handleLogin}
+            onLogin={(emailText) => {
+              if (emailText) {
+                void handleDevAutoLogin(emailText, 'login');
+              } else {
+                // Mock Apple/Google login for dev
+                setAuthenticatedUser({
+                  firstName: 'Dev',
+                  lastName: 'Apple/Google',
+                  email: 'dev@sentri.app',
+                });
+                setSessionToken('dev-mock-token');
+              }
+            }}
           />
-        </SafeAreaView>
+        </View>
       </SafeAreaProvider>
     );
   }
