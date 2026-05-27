@@ -111,7 +111,8 @@ export default function CalorieScreen({ onOpenDrawer, avatarLabel }) {
         setMeals(persistedState.meals);
         setBurns(persistedState.burns);
         setStatusMessage(persistedState.statusMessage);
-    }, [hydrated, persistedState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hydrated]);
     useEffect(() => {
         if (!hydrated) {
             return;

@@ -19,13 +19,15 @@ const friends = [
     { name: 'Rohan', status: 'offline', note: 'Back after class' },
     { name: 'Pranav', status: 'offline', note: 'At the gym' },
 ];
+const DEFAULT_HANGOUT_STATE = {
+    roomName: 'DBMS Revision Room',
+    roomType: 'Study',
+    joinInput: '',
+    activeRoom: null,
+};
+
 export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken, userName, incomingRoomCode, onConsumeIncomingRoomCode, onMeetingModeChange, }) {
-    const { value: persistedState, setValue: setPersistedState, hydrated } = usePersistedState(PERSISTENT_KEYS.hangoutState, {
-        roomName: 'DBMS Revision Room',
-        roomType: 'Study',
-        joinInput: '',
-        activeRoom: null,
-    });
+    const { value: persistedState, setValue: setPersistedState, hydrated } = usePersistedState(PERSISTENT_KEYS.hangoutState, DEFAULT_HANGOUT_STATE);
     const [rooms, setRooms] = useState([]);
     const [activeRoom, setActiveRoom] = useState(null);
     const [roomName, setRoomName] = useState('DBMS Revision Room');
@@ -145,7 +147,8 @@ export default function HangoutScreen({ onOpenDrawer, avatarLabel, sessionToken,
         if (persistedState.activeRoom) {
             seedMeetingRoom(persistedState.activeRoom);
         }
-    }, [hydrated, persistedState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hydrated]);
     useEffect(() => {
         if (!hydrated) {
             return;
