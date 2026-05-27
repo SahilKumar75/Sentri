@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { startTransition, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, View, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -407,6 +408,19 @@ export default function App() {
           />
         ) : null}
 
+        {!hangoutMeetingMode && ['home', 'myspace', 'calorie', 'hangout'].includes(activeTab) ? (
+          <Pressable
+            style={styles.floatingSentriButton}
+            onPress={() => setSentriSheetOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Open Sentri assistant"
+          >
+            <View style={styles.floatingSentriInner}>
+              <Ionicons name="sparkles" size={24} color={theme.colors.white} />
+            </View>
+          </Pressable>
+        ) : null}
+
         <DrawerSheet
           visible={drawerOpen}
           onClose={() => setDrawerOpen(false)}
@@ -484,5 +498,20 @@ const styles = StyleSheet.create({
   },
   screenLayerHidden: {
     opacity: 0,
+  },
+  floatingSentriButton: {
+    position: 'absolute',
+    bottom: 105,
+    right: 20,
+    zIndex: 100,
+  },
+  floatingSentriInner: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.accent,
+    ...theme.shadow.strong,
   },
 });

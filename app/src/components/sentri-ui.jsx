@@ -61,21 +61,13 @@ export function CapsuleTabBar({ activeTab, onTabChange, onSentriPress, tone = 'l
       <View style={styles.tabBarContainer} pointerEvents="box-none">
         <BlurView
           intensity={100}
-          tint={dark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
+          tint={dark ? 'systemUltraThinMaterialDark' : 'systemUltraThinMaterialLight'}
           experimentalBlurMethod="dimezisBlurView"
           style={[StyleSheet.absoluteFill, styles.tabBarBg, dark ? styles.tabBarBgDark : styles.tabBarBgLight]}
         />
         <View style={styles.tabBarContent} pointerEvents="box-none">
           <TabItem label="Home" icon="home" active={activeTab === 'home'} dark={dark} onPress={() => onTabChange('home')}/>
           <TabItem label="Myspace" icon="grid" active={activeTab === 'myspace'} dark={dark} onPress={() => onTabChange('myspace')}/>
-          <Pressable onPress={onSentriPress} style={styles.sentriButton} accessibilityRole="button" accessibilityLabel="Open Sentri assistant">
-            <View style={styles.sentriInner}>
-              <Ionicons name="sparkles" size={18} color="#FFF9F5"/>
-            </View>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[styles.sentriLabel, dark && styles.sentriLabelDark]}>
-              Sentri
-            </Text>
-          </Pressable>
           <TabItem label="Calorie" icon="barbell" active={activeTab === 'calorie'} dark={dark} onPress={() => onTabChange('calorie')}/>
           <TabItem label="Hangout" icon="people" active={activeTab === 'hangout'} dark={dark} onPress={() => onTabChange('hangout')}/>
         </View>
