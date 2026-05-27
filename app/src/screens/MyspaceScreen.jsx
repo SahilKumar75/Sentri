@@ -20,9 +20,11 @@ const noteTones = {
     rose: { backgroundColor: '#F4F5F7', pin: '#111111' },
     ink: { backgroundColor: '#E8EAED', pin: '#111111' },
 };
+const EMPTY_SEARCHES = [];
+
 export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
     const { value: items, setValue: setItems } = usePersistedState(PERSISTENT_KEYS.myspaceItems, savedItems);
-    const { value: recentSearches, setValue: setRecentSearches } = usePersistedState(PERSISTENT_KEYS.myspaceRecentSearches, []);
+    const { value: recentSearches, setValue: setRecentSearches } = usePersistedState(PERSISTENT_KEYS.myspaceRecentSearches, EMPTY_SEARCHES);
     const [query, setQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
     const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });

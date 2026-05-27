@@ -92,6 +92,7 @@ Bottom bar:
 
 - capsule-shaped
 - visually inspired by polished iOS floating tab bars
+- uses **Liquid Glass** effect via `expo-blur` to adapt fluidly to the content underneath
 - must still clearly communicate the four real destinations
 
 ## 5. Screen-by-Screen Rules

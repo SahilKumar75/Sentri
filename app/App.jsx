@@ -141,6 +141,11 @@ export default function App() {
       setAuthInitializing(false);
     }
 
+    if (storedToken === 'dev-mock-token') {
+      setAuthInitializing(false);
+      return;
+    }
+
     const result = await authApi.restoreSession(storedToken);
     if (result.ok && result.user) {
       setSessionToken(storedToken);
@@ -330,12 +335,15 @@ export default function App() {
                 void handleDevAutoLogin(emailText, 'signupWizard');
               } else {
                 // Mock Apple/Google login for dev
-                setAuthenticatedUser({
+                const mockUser = {
                   firstName: 'Dev',
                   lastName: 'Apple/Google',
                   email: 'dev@sentri.app',
-                });
+                };
+                setAuthenticatedUser(mockUser);
                 setSessionToken('dev-mock-token');
+                void storeSessionToken('dev-mock-token');
+                void storeSessionUser(mockUser);
               }
             }}
             onLogin={(emailText) => {
@@ -343,12 +351,15 @@ export default function App() {
                 void handleDevAutoLogin(emailText, 'login');
               } else {
                 // Mock Apple/Google login for dev
-                setAuthenticatedUser({
+                const mockUser = {
                   firstName: 'Dev',
                   lastName: 'Apple/Google',
                   email: 'dev@sentri.app',
-                });
+                };
+                setAuthenticatedUser(mockUser);
                 setSessionToken('dev-mock-token');
+                void storeSessionToken('dev-mock-token');
+                void storeSessionUser(mockUser);
               }
             }}
           />

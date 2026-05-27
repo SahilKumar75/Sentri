@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../design/tokens';
@@ -57,19 +58,27 @@ export function DrawerSheet({ visible, onClose, userName, userSubtitle, onSelect
 export function CapsuleTabBar({ activeTab, onTabChange, onSentriPress, tone = 'light', }) {
     const dark = tone === 'dark';
     return (<View style={styles.tabWrap} pointerEvents="box-none">
-      <View style={[styles.tabBar, dark ? styles.tabBarDark : styles.tabBarLight]}>
-        <TabItem label="Home" icon="home" active={activeTab === 'home'} dark={dark} onPress={() => onTabChange('home')}/>
-        <TabItem label="Myspace" icon="grid" active={activeTab === 'myspace'} dark={dark} onPress={() => onTabChange('myspace')}/>
-        <Pressable onPress={onSentriPress} style={styles.sentriButton} accessibilityRole="button" accessibilityLabel="Open Sentri assistant">
-          <View style={styles.sentriInner}>
-            <Ionicons name="sparkles" size={18} color="#FFF9F5"/>
-          </View>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[styles.sentriLabel, dark && styles.sentriLabelDark]}>
-            Sentri
-          </Text>
-        </Pressable>
-        <TabItem label="Calorie" icon="barbell" active={activeTab === 'calorie'} dark={dark} onPress={() => onTabChange('calorie')}/>
-        <TabItem label="Hangout" icon="people" active={activeTab === 'hangout'} dark={dark} onPress={() => onTabChange('hangout')}/>
+      <View style={styles.tabBarContainer} pointerEvents="box-none">
+        <BlurView
+          intensity={80}
+          tint={dark ? 'dark' : 'light'}
+          experimentalBlurMethod="dimezisBlurView"
+          style={[StyleSheet.absoluteFill, styles.tabBarBg, dark ? styles.tabBarBgDark : styles.tabBarBgLight]}
+        />
+        <View style={styles.tabBarContent} pointerEvents="box-none">
+          <TabItem label="Home" icon="home" active={activeTab === 'home'} dark={dark} onPress={() => onTabChange('home')}/>
+          <TabItem label="Myspace" icon="grid" active={activeTab === 'myspace'} dark={dark} onPress={() => onTabChange('myspace')}/>
+          <Pressable onPress={onSentriPress} style={styles.sentriButton} accessibilityRole="button" accessibilityLabel="Open Sentri assistant">
+            <View style={styles.sentriInner}>
+              <Ionicons name="sparkles" size={18} color="#FFF9F5"/>
+            </View>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[styles.sentriLabel, dark && styles.sentriLabelDark]}>
+              Sentri
+            </Text>
+          </Pressable>
+          <TabItem label="Calorie" icon="barbell" active={activeTab === 'calorie'} dark={dark} onPress={() => onTabChange('calorie')}/>
+          <TabItem label="Hangout" icon="people" active={activeTab === 'hangout'} dark={dark} onPress={() => onTabChange('hangout')}/>
+        </View>
       </View>
     </View>);
 }
@@ -360,24 +369,31 @@ const styles = StyleSheet.create({
         right: 14,
         bottom: theme.chrome.floatingBarOffset,
     },
-    tabBar: {
+    tabBarContainer: {
         height: 82,
         borderRadius: 999,
+        ...theme.shadow.strong,
+    },
+    tabBarBg: {
+        borderRadius: 999,
+        overflow: 'hidden',
         borderWidth: 1,
+    },
+    tabBarBgLight: {
+        backgroundColor: 'rgba(255, 255, 255, 0.45)',
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    tabBarBgDark: {
+        backgroundColor: 'rgba(28, 28, 30, 0.45)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    tabBarContent: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 10,
         paddingVertical: 8,
-    },
-    tabBarLight: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        borderColor: theme.colors.line,
-        ...theme.shadow.strong,
-    },
-    tabBarDark: {
-        backgroundColor: 'rgba(28, 28, 30, 0.94)',
-        borderColor: theme.colors.darkLine,
     },
     tabItem: {
         flex: 1,
