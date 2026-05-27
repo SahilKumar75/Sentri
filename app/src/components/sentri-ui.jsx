@@ -60,8 +60,8 @@ export function CapsuleTabBar({ activeTab, onTabChange, onSentriPress, tone = 'l
     return (<View style={styles.tabWrap} pointerEvents="box-none">
       <View style={styles.tabBarContainer} pointerEvents="box-none">
         <BlurView
-          intensity={80}
-          tint={dark ? 'dark' : 'light'}
+          intensity={100}
+          tint={dark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
           experimentalBlurMethod="dimezisBlurView"
           style={[StyleSheet.absoluteFill, styles.tabBarBg, dark ? styles.tabBarBgDark : styles.tabBarBgLight]}
         />
@@ -380,11 +380,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     tabBarBgLight: {
-        backgroundColor: 'rgba(255, 255, 255, 0.45)',
-        borderColor: 'rgba(255, 255, 255, 0.3)',
+        backgroundColor: 'transparent',
+        borderColor: 'rgba(0, 0, 0, 0.1)',
     },
     tabBarBgDark: {
-        backgroundColor: 'rgba(28, 28, 30, 0.45)',
+        backgroundColor: 'transparent',
         borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     tabBarContent: {
