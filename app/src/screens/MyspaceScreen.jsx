@@ -67,6 +67,9 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
               Blackboard photos, screenshots, links, files, and notes are searchable by OCR text, dates, and context.
             </Text>
           </View>
+          <Pressable onPress={() => setAddSheetOpen(true)} style={styles.topAddButton}>
+            <Text style={styles.topAddButtonText}>Add</Text>
+          </Pressable>
         </View>
 
         <View style={styles.searchCard}>
@@ -80,7 +83,6 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
           <View style={styles.searchFootRow}>
             <Text style={styles.searchHint}>Search by OCR, subject, source, date, or the thing you remember first.</Text>
             <Pressable onPress={() => setAddSheetOpen(true)} style={styles.addButton}>
-              <Ionicons name="add" size={16} color="#FFFFFF"/>
               <Text style={styles.addButtonText}>Add</Text>
             </Pressable>
           </View>
@@ -206,10 +208,6 @@ export default function MyspaceScreen({ onOpenDrawer, avatarLabel }) {
             </View>
           </View>)}
       </ScrollView>
-
-      <Pressable onPress={() => setAddSheetOpen(true)} style={styles.fab} accessibilityRole="button" accessibilityLabel="Add to Myspace">
-        <Ionicons name="add" size={26} color="#FFFFFF"/>
-      </Pressable>
 
       <AddSheet open={addSheetOpen} onClose={() => setAddSheetOpen(false)} onSelectOption={(option) => {
             setAddSheetOpen(false);
@@ -465,6 +463,20 @@ const styles = StyleSheet.create({
         flex: 1,
         gap: 4,
     },
+    topAddButton: {
+        minWidth: 70,
+        borderRadius: theme.radius.pill,
+        backgroundColor: theme.colors.accentSoft,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    topAddButtonText: {
+        color: theme.colors.accentStrong,
+        fontSize: 13,
+        fontWeight: '800',
+    },
     kicker: {
         color: theme.colors.accentStrong,
         fontSize: 12,
@@ -566,16 +578,16 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     addButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
+        minWidth: 86,
         borderRadius: theme.radius.pill,
-        backgroundColor: theme.colors.accent,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
+        backgroundColor: theme.colors.accentSoft,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     addButtonText: {
-        color: '#FFFFFF',
+        color: theme.colors.accentStrong,
         fontSize: 13,
         fontWeight: '800',
     },
@@ -848,18 +860,6 @@ const styles = StyleSheet.create({
         marginTop: 14,
         flexDirection: 'row',
         gap: 10,
-    },
-    fab: {
-        position: 'absolute',
-        right: 20,
-        bottom: 104,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: theme.colors.accent,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...theme.shadow.strong,
     },
     modalBackdrop: {
         flex: 1,
