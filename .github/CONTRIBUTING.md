@@ -60,3 +60,12 @@ Before merging a PR, check:
 - Backend should keep controllers thin and services explicit.
 - AI logic should be explainable, deterministic where possible, and upgradeable to model-backed flows later.
 - UI/UX changes should preserve a coherent system, not one-off screens.
+
+### Development Setup Verification
+
+After setting up your development environment, verify that all services are working correctly:
+
+- **Frontend**: `npm run dev` and check http://localhost:3000
+- **Backend**: `npm run start:server` and check http://localhost:8000/health
+- **ML Worker**: `cd ml-worker && pytest` (requires Python 3.9+)
+- **Mobile**: `cd mobile && npm run build` (requires Android Studio for Android builds)
