@@ -6,4 +6,6 @@ import com.sentri.backend.dto.response.MyspaceSearchResponse;
 public interface MyspaceIntelligenceService {
 
     MyspaceSearchResponse search(MyspaceSearchRequest request);
+    
+    MyspaceSearchResponse classify(MyspaceSearchRequest request);
 }
