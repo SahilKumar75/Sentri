@@ -5,11 +5,12 @@ Sentri is a zero-budget cross-platform student companion for Army Institute of T
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-This repository is currently split into 3 working parts:
+## Repository Architecture
 
 - `app/`: Expo React Native frontend for iPhone and Android
 - `backend/`: Spring Boot API and timetable storage layer
 - `ml-worker/`: Python OCR and timetable normalization worker
+- `docs/`: System design documents and contribution guides
 
 ## Product Scope
 
