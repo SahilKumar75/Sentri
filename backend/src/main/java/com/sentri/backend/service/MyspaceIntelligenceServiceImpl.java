@@ -53,6 +53,88 @@ public class MyspaceIntelligenceServiceImpl implements MyspaceIntelligenceServic
         this.myspaceVectorStoreService = myspaceVectorStoreService;
     }
 
+    // Myspace intelligence service implementation for capture classification
+    @Override
+    public CaptureClassification classifyCapture(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            return new CaptureClassification("uncategorized", 0.0, "No content provided");
+        }
+
+        String lowerContent = content.toLowerCase();
+        
+        // First try ML-based classification (placeholder)
+        CaptureClassification mlClassification = performMLClassification(lowerContent);
+        if (mlClassification.confidence() >= 0.8) {
+            return mlClassification;
+        }
+
+        // Fallback to deterministic rules
+        return performDeterministicClassification(lowerContent);
+    }
+
+    private CaptureClassification performMLClassification(String content) {
+        // Placeholder for ML classification logic
+        // In a real implementation, this would call an ML model
+        return new CaptureClassification("ml_placeholder", 0.5, "ML model placeholder");
+    }
+
+    private CaptureClassification performDeterministicClassification(String content) {
+        Map<String, Integer> categoryScores = new HashMap<>();
+        
+        // Score content against subject aliases
+        for (Map.Entry<String, List<String>> entry : SUBJECT_ALIASES.entrySet()) {
+            String category = entry.getKey();
+            List<String> aliases = entry.getValue();
+            
+            int score = 0;
+            for (String alias : aliases) {
+                if (content.contains(alias.toLowerCase())) {
+                    score += 10;
+                }
+            }
+            
+            if (score > 0) {
+                categoryScores.put(category, score);
+            }
+        }
+
+        // Score content against context aliases
+        for (Map.Entry<String, List<String>> entry : CONTEXT_ALIASES.entrySet()) {
+            String category = entry.getKey();
+            List<String> aliases = entry.getValue();
+            
+            int score = 0;
+            for (String alias : aliases) {
+                if (content.contains(alias.toLowerCase())) {
+                    score += 5;
+                }
+            }
+            
+            if (score > 0) {
+                categoryScores.put(category, categoryScores.getOrDefault(category, 0) + score);
+            }
+        }
+
+        // Find category with highest score
+        String bestCategory = "uncategorized";
+        int bestScore = 0;
+        double confidence = 0.0;
+        
+        for (Map.Entry<String, Integer> entry : categoryScores.entrySet()) {
+            if (entry.getValue() > bestScore) {
+                bestCategory = entry.getKey();
+                bestScore = entry.getValue();
+            }
+        }
+
+        // Calculate confidence based on score
+        if (bestScore > 0) {
+            confidence = Math.min(1.0, (double) bestScore / 50.0);
+        }
+
+        return new CaptureClassification(bestCategory, confidence, "Deterministic classification");
+    }
+
     @Override
     public MyspaceSearchResponse search(MyspaceSearchRequest request) {
         if (request == null) {
