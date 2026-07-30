@@ -54,37 +54,46 @@ The app should stay simple and cheap to run:
 - shared mobile HTTP client with request timeouts
 - backend indexes, cacheable read paths, and read-only transactions
 
-## Run Locally
+## Local Development Setup
 
 ### Prerequisites
 
-- Node.js 16+ for frontend
-- Java 17+ for backend
-- Python 3.11+ for ML worker
+Before you begin, ensure you have the following installed:
+- Node.js 16+ (for the Expo frontend)
+- Java 17+ (for the Spring Boot backend)
+- Python 3.11+ (for the ML worker)
+- Android Studio or Xcode (for mobile emulation)
 
-### Frontend
+### Setup Steps
 
-```bash
-cd app
-npm start
-```
+1. **Frontend (Expo App)**
+   ```bash
+   cd app
+   npm install
+   npm start
+   ```
+   This will start the Expo development server. You can then open the app in an emulator or on a physical device.
 
-### Backend
+2. **Backend (Spring Boot)**
+   ```bash
+   cd backend
+   mvn spring-boot:run
+   ```
+   The backend will start on `http://localhost:8080`. You can verify it's running by visiting `http://localhost:8080/actuator/health`.
 
-```bash
-cd backend
-mvn spring-boot:run
-```
+3. **ML Worker (Python)**
+   ```bash
+   cd ml-worker
+   python -m pip install -e ".[dev]"
+   python worker.py
+   ```
+   The worker will start processing tasks from the backend queue.
 
-### OCR worker tests
+### Verification
 
-```bash
-cd ml-worker
-python -m pip install -e ".[dev]"
-pytest
-```
-
-The same worker test command runs in GitHub Actions for pull requests that touch `ml-worker` or the worker workflow.
+- Frontend: Open `http://localhost:19002` to see the Expo DevTools
+- Backend: Visit `http://localhost:8080/actuator/health` to confirm the backend is healthy
+- ML Worker: Check the terminal where you started the worker for processing logs
 
 ## Notes
 
